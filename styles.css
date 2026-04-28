@@ -764,7 +764,15 @@ canvas,
   }
 
   .hangar-screen.visible {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
     gap: 10px;
+  }
+
+  .hangar-launch {
+    grid-column: 3;
+    grid-row: 1;
+    align-items: center;
   }
 
   .hangar-launch .ui-btn {
@@ -772,7 +780,19 @@ canvas,
   }
 
   .hangar-summary {
+    grid-column: 1 / 3;
+    grid-row: 1;
     gap: 10px;
+  }
+
+  .hangar-status {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .upgrade-tree {
+    grid-column: 1 / -1;
+    grid-row: 3;
   }
 
   .hangar-stat,
@@ -791,11 +811,12 @@ canvas,
 
   .upgrade-tree {
     min-height: 0;
+    min-height: 520px;
     border-radius: 18px;
   }
 
   .tree-canvas {
-    min-height: 480px;
+    min-height: 560px;
   }
 
   .viewport {
