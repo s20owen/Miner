@@ -8,7 +8,6 @@ const ui = {
   settingsBtn: document.getElementById("settings-btn"),
   quitBtn: document.getElementById("quit-btn"),
   settingsScreen: document.getElementById("settings-screen"),
-  settingsOpenBtn: document.getElementById("settings-open-btn"),
   settingsCloseBtn: document.getElementById("settings-close-btn"),
   tipScreen: document.getElementById("tip-screen"),
   tipCloseBtn: document.getElementById("tip-close-btn"),
@@ -24,11 +23,11 @@ const ui = {
   hpBar: document.getElementById("hp-bar"),
   dockBar: document.getElementById("dock-bar"),
   status: document.getElementById("status-text"),
+  fuelAlert: document.getElementById("fuel-alert"),
   launchSortieBtn: document.getElementById("launch-sortie-btn"),
   moveStick: document.getElementById("move-stick"),
   aimStick: document.getElementById("aim-stick"),
   dashTouchBtn: document.getElementById("dash-touch-btn"),
-  topbar: document.querySelector(".topbar"),
   hudLeft: document.querySelector(".hud-left"),
   hudRight: document.querySelector(".hud-right"),
   mobileControls: document.querySelector(".mobile-controls"),
@@ -43,7 +42,7 @@ const SHIP_RADIUS = 11;
 const SAVE_KEY = "orbit-mine-save-v1";
 
 const WEAPON_STATS = {
-  blaster: { rate: 0.34, bulletSpeed: 780, shotFuel: 0.6, spread: 0.02 },
+  blaster: { rate: 0.34, bulletSpeed: 780, shotFuel: 0.6, spread: 0.02, life: 0.5 },
   laser: { shotFuel: 9, range: 320, damagePerSecond: 5.2 },
 };
 
@@ -68,17 +67,19 @@ const upgradeNodes = [
   { id: "magnet1", x: 250, y: 250, label: "Magnet", symbol: "🧲", cost: cost(65), requires: ["cargo1"], effect: { magnet: 10 } },
   { id: "drill1", x: 410, y: 250, label: "Bullet Force", symbol: "✦", cost: cost(85), requires: ["fire1"], effect: { bulletDamage: 1 } },
   { id: "laserFuel", x: 570, y: 250, label: "Laser Saver", symbol: "💧", cost: cost(120, 6), requires: ["laser"], effect: { laserFuelMult: 0.8 } },
-  { id: "cargo2", x: 730, y: 250, label: "Cargo Rack II", symbol: "◫", cost: cost(140), requires: ["magnet1"], effect: { cargoCap: 9 } },
-  { id: "ore1", x: 890, y: 250, label: "Refinery", symbol: "$", cost: cost(130), requires: ["cargo2"], effect: { cargoCap: 6 } },
-  { id: "dash1", x: 90, y: 410, label: "Dash", symbol: "➜", cost: cost(70), requires: ["hull1"], effect: { dash: true } },
-  { id: "thrust1", x: 250, y: 410, label: "Thrusters", symbol: "▲", cost: cost(85), requires: ["dash1"], effect: { thrust: 18 } },
-  { id: "dock1", x: 410, y: 410, label: "Dock Clamp", symbol: "⌂", cost: cost(90), requires: ["dash1"], effect: { dockRate: 1.35 } },
-  { id: "hull2", x: 570, y: 410, label: "Hull Plate II", symbol: "🛡", cost: cost(100, 8), requires: ["hull1"], effect: { hpMax: 16 } },
-  { id: "fire2", x: 730, y: 410, label: "Fire Rate II", symbol: "»", cost: cost(105, 10), requires: ["drill1"], effect: { rateMult: 0.86 } },
-  { id: "fuel3", x: 890, y: 410, label: "Fuel Tank III", symbol: "⛽", cost: cost(150, 16), requires: ["fuel2"], effect: { fuelMax: 22 } },
-  { id: "fire3", x: 730, y: 570, label: "Fire Rate III", symbol: "»", cost: cost(120, 18), requires: ["fire2"], effect: { rateMult: 0.8 } },
-  { id: "splash1", x: 890, y: 570, label: "Blast Rounds", symbol: "✺", cost: cost(140, 24), requires: ["fire3"], effect: { splashRadius: 18, splashFalloff: 0.35 } },
-  { id: "splash2", x: 1050, y: 570, label: "AOE Core", symbol: "✹", cost: cost(180, 32), requires: ["splash1"], effect: { splashRadius: 28, splashFalloff: 0.55 } },
+  { id: "cargo2", x: 250, y: 410, label: "Cargo Rack II", symbol: "◫", cost: cost(140), requires: ["magnet1"], effect: { cargoCap: 9 } },
+  { id: "ore1", x: 250, y: 570, label: "Refinery", symbol: "$", cost: cost(130), requires: ["cargo2"], effect: { cargoCap: 6 } },
+  { id: "dash1", x: 90, y: 570, label: "Dash", symbol: "➜", cost: cost(70), requires: ["hull2"], effect: { dash: true } },
+  { id: "thrust1", x: 250, y: 730, label: "Thrusters", symbol: "▲", cost: cost(85), requires: ["dash1"], effect: { thrust: 18 } },
+  { id: "dock1", x: 410, y: 730, label: "Dock Clamp", symbol: "⌂", cost: cost(90), requires: ["dash1"], effect: { dockRate: 1.35 } },
+  { id: "hull2", x: 90, y: 410, label: "Hull Plate II", symbol: "🛡", cost: cost(100, 8), requires: ["hull1"], effect: { hpMax: 16 } },
+  { id: "fire2", x: 410, y: 410, label: "Fire Rate II", symbol: "»", cost: cost(105, 10), requires: ["drill1"], effect: { rateMult: 0.86 } },
+  { id: "fuel3", x: 890, y: 250, label: "Fuel Tank III", symbol: "⛽", cost: cost(150, 16), requires: ["fuel2"], effect: { fuelMax: 22 } },
+  { id: "range1", x: 570, y: 410, label: "Range Boost", symbol: "⇢", cost: cost(112, 10), requires: ["drill1"], effect: { bulletLifeMult: 1.35 } },
+  { id: "splash1", x: 730, y: 410, label: "Blast Rounds", symbol: "✺", cost: cost(140, 24), requires: ["drill1"], effect: { splashRadius: 18, splashFalloff: 0.35 } },
+  { id: "fire3", x: 410, y: 570, label: "Fire Rate III", symbol: "»", cost: cost(120, 18), requires: ["fire2"], effect: { rateMult: 0.8 } },
+  { id: "range2", x: 570, y: 570, label: "Longshot Shells", symbol: "⇢", cost: cost(138, 18), requires: ["range1"], effect: { bulletLifeMult: 1.35 } },
+  { id: "splash2", x: 730, y: 570, label: "AOE Core", symbol: "✹", cost: cost(180, 32), requires: ["splash1"], effect: { splashRadius: 28, splashFalloff: 0.55 } },
 ];
 
 function clamp(value, min, max) {
@@ -167,6 +168,12 @@ function previewTextForNode(node, purchased) {
     const before = purchased ? state.ship.bulletDamage - effect.bulletDamage : state.ship.bulletDamage;
     const after = purchased ? state.ship.bulletDamage : state.ship.bulletDamage + effect.bulletDamage;
     return `${before} -> ${after} dmg`;
+  }
+  if (effect.bulletLifeMult) {
+    const current = WEAPON_STATS.blaster.life * WEAPON_STATS.blaster.bulletSpeed * state.ship.bulletLifeMult;
+    const before = purchased ? current / effect.bulletLifeMult : current;
+    const after = purchased ? current : current * effect.bulletLifeMult;
+    return `${Math.round(before)} -> ${Math.round(after)} range`;
   }
   if (effect.rateMult) {
     const current = WEAPON_STATS.blaster.rate * state.ship.rateMult;
@@ -379,6 +386,7 @@ function makeState() {
       dockRate: 1,
       fireCooldown: 0,
       bulletDamage: 1,
+      bulletLifeMult: 1,
       bulletSplashRadius: 0,
       bulletSplashFalloff: 0,
       rateMult: 1,
@@ -400,7 +408,10 @@ function makeState() {
     particles: [],
     damageShake: 0,
     wreckTimer: 0,
-    statusFlash: "",
+    wrecked: false,
+    failMode: "",
+    failMessage: "",
+    failAngle: 0,
     hangarMessage: progress.lastStatus,
   };
 }
@@ -432,6 +443,7 @@ function applyUpgrades() {
   ship.thrust = 170;
   ship.dockRate = 1;
   ship.bulletDamage = 1;
+  ship.bulletLifeMult = 1;
   ship.bulletSplashRadius = 0;
   ship.bulletSplashFalloff = 0;
   ship.rateMult = 1;
@@ -450,6 +462,7 @@ function applyUpgrades() {
     if (effect.thrust) ship.thrust += effect.thrust;
     if (effect.dockRate) ship.dockRate *= effect.dockRate;
     if (effect.bulletDamage) ship.bulletDamage += effect.bulletDamage;
+    if (effect.bulletLifeMult) ship.bulletLifeMult *= effect.bulletLifeMult;
     if (effect.splashRadius) ship.bulletSplashRadius = Math.max(ship.bulletSplashRadius, effect.splashRadius);
     if (effect.splashFalloff) ship.bulletSplashFalloff = Math.max(ship.bulletSplashFalloff, effect.splashFalloff);
     if (effect.rateMult) ship.rateMult *= effect.rateMult;
@@ -745,6 +758,46 @@ function spawnPickup(block) {
   }
 }
 
+function spawnShipExplosion() {
+  for (let i = 0; i < 26; i += 1) {
+    state.particles.push({
+      x: state.ship.x,
+      y: state.ship.y,
+      vx: rand(-240, 240),
+      vy: rand(-240, 240),
+      life: rand(0.25, 0.65),
+      color: i % 3 === 0 ? "#fff0b8" : i % 2 === 0 ? "#ff9d4d" : "#58dfff",
+    });
+  }
+}
+
+function beginFailureSequence(mode, message) {
+  if (state.wrecked) return;
+  state.wrecked = true;
+  state.failMode = mode;
+  state.failMessage = message;
+  state.wreckTimer = mode === "fuel" ? 1.1 : 0.95;
+  state.failAngle = Math.atan2(state.input.aimY, state.input.aimX);
+  state.damageShake = mode === "damage" ? 1.3 : 0.65;
+  if (mode === "damage") {
+    spawnShipExplosion();
+    state.ship.vx *= 0.45;
+    state.ship.vy *= 0.45;
+  } else {
+    for (let i = 0; i < 14; i += 1) {
+      state.particles.push({
+        x: state.ship.x,
+        y: state.ship.y,
+        vx: rand(-90, 90),
+        vy: rand(-90, 90),
+        life: rand(0.2, 0.55),
+        color: i % 2 === 0 ? "#58dfff" : "#ffd24f",
+      });
+    }
+  }
+  playHit();
+}
+
 function getMoveAxis() {
   let x = state.input.touchMoveX || 0;
   let y = state.input.touchMoveY || 0;
@@ -798,7 +851,7 @@ function spawnBullet() {
     y: state.ship.y + dirY * 20,
     vx: dirX * stats.bulletSpeed,
     vy: dirY * stats.bulletSpeed,
-    life: 1.25,
+    life: stats.life * state.ship.bulletLifeMult,
     damage: state.ship.bulletDamage,
   });
   state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel);
@@ -816,6 +869,44 @@ function updateShip(dt) {
   const move = getMoveAxis();
   const ship = state.ship;
   state.damageShake = Math.max(0, state.damageShake - dt * 5);
+  if (state.wreckTimer > 0) {
+    if (state.failMode === "damage") {
+      state.failAngle += dt * 10;
+      ship.vx += Math.cos(state.time * 32) * 180 * dt;
+      ship.vy += Math.sin(state.time * 27) * 180 * dt;
+      if (Math.random() < 0.35) {
+        state.particles.push({
+          x: ship.x + rand(-10, 10),
+          y: ship.y + rand(-10, 10),
+          vx: rand(-120, 120),
+          vy: rand(-120, 120),
+          life: rand(0.12, 0.28),
+          color: Math.random() < 0.5 ? "#ff9d4d" : "#fff0b8",
+        });
+      }
+    } else if (state.failMode === "fuel") {
+      state.failAngle += dt * 2.6;
+      ship.vx *= 0.985;
+      ship.vy *= 0.985;
+      ship.vx += Math.cos(state.time * 9) * 18 * dt;
+      ship.vy += Math.sin(state.time * 7) * 12 * dt;
+      if (Math.random() < 0.18) {
+        state.particles.push({
+          x: ship.x + rand(-8, 8),
+          y: ship.y + rand(-8, 8),
+          vx: rand(-55, 55),
+          vy: rand(-55, 55),
+          life: rand(0.14, 0.34),
+          color: Math.random() < 0.6 ? "#58dfff" : "#8ea2b8",
+        });
+      }
+    }
+    ship.vx *= 0.92;
+    ship.vy *= 0.92;
+    ship.x += ship.vx * dt;
+    ship.y += ship.vy * dt;
+    return;
+  }
   if (move.active) {
     ship.vx += move.x * ship.thrust * dt;
     ship.vy += move.y * ship.thrust * dt;
@@ -853,10 +944,10 @@ function updateShip(dt) {
     const separation = BLOCK_SIZE * 0.5 + SHIP_RADIUS + 4;
     ship.x = hit.x + pushX * separation;
     ship.y = hit.y + pushY * separation;
-    ship.hp = Math.max(0, ship.hp - dt * 38);
-    ship.fuel = Math.max(0, ship.fuel - dt * 18);
-    ship.vx = pushX * 115;
-    ship.vy = pushY * 115;
+    ship.hp = Math.max(0, ship.hp - dt * 68);
+    ship.fuel = Math.max(0, ship.fuel - dt * 24);
+    ship.vx = pushX * 145;
+    ship.vy = pushY * 145;
     state.damageShake = 1;
     playHit();
   }
@@ -869,8 +960,15 @@ function updateShip(dt) {
     ship.vy -= ny * 120 * dt;
   }
 
-  if (ship.hp <= 0 || ship.fuel <= 0) {
-    failSortie("Ship was lost before docking. Cargo discarded.");
+  if (ship.hp <= 0 && !state.wrecked) {
+    ship.hp = 0;
+    beginFailureSequence("damage", "Ship was damaged too much and blew up.");
+    return;
+  }
+
+  if (ship.fuel <= 0 && !state.wrecked) {
+    ship.fuel = 0;
+    beginFailureSequence("fuel", "Ship ran out of fuel and drifted dead in space.");
   }
 }
 
@@ -1024,10 +1122,12 @@ function updateStatusText() {
     const cargoFull = sumCargo(state.ship.cargo) >= state.ship.cargoCap;
     if (state.dock.timer > 0) {
       ui.status.textContent = `Docking in ${Math.max(0, state.dock.needed - state.dock.timer).toFixed(1)}s`;
+    } else if (state.wreckTimer > 0) {
+      ui.status.textContent = state.failMode === "fuel" ? "Fuel depleted." : "Ship critical.";
     } else {
       ui.status.textContent = cargoFull
         ? "Cargo full. Return to the docking station to bank the haul."
-        : `Weapon: ${state.ship.weapon === "laser" ? "Laser" : "Blaster"} • Mine blocks and dock to extract.`;
+        : "";
     }
   } else {
     ui.status.textContent = state.hangarMessage;
@@ -1038,6 +1138,21 @@ function update(dt) {
   state.time += dt;
   updateParticles(dt);
   if (state.mode !== "sortie") {
+    updateStatusText();
+    syncUi();
+    return;
+  }
+  if (state.wreckTimer > 0) {
+    state.wreckTimer = Math.max(0, state.wreckTimer - dt);
+    updateShip(dt);
+    updateCamera(dt);
+    if (state.wreckTimer <= 0) {
+      if (state.failMode === "damage") {
+        spawnShipExplosion();
+      }
+      failSortie(state.failMessage || "Ship was lost before docking. Cargo discarded.");
+      return;
+    }
     updateStatusText();
     syncUi();
     return;
@@ -1080,13 +1195,27 @@ function drawDock() {
   ctx.stroke();
   ctx.shadowBlur = 0;
 
+  const arm = 10;
+  const gap = 5;
+  ctx.strokeStyle = "#8ff0ff";
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(dock.x, dock.y - 18);
-  ctx.lineTo(dock.x + 12, dock.y + 12);
-  ctx.lineTo(dock.x - 12, dock.y + 12);
-  ctx.closePath();
+  ctx.moveTo(dock.x - arm, dock.y - arm);
+  ctx.lineTo(dock.x - gap, dock.y - arm);
+  ctx.lineTo(dock.x - gap, dock.y - gap);
+  ctx.moveTo(dock.x + arm, dock.y - arm);
+  ctx.lineTo(dock.x + gap, dock.y - arm);
+  ctx.lineTo(dock.x + gap, dock.y - gap);
+  ctx.moveTo(dock.x - arm, dock.y + arm);
+  ctx.lineTo(dock.x - gap, dock.y + arm);
+  ctx.lineTo(dock.x - gap, dock.y + gap);
+  ctx.moveTo(dock.x + arm, dock.y + arm);
+  ctx.lineTo(dock.x + gap, dock.y + arm);
+  ctx.lineTo(dock.x + gap, dock.y + gap);
+  ctx.stroke();
+
   ctx.fillStyle = "#8ff0ff";
-  ctx.fill();
+  ctx.fillRect(dock.x - 4, dock.y - 4, 8, 8);
 }
 
 function drawPlanetBlocks() {
@@ -1158,10 +1287,12 @@ function drawParticles() {
 
 function drawShip() {
   const ship = worldToScreen(state.ship.x, state.ship.y);
-  const angle = Math.atan2(state.input.aimY, state.input.aimX);
+  const angle = state.wreckTimer > 0 ? state.failAngle : Math.atan2(state.input.aimY, state.input.aimX);
+  const alpha = state.failMode === "fuel" && state.wreckTimer > 0 ? clamp(state.wreckTimer / 1.1, 0.35, 1) : 1;
   ctx.save();
   ctx.translate(ship.x, ship.y);
   ctx.rotate(angle + Math.PI / 2);
+  ctx.globalAlpha = alpha;
   ctx.fillStyle = "#89f3ff";
   ctx.shadowColor = "#58dfff";
   ctx.shadowBlur = 18;
@@ -1217,11 +1348,11 @@ function syncUi() {
   const inGameplay = state.mode === "sortie";
   const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip";
   const inHangar = state.mode === "hangar";
-  ui.topbar.classList.toggle("hidden", !inGameplay);
   ui.hudLeft.classList.toggle("hidden", !inGameplay);
   ui.hudRight.classList.toggle("hidden", !inGameplay);
   ui.mobileControls.classList.toggle("hidden", !inGameplay);
-  ui.statusBanner.classList.toggle("hidden", !inGameplay);
+  ui.statusBanner.classList.toggle("hidden", !inGameplay || !ui.status.textContent);
+  ui.fuelAlert.classList.toggle("hidden", !inGameplay || fuelRatio > 0.18);
   ui.title.classList.toggle("visible", inMenu);
   ui.hangarScreen.classList.toggle("visible", inHangar);
   ui.tipScreen.classList.toggle("visible", state.mode === "tip");
@@ -1299,7 +1430,6 @@ ui.continueBtn.addEventListener("click", () => {
   renderUpgradeTree();
 });
 ui.settingsBtn.addEventListener("click", showSettings);
-ui.settingsOpenBtn.addEventListener("click", showSettings);
 ui.settingsCloseBtn.addEventListener("click", hideSettings);
 ui.quitBtn.addEventListener("click", () => {
   playUiClick();
