@@ -22,6 +22,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  min-height: 100svh;
   background:
     radial-gradient(circle at top, rgba(255, 110, 64, 0.18), transparent 30%),
     radial-gradient(circle at bottom right, rgba(88, 223, 255, 0.1), transparent 24%),
@@ -31,6 +32,10 @@ body {
 
 body {
   overflow: hidden;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  background-color: #05010a;
 }
 
 button {
@@ -41,6 +46,11 @@ button {
   min-height: 100svh;
   display: grid;
   grid-template-rows: auto 1fr;
+  padding:
+    max(env(safe-area-inset-top), 10px)
+    max(env(safe-area-inset-right), 10px)
+    max(env(safe-area-inset-bottom), 10px)
+    max(env(safe-area-inset-left), 10px);
 }
 
 .topbar {
@@ -49,7 +59,7 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  padding: 16px 20px 10px;
+  padding: 10px 20px 10px;
 }
 
 .topbar.hidden {
@@ -107,16 +117,32 @@ button {
 .viewport {
   position: relative;
   min-height: 0;
-  padding: 0 14px 14px;
+  padding: 0 14px 0;
 }
 
 canvas {
   width: 100%;
-  height: calc(100svh - 96px);
+  height: 100%;
   display: block;
   border-radius: 28px;
   background: #05010a;
   box-shadow: var(--shadow);
+}
+
+html,
+body,
+canvas,
+.mobile-controls,
+.stick-group,
+.stick-pad,
+.stick-ring,
+.stick-knob,
+.touch-btn {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
 }
 
 .overlay,
@@ -151,6 +177,8 @@ canvas {
 .modal-card,
 .tip-card {
   width: min(440px, calc(100% - 30px));
+  max-height: calc(100% - 30px);
+  overflow: auto;
   padding: 28px;
   border-radius: 26px;
   background: var(--bg-soft);
@@ -202,7 +230,7 @@ canvas {
 
 .hangar-screen.visible {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 16px;
 }
 
@@ -249,6 +277,7 @@ canvas {
 
 .upgrade-tree {
   position: relative;
+  min-height: 0;
   min-height: 420px;
   border-radius: 22px;
   overflow: auto;
@@ -273,8 +302,8 @@ canvas {
 
 .tree-node {
   position: absolute;
-  width: 96px;
-  height: 96px;
+  width: var(--tree-node-size, 96px);
+  height: var(--tree-node-size, 96px);
   padding: 0;
   border-radius: 18px;
   border: 2px solid rgba(98, 255, 141, 0.68);
@@ -336,6 +365,26 @@ canvas {
   color: var(--muted);
 }
 
+.tree-canvas.compact .tree-node {
+  border-radius: 16px;
+}
+
+.tree-canvas.compact .tree-node .symbol {
+  font-size: 1rem;
+}
+
+.tree-canvas.compact .tree-node .name {
+  font-size: 0.62rem;
+}
+
+.tree-canvas.compact .tree-node .preview {
+  font-size: 0.56rem;
+}
+
+.tree-canvas.compact .tree-node .cost {
+  font-size: 0.62rem;
+}
+
 @keyframes node-reveal {
   0% {
     transform: scale(0.72);
@@ -394,8 +443,7 @@ canvas {
 }
 
 .hud span,
-.bar-block span,
-.desktop-controls-grid span {
+.bar-block span {
   color: var(--muted);
   font-size: 0.72rem;
   letter-spacing: 0.08em;
@@ -420,12 +468,30 @@ canvas {
   background: linear-gradient(90deg, #5cefff, #43abff);
 }
 
+.bar.fuel.low i {
+  background: linear-gradient(90deg, #ff9d4d, #ff5d49);
+  animation: fuel-warning 900ms ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(255, 93, 73, 0.45);
+}
+
 .bar.hull i {
   background: linear-gradient(90deg, #ffd04d, #ff6b4e);
 }
 
 .bar.dock i {
   background: linear-gradient(90deg, #67ff8a, #c4ff77);
+}
+
+@keyframes fuel-warning {
+  0%,
+  100% {
+    filter: saturate(1);
+    opacity: 0.9;
+  }
+  50% {
+    filter: saturate(1.35);
+    opacity: 0.58;
+  }
 }
 
 .mobile-controls.hidden,
@@ -474,7 +540,6 @@ canvas {
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
   border: 1px solid rgba(255,255,255,0.08);
-  touch-action: none;
 }
 
 .stick-ring,
@@ -509,6 +574,13 @@ canvas {
   color: rgba(247, 238, 215, 0.82);
 }
 
+.mobile-controls,
+.stick-pad,
+.stick-ring,
+.stick-knob {
+  overscroll-behavior: none;
+}
+
 .status-banner {
   left: 50%;
   bottom: 24px;
@@ -519,11 +591,30 @@ canvas {
 
 @media (max-width: 760px) {
   .topbar {
-    padding-inline: 14px;
+    padding: 6px 14px 8px;
+    align-items: start;
   }
 
   .top-actions {
     display: none;
+  }
+
+  .brand h1 {
+    font-size: clamp(2.6rem, 9vw, 4rem);
+    line-height: 0.95;
+  }
+
+  .eyebrow {
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+  }
+
+  .viewport {
+    padding: 0 0 0;
+  }
+
+  canvas {
+    border-radius: 24px 24px 0 0;
   }
 
   .hud-right {
@@ -541,9 +632,160 @@ canvas {
   }
 }
 
-@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  .app-shell {
+    grid-template-rows: auto 1fr;
+  }
+
   .topbar {
-    padding: max(env(safe-area-inset-top), 10px) 14px 8px;
+    padding: 4px 10px 8px;
+  }
+
+  .viewport {
+    padding: 0;
+  }
+
+  canvas {
+    border-radius: 26px 26px 0 0;
+  }
+
+  .hud {
+    gap: 8px;
+  }
+
+  .hud-left {
+    left: 14px;
+    top: 16px;
+    width: min(38vw, 160px);
+  }
+
+  .hud-right {
+    right: 14px;
+    top: 16px;
+    width: min(46vw, 200px);
+  }
+
+  .hud-chip,
+  .bar-block {
+    border-radius: 14px;
+    padding: 9px 10px;
+  }
+
+  .mobile-controls {
+    display: flex;
+    left: 12px;
+    right: 12px;
+    bottom: max(env(safe-area-inset-bottom), 10px);
+    gap: 10px;
+    align-items: center;
+  }
+
+  .stick-group {
+    gap: 6px;
+  }
+
+  .stick-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+  }
+
+  .stick-pad {
+    width: min(28vw, 104px);
+    height: min(28vw, 104px);
+  }
+
+  .mobile-actions {
+    flex: 0 0 auto;
+  }
+
+  .touch-btn {
+    min-width: 78px;
+    padding: 10px 12px;
+  }
+
+  .status-banner {
+    left: 12px;
+    right: 12px;
+    bottom: max(env(safe-area-inset-bottom), 10px);
+    transform: none;
+    width: auto;
+    text-align: center;
+    border-radius: 22px;
+    padding: 10px 14px;
+    font-size: 0.92rem;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: landscape) {
+  .overlay {
+    inset: 8px;
+  }
+
+  .menu-card,
+  .modal-card,
+  .tip-card {
+    width: min(420px, calc(100% - 18px));
+    max-height: calc(100% - 10px);
+    padding: 18px 20px;
+    border-radius: 22px;
+  }
+
+  .menu-card h2 {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    margin-bottom: 16px;
+  }
+
+  .menu-actions {
+    gap: 8px;
+  }
+
+  .ui-btn.large {
+    padding: 12px 16px;
+  }
+
+  .hangar-screen {
+    inset: 8px;
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .hangar-screen.visible {
+    gap: 10px;
+  }
+
+  .hangar-launch .ui-btn {
+    padding: 10px 18px;
+  }
+
+  .hangar-summary {
+    gap: 10px;
+  }
+
+  .hangar-stat,
+  .hangar-status {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
+
+  .hangar-stat strong {
+    font-size: 1.05rem;
+  }
+
+  .hangar-status {
+    font-size: 0.98rem;
+  }
+
+  .upgrade-tree {
+    min-height: 0;
+    border-radius: 18px;
+  }
+
+  .tree-canvas {
+    min-height: 480px;
+  }
+
+  .topbar {
+    padding: 4px 14px 8px;
   }
 
   .viewport {
@@ -551,7 +793,6 @@ canvas {
   }
 
   canvas {
-    height: calc(100svh - 72px - env(safe-area-inset-top));
     border-radius: 18px;
   }
 

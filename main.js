@@ -566,7 +566,21 @@ function renderUpgradeTree() {
   ui.upgradeTree.innerHTML = "";
   const canvasEl = document.createElement("div");
   canvasEl.className = "tree-canvas";
-  for (const node of upgradeNodes) {
+  const visibleNodes = upgradeNodes.filter(nodeVisible);
+  const compactLandscape = window.matchMedia("(hover: none) and (pointer: coarse) and (orientation: landscape)").matches;
+  const scale = compactLandscape ? 0.8 : 1;
+  const nodeSize = 96 * scale;
+  const nodeHalf = nodeSize / 2;
+  const maxNodeX = visibleNodes.reduce((max, node) => Math.max(max, node.x), 0);
+  const maxNodeY = visibleNodes.reduce((max, node) => Math.max(max, node.y), 0);
+  const canvasWidth = Math.ceil((maxNodeX + 96 + 56) * scale);
+  const canvasHeight = Math.ceil((maxNodeY + 96 + 56) * scale);
+  canvasEl.style.width = `${canvasWidth}px`;
+  canvasEl.style.height = `${canvasHeight}px`;
+  canvasEl.style.setProperty("--tree-node-size", `${nodeSize}px`);
+  if (compactLandscape) canvasEl.classList.add("compact");
+
+  for (const node of visibleNodes) {
     if (!nodeVisible(node)) continue;
     for (const depId of node.requires) {
       const dep = upgradeNodes.find((entry) => entry.id === depId);
@@ -576,11 +590,11 @@ function renderUpgradeTree() {
       const distance = Math.hypot(dx, dy);
       const dirX = distance === 0 ? 0 : dx / distance;
       const dirY = distance === 0 ? 0 : dy / distance;
-      const nodeInset = 48;
-      const startX = dep.x + 48 + dirX * nodeInset;
-      const startY = dep.y + 48 + dirY * nodeInset;
-      const endX = node.x + 48 - dirX * nodeInset;
-      const endY = node.y + 48 - dirY * nodeInset;
+      const nodeInset = nodeHalf;
+      const startX = dep.x * scale + nodeHalf + dirX * nodeInset;
+      const startY = dep.y * scale + nodeHalf + dirY * nodeInset;
+      const endX = node.x * scale + nodeHalf - dirX * nodeInset;
+      const endY = node.y * scale + nodeHalf - dirY * nodeInset;
       const lineDx = endX - startX;
       const lineDy = endY - startY;
       const line = document.createElement("div");
@@ -592,15 +606,14 @@ function renderUpgradeTree() {
       canvasEl.appendChild(line);
     }
   }
-  for (const node of upgradeNodes) {
-    if (!nodeVisible(node)) continue;
+  for (const node of visibleNodes) {
     const button = document.createElement("button");
     const purchased = !!progress.upgrades[node.id];
     const unlocked = purchased || nodeUnlocked(node);
     const firstReveal = unlocked && !revealedTreeNodes.has(node.id);
     button.className = `tree-node${purchased ? " purchased" : ""}${unlocked ? "" : " locked"}${firstReveal ? " reveal" : ""}`;
-    button.style.left = `${node.x}px`;
-    button.style.top = `${node.y}px`;
+    button.style.left = `${node.x * scale}px`;
+    button.style.top = `${node.y * scale}px`;
     button.disabled = purchased || !unlocked || !canAffordCost(progress.bank, node.cost);
     button.innerHTML = `
       <div class="node-inner">
@@ -1160,9 +1173,11 @@ function syncUi() {
   ui.bank.textContent = formatMaterials(progress.bank);
   ui.cargo.textContent = `${fmt(sumCargo(state.ship.cargo))} / ${fmt(state.ship.cargoCap)}`;
   ui.sortie.textContent = `#${progress.sortie}`;
-  ui.fuelBar.style.width = `${(state.ship.fuel / state.ship.fuelMax) * 100}%`;
+  const fuelRatio = state.ship.fuel / state.ship.fuelMax;
+  ui.fuelBar.style.width = `${fuelRatio * 100}%`;
   ui.hpBar.style.width = `${(state.ship.hp / state.ship.hpMax) * 100}%`;
   ui.dockBar.style.width = `${(state.dock.timer / state.dock.needed) * 100}%`;
+  ui.fuelBar.parentElement?.classList.toggle("low", fuelRatio <= 0.18);
   ui.recentCargoValue.textContent = formatMaterials(progress.lastDeliveredCargo);
   ui.hangarBankValue.textContent = formatMaterials(progress.bank);
   ui.hangarStatus.textContent = progress.lastStatus;
@@ -1291,6 +1306,7 @@ function setupStick(element, { onMove, onStart, onEnd }) {
     onMove(x, y);
   }
   element.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
     ensureAudio()?.resume?.();
     pointerId = event.pointerId;
     element.setPointerCapture(pointerId);
@@ -1299,13 +1315,18 @@ function setupStick(element, { onMove, onStart, onEnd }) {
   });
   element.addEventListener("pointermove", (event) => {
     if (pointerId !== event.pointerId) return;
+    event.preventDefault();
     update(event.clientX, event.clientY);
   });
   element.addEventListener("pointerup", (event) => {
     if (pointerId !== event.pointerId) return;
+    event.preventDefault();
     reset();
   });
-  element.addEventListener("pointercancel", reset);
+  element.addEventListener("pointercancel", (event) => {
+    event.preventDefault();
+    reset();
+  });
 }
 
 setupStick(ui.moveStick, {
@@ -1341,6 +1362,48 @@ ui.dashTouchBtn.addEventListener("click", () => {
   playUiClick();
   state.input.dashQueued = true;
 });
+
+function blockIOSGameGestures() {
+  const targets = [
+    canvas,
+    ui.mobileControls,
+    ui.moveStick,
+    ui.aimStick,
+    ui.dashTouchBtn,
+  ].filter(Boolean);
+
+  for (const element of targets) {
+    element.addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
+    element.addEventListener(
+      "touchstart",
+      (event) => {
+        event.preventDefault();
+      },
+      { passive: false },
+    );
+
+    element.addEventListener(
+      "touchmove",
+      (event) => {
+        event.preventDefault();
+      },
+      { passive: false },
+    );
+
+    element.addEventListener(
+      "gesturestart",
+      (event) => {
+        event.preventDefault();
+      },
+      { passive: false },
+    );
+  }
+}
+
+blockIOSGameGestures();
 
 window.render_game_to_text = () =>
   JSON.stringify({
@@ -1396,7 +1459,10 @@ applyUpgrades();
 renderUpgradeTree();
 syncUi();
 requestAnimationFrame(frame);
-window.addEventListener("resize", resize);
+window.addEventListener("resize", () => {
+  resize();
+  if (state.mode === "hangar") renderUpgradeTree();
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
