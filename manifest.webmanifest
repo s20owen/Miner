@@ -1,0 +1,17 @@
+{
+  "name": "Orbit Mine",
+  "short_name": "Orbit Mine",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#06010d",
+  "theme_color": "#06010d",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

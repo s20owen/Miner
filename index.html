@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#06010d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <link rel="apple-touch-icon" href="apple-launch-1125x2436.png" />
+    <link rel="apple-touch-startup-image" href="apple-launch-1125x2436.png">
+    <link rel="apple-touch-startup-image" href="apple-launch-1179x2556.png">
+    <title>Orbit Mine</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">Neon orbital mining run</p>
+          <h1>Orbit Mine</h1>
+        </div>
+        <div class="top-actions">
+          <button id="settings-open-btn" class="ui-btn">Settings</button>
+        </div>
+      </header>
+
+      <main class="viewport">
+        <canvas id="game" width="1280" height="720"></canvas>
+
+        <section id="title-screen" class="overlay menu-screen visible">
+          <div class="menu-card">
+            <p class="eyebrow">Twin-stick mining prototype</p>
+            <h2>Orbit Mine</h2>
+            <div class="menu-actions">
+              <button id="start-btn" class="ui-btn primary large">Start</button>
+              <button id="continue-btn" class="ui-btn large">Continue</button>
+              <button id="settings-btn" class="ui-btn large">Settings</button>
+              <button id="quit-btn" class="ui-btn large">Quit</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="settings-screen" class="overlay modal-screen">
+          <div class="modal-card">
+            <p class="eyebrow">Settings</p>
+            <h3>System Panel</h3>
+            <div class="settings-copy">
+              <p><strong>Desktop:</strong> move with `WASD` or arrows, aim with the mouse, hold click to fire, `Space` to dash, `Q` to switch weapon.</p>
+              <p><strong>Mobile:</strong> left stick moves, right stick aims and fires, and the dash pill gives a quick burst away from blocks.</p>
+              <p><strong>Install:</strong> add Orbit Mine to your home screen to run it as a landscape PWA on iPhone.</p>
+            </div>
+            <button id="settings-close-btn" class="ui-btn primary">Back</button>
+          </div>
+        </section>
+
+        <section id="tip-screen" class="overlay tip-screen">
+          <div class="tip-card">
+            <p class="tip-step">3 / 4</p>
+            <h3>Danger</h3>
+            <p>
+              Crashing into blocks or running out of fuel costs resources.
+              Cargo full? Mining continues, but you earn no more ore.
+            </p>
+            <p>
+              Return to the docking ring above the planet and hold position for
+              3 seconds to extract safely.
+            </p>
+            <button id="tip-close-btn" class="ui-btn primary">Continue</button>
+          </div>
+        </section>
+
+        <section id="hangar-screen" class="overlay hangar-screen">
+          <div class="hangar-launch">
+            <button id="launch-sortie-btn" class="ui-btn primary">Start New Sortie</button>
+          </div>
+          <div class="hangar-summary">
+            <div class="hangar-stat">
+              <span>Recent Sortie</span>
+              <strong id="recent-cargo-value">0 ore</strong>
+            </div>
+            <div class="hangar-stat">
+              <span>Available Currency</span>
+              <strong id="hangar-bank-value">0 ore</strong>
+            </div>
+          </div>
+          <div id="hangar-status" class="hangar-status"></div>
+          <div id="upgrade-tree" class="upgrade-tree"></div>
+        </section>
+
+        <div class="hud hud-left">
+          <div class="hud-chip"><span>Bank</span><strong id="bank-value">0</strong></div>
+          <div class="hud-chip"><span>Cargo</span><strong id="cargo-value">0 / 0</strong></div>
+          <div class="hud-chip"><span>Sortie</span><strong id="sortie-value">#1</strong></div>
+        </div>
+
+        <div class="hud hud-right">
+          <div class="bar-block">
+            <span>Fuel</span>
+            <div class="bar fuel"><i id="fuel-bar"></i></div>
+          </div>
+          <div class="bar-block">
+            <span>Hull</span>
+            <div class="bar hull"><i id="hp-bar"></i></div>
+          </div>
+          <div class="bar-block">
+            <span>Dock</span>
+            <div class="bar dock"><i id="dock-bar"></i></div>
+          </div>
+        </div>
+
+        <div class="mobile-controls">
+          <div class="stick-group">
+            <div class="stick-label">Move</div>
+            <div id="move-stick" class="stick-pad">
+              <div class="stick-ring"></div>
+              <div class="stick-knob"></div>
+            </div>
+          </div>
+          <div class="mobile-actions">
+            <button id="dash-touch-btn" class="touch-btn">Dash</button>
+          </div>
+          <div class="stick-group">
+            <div class="stick-label">Aim</div>
+            <div id="aim-stick" class="stick-pad">
+              <div class="stick-ring"></div>
+              <div class="stick-knob"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-banner">
+          <span id="status-text">Dock, mine, and bring the cargo back alive.</span>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
