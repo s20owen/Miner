@@ -1184,12 +1184,14 @@ function syncUi() {
   ui.continueBtn.disabled = progress.sortie === 1 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
   const inGameplay = state.mode === "sortie";
   const inMenu = state.mode === "menu";
+  const inHangar = state.mode === "hangar";
   ui.topbar.classList.toggle("hidden", !inGameplay);
   ui.hudLeft.classList.toggle("hidden", !inGameplay);
   ui.hudRight.classList.toggle("hidden", !inGameplay);
   ui.mobileControls.classList.toggle("hidden", !inGameplay);
   ui.statusBanner.classList.toggle("hidden", !inGameplay);
   ui.title.classList.toggle("visible", inMenu);
+  ui.hangarScreen.classList.toggle("visible", inHangar);
 }
 
 function resize() {
@@ -1461,6 +1463,7 @@ syncUi();
 requestAnimationFrame(frame);
 window.addEventListener("resize", () => {
   resize();
+  syncUi();
   if (state.mode === "hangar") renderUpgradeTree();
 });
 
