@@ -159,10 +159,6 @@ canvas,
   border-radius: 28px;
 }
 
-.overlay.visible {
-  display: block;
-}
-
 .menu-screen {
   display: none;
   place-items: center;

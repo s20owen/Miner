@@ -465,6 +465,7 @@ function startNewGame() {
   resetSortie();
   state.mode = "tip";
   state.hangarMessage = "Fresh contract accepted.";
+  hideOverlays();
   ui.tipScreen.classList.add("visible");
   syncUi();
   resize();
@@ -487,7 +488,6 @@ function startSortie() {
 function sendToHangar(success) {
   state.mode = "hangar";
   hideOverlays();
-  ui.hangarScreen.classList.add("visible");
   const delivered = success ? state.ship.cargo : 0;
   if (success) {
     progress.bank.ore += delivered.ore || 0;
@@ -1192,6 +1192,7 @@ function syncUi() {
   ui.statusBanner.classList.toggle("hidden", !inGameplay);
   ui.title.classList.toggle("visible", inMenu);
   ui.hangarScreen.classList.toggle("visible", inHangar);
+  ui.tipScreen.classList.toggle("visible", state.mode === "tip");
 }
 
 function resize() {
@@ -1261,8 +1262,8 @@ ui.continueBtn.addEventListener("click", () => {
   state.mode = "hangar";
   syncUi();
   resize();
+  render();
   renderUpgradeTree();
-  ui.hangarScreen.classList.add("visible");
 });
 ui.settingsBtn.addEventListener("click", showSettings);
 ui.settingsOpenBtn.addEventListener("click", showSettings);
@@ -1271,9 +1272,9 @@ ui.quitBtn.addEventListener("click", () => {
   playUiClick();
   state.mode = "menu";
   hideOverlays();
-  ui.title.classList.add("visible");
   syncUi();
   resize();
+  render();
 });
 ui.tipCloseBtn.addEventListener("click", () => {
   playUiClick();
@@ -1464,7 +1465,9 @@ requestAnimationFrame(frame);
 window.addEventListener("resize", () => {
   resize();
   syncUi();
+  if (state.mode === "sortie") snapCameraToTarget();
   if (state.mode === "hangar") renderUpgradeTree();
+  render();
 });
 
 if ("serviceWorker" in navigator) {
