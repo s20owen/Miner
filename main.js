@@ -982,6 +982,25 @@ function updateDocking(dt) {
 
 function updateCamera(dt) {
   const { targetX, targetY, desiredZoom } = getCameraTarget();
+  const shipScreen = worldToScreen(state.ship.x, state.ship.y);
+  const dockScreen = worldToScreen(state.dock.x, state.dock.y);
+  const offscreenMargin = 120;
+  const shipOffscreen =
+    shipScreen.x < -offscreenMargin ||
+    shipScreen.x > state.width + offscreenMargin ||
+    shipScreen.y < -offscreenMargin ||
+    shipScreen.y > state.height + offscreenMargin;
+  const dockOffscreen =
+    dockScreen.x < -offscreenMargin ||
+    dockScreen.x > state.width + offscreenMargin ||
+    dockScreen.y < -offscreenMargin ||
+    dockScreen.y > state.height + offscreenMargin;
+
+  if (shipOffscreen || dockOffscreen || !Number.isFinite(state.camera.x) || !Number.isFinite(state.camera.y) || !Number.isFinite(state.camera.zoom)) {
+    snapCameraToTarget();
+    return;
+  }
+
   state.camera.x = lerp(state.camera.x, targetX, 5 * dt);
   state.camera.y = lerp(state.camera.y, targetY, 5 * dt);
   state.camera.zoom = lerp(state.camera.zoom, desiredZoom, 3 * dt);
@@ -1183,7 +1202,7 @@ function syncUi() {
   ui.hangarStatus.textContent = progress.lastStatus;
   ui.continueBtn.disabled = progress.sortie === 1 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
   const inGameplay = state.mode === "sortie";
-  const inMenu = state.mode === "menu";
+  const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip";
   const inHangar = state.mode === "hangar";
   ui.topbar.classList.toggle("hidden", !inGameplay);
   ui.hudLeft.classList.toggle("hidden", !inGameplay);
@@ -1472,6 +1491,8 @@ window.addEventListener("resize", () => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => {});
+    navigator.serviceWorker.register("./sw.js").then((registration) => {
+      registration.update().catch(() => {});
+    }).catch(() => {});
   });
 }
