@@ -85,6 +85,19 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function isStandaloneDisplay() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function syncViewportVars() {
+  const viewport = window.visualViewport;
+  const width = Math.round(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 0);
+  const height = Math.round(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 0);
+  document.documentElement.style.setProperty("--app-width", `${width}px`);
+  document.documentElement.style.setProperty("--app-height", `${height}px`);
+  document.body.classList.toggle("is-standalone", isStandaloneDisplay());
+}
+
 function lerp(a, b, t) {
   return a + (b - a) * t;
 }
@@ -1215,6 +1228,7 @@ function syncUi() {
 }
 
 function resize() {
+  syncViewportVars();
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = Math.round(rect.width * dpr);
@@ -1488,6 +1502,22 @@ window.addEventListener("resize", () => {
   if (state.mode === "hangar") renderUpgradeTree();
   render();
 });
+window.addEventListener("orientationchange", () => {
+  window.setTimeout(() => {
+    resize();
+    syncUi();
+    if (state.mode === "sortie") snapCameraToTarget();
+    if (state.mode === "hangar") renderUpgradeTree();
+    render();
+  }, 120);
+});
+window.addEventListener("pageshow", () => {
+  resize();
+  syncUi();
+  render();
+});
+window.visualViewport?.addEventListener("resize", resize);
+window.visualViewport?.addEventListener("scroll", resize);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

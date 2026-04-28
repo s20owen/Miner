@@ -22,7 +22,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  min-height: 100svh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top, rgba(255, 110, 64, 0.18), transparent 30%),
     radial-gradient(circle at bottom right, rgba(88, 223, 255, 0.1), transparent 24%),
@@ -32,9 +32,9 @@ body {
 
 body {
   overflow: hidden;
-  position: fixed;
-  inset: 0;
+  position: relative;
   width: 100%;
+  min-height: var(--app-height, 100dvh);
   background-color: #05010a;
 }
 
@@ -43,7 +43,9 @@ button {
 }
 
 .app-shell {
-  min-height: 100svh;
+  width: var(--app-width, 100vw);
+  height: var(--app-height, 100dvh);
+  min-height: var(--app-height, 100dvh);
   display: grid;
   grid-template-rows: auto 1fr;
   padding:
@@ -117,6 +119,7 @@ button {
 .viewport {
   position: relative;
   min-height: 0;
+  height: 100%;
   padding: 0 14px 0;
 }
 
@@ -820,4 +823,14 @@ canvas,
     padding: 8px 12px;
     font-size: 0.88rem;
   }
+}
+
+body.is-standalone .app-shell {
+  padding-top: max(env(safe-area-inset-top), 6px);
+  padding-bottom: max(env(safe-area-inset-bottom), 6px);
+}
+
+body.is-standalone .viewport {
+  padding-left: 8px;
+  padding-right: 8px;
 }
