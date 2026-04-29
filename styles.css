@@ -262,6 +262,10 @@ canvas,
   font-size: 1.1rem;
 }
 
+.hangar-status.hidden {
+  display: none;
+}
+
 .upgrade-tree {
   position: relative;
   min-height: 0;
@@ -537,6 +541,10 @@ canvas,
   pointer-events: auto;
 }
 
+.mobile-actions {
+  position: absolute;
+}
+
 .stick-group {
   display: grid;
   justify-items: center;
@@ -703,6 +711,8 @@ canvas,
   }
 
   .mobile-actions {
+    left: 12px;
+    bottom: calc(max(env(safe-area-inset-bottom), 10px) + 112px);
     flex: 0 0 auto;
   }
 
@@ -758,9 +768,9 @@ canvas,
   }
 
   .hangar-screen {
-    inset: 8px;
-    padding: 14px;
-    border-radius: 22px;
+    inset: 4px;
+    padding: 10px;
+    border-radius: 18px;
   }
 
   .hangar-screen.visible {
@@ -776,7 +786,7 @@ canvas,
   }
 
   .hangar-launch .ui-btn {
-    padding: 10px 18px;
+    padding: 9px 16px;
   }
 
   .hangar-summary {
@@ -797,8 +807,8 @@ canvas,
 
   .hangar-stat,
   .hangar-status {
-    padding: 12px 14px;
-    border-radius: 16px;
+    padding: 10px 12px;
+    border-radius: 14px;
   }
 
   .hangar-stat strong {
@@ -806,17 +816,17 @@ canvas,
   }
 
   .hangar-status {
-    font-size: 0.98rem;
+    font-size: 0.94rem;
   }
 
   .upgrade-tree {
     min-height: 0;
-    min-height: 520px;
+    min-height: 590px;
     border-radius: 18px;
   }
 
   .tree-canvas {
-    min-height: 560px;
+    min-height: 640px;
   }
 
   .viewport {
@@ -841,6 +851,11 @@ canvas,
   .mobile-controls {
     display: flex;
     bottom: max(env(safe-area-inset-bottom), 8px);
+  }
+
+  .mobile-actions {
+    left: 18px;
+    bottom: calc(max(env(safe-area-inset-bottom), 8px) + 120px);
   }
 
   .stick-pad {

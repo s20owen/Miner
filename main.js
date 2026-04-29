@@ -412,6 +412,8 @@ function makeState() {
     failMode: "",
     failMessage: "",
     failAngle: 0,
+    hangarStatusUntil: 0,
+    treeZoom: 0.72,
     hangarMessage: progress.lastStatus,
   };
 }
@@ -520,15 +522,14 @@ function sendToHangar(success) {
     progress.bank.platinum += delivered.platinum || 0;
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
     progress.lastDeliveredCargo = { ore: delivered.ore || 0, platinum: delivered.platinum || 0 };
-    progress.lastStatus = `Dock successful. Delivered ${formatMaterials(delivered)} to the hangar bank.`;
+    showHangarStatus(`Dock successful. Delivered ${formatMaterials(delivered)} to the hangar bank.`);
     progress.sortie += 1;
   } else {
     progress.lastDeliveredCargo = { ore: 0, platinum: 0 };
-    progress.lastStatus = "Sortie failed. Cargo was lost before docking.";
+    showHangarStatus("Sortie failed. Cargo was lost before docking.");
   }
   progress.hasSeenTip = true;
   saveProgress();
-  state.hangarMessage = progress.lastStatus;
   renderUpgradeTree();
   syncUi();
 }
@@ -575,12 +576,18 @@ function nodeVisible(node) {
   return nodeUnlocked(node);
 }
 
+function showHangarStatus(message, duration = 3.6) {
+  progress.lastStatus = message;
+  state.hangarMessage = message;
+  state.hangarStatusUntil = state.time + duration;
+}
+
 function buyNode(id) {
   const node = upgradeNodes.find((entry) => entry.id === id);
   if (!node || progress.upgrades[id] || !nodeUnlocked(node) || !canAffordCost(progress.bank, node.cost)) return;
   subtractCost(progress.bank, node.cost);
   progress.upgrades[id] = true;
-  progress.lastStatus = `${node.label} installed.`;
+  showHangarStatus(`${node.label} installed.`);
   saveProgress();
   applyUpgrades();
   playUnlock();
@@ -594,7 +601,7 @@ function renderUpgradeTree() {
   canvasEl.className = "tree-canvas";
   const visibleNodes = upgradeNodes.filter(nodeVisible);
   const compactLandscape = window.matchMedia("(hover: none) and (pointer: coarse) and (orientation: landscape)").matches;
-  const scale = compactLandscape ? 0.8 : 1;
+  const scale = compactLandscape ? state.treeZoom : 1;
   const nodeSize = 96 * scale;
   const nodeHalf = nodeSize / 2;
   const maxNodeX = visibleNodes.reduce((max, node) => Math.max(max, node.x), 0);
@@ -654,6 +661,81 @@ function renderUpgradeTree() {
     if (unlocked) revealedTreeNodes.add(node.id);
   }
   ui.upgradeTree.appendChild(canvasEl);
+}
+
+function setupUpgradeTreeZoom() {
+  let pinchDistance = 0;
+  let pinchZoom = 0;
+
+  ui.upgradeTree.addEventListener(
+    "touchstart",
+    (event) => {
+      if (event.touches.length !== 2) return;
+      const [a, b] = event.touches;
+      pinchDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      pinchZoom = state.treeZoom;
+    },
+    { passive: true },
+  );
+
+  ui.upgradeTree.addEventListener(
+    "touchmove",
+    (event) => {
+      if (event.touches.length !== 2) return;
+      const [a, b] = event.touches;
+      const nextDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (!pinchDistance) {
+        pinchDistance = nextDistance;
+        pinchZoom = state.treeZoom;
+        return;
+      }
+      event.preventDefault();
+      const ratio = nextDistance / pinchDistance;
+      state.treeZoom = clamp(pinchZoom * ratio, 0.58, 0.95);
+      renderUpgradeTree();
+    },
+    { passive: false },
+  );
+
+  ui.upgradeTree.addEventListener("touchend", () => {
+    if (ui.upgradeTree.classList.contains("hidden")) return;
+    pinchDistance = 0;
+  });
+}
+
+function setupUpgradeTreePan() {
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let startScrollLeft = 0;
+  let startScrollTop = 0;
+
+  ui.upgradeTree.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (event.target.closest(".tree-node")) return;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    startScrollLeft = ui.upgradeTree.scrollLeft;
+    startScrollTop = ui.upgradeTree.scrollTop;
+    ui.upgradeTree.setPointerCapture(pointerId);
+  });
+
+  ui.upgradeTree.addEventListener("pointermove", (event) => {
+    if (pointerId !== event.pointerId) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    ui.upgradeTree.scrollLeft = startScrollLeft - dx;
+    ui.upgradeTree.scrollTop = startScrollTop - dy;
+  });
+
+  function releasePan(event) {
+    if (pointerId !== event.pointerId) return;
+    pointerId = null;
+  }
+
+  ui.upgradeTree.addEventListener("pointerup", releasePan);
+  ui.upgradeTree.addEventListener("pointercancel", releasePan);
 }
 
 function blockColor(block) {
@@ -1344,6 +1426,7 @@ function syncUi() {
   ui.recentCargoValue.textContent = formatMaterials(progress.lastDeliveredCargo);
   ui.hangarBankValue.textContent = formatMaterials(progress.bank);
   ui.hangarStatus.textContent = progress.lastStatus;
+  ui.hangarStatus.classList.toggle("hidden", state.mode !== "hangar" || state.time > state.hangarStatusUntil);
   ui.continueBtn.disabled = progress.sortie === 1 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
   const inGameplay = state.mode === "sortie";
   const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip";
@@ -1623,6 +1706,8 @@ function frame(now) {
 resize();
 applyUpgrades();
 renderUpgradeTree();
+setupUpgradeTreeZoom();
+setupUpgradeTreePan();
 syncUi();
 requestAnimationFrame(frame);
 window.addEventListener("resize", () => {
