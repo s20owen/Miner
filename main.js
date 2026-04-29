@@ -390,11 +390,11 @@ function makeState() {
       bulletSplashRadius: 0,
       bulletSplashFalloff: 0,
       rateMult: 1,
-      weapon: "blaster",
       hasLaser: false,
       laserDamage: 1,
       laserFuelMult: 1,
       oreMult: 1,
+      facingAngle: 0,
     },
     dock: {
       x: 0,
@@ -412,6 +412,7 @@ function makeState() {
     failMode: "",
     failMessage: "",
     failAngle: 0,
+    laserTarget: null,
     hangarStatusUntil: 0,
     treeZoom: 0.72,
     hangarMessage: progress.lastStatus,
@@ -427,7 +428,10 @@ function getCameraTarget() {
   const targetX = (state.ship.x + state.dock.x) * 0.5;
   const dist = Math.hypot(state.ship.x - state.dock.x, state.ship.y - state.dock.y);
   const desiredZoom = clamp(0.78 - dist / 4200, 0.48, 0.84);
-  const targetY = lerp(state.dock.y, state.ship.y, 0.68);
+  const baseTargetY = lerp(state.dock.y, state.ship.y, 0.68);
+  const safeLowerScreenRatio = 0.72;
+  const minCameraY = state.ship.y - ((safeLowerScreenRatio - 0.5) * state.height) / Math.max(desiredZoom, 0.001);
+  const targetY = Math.max(baseTargetY, minCameraY);
   return { targetX, targetY, desiredZoom };
 }
 
@@ -955,12 +959,12 @@ function shipHitsBlock() {
 
 function spawnBullet() {
   const stats = WEAPON_STATS.blaster;
-  const dirLen = Math.hypot(state.input.aimX, state.input.aimY) || 1;
   const angleJitter = rand(-stats.spread, stats.spread);
+  const facingAngle = state.ship.facingAngle + angleJitter;
   const cos = Math.cos(angleJitter);
   const sin = Math.sin(angleJitter);
-  const dx = state.input.aimX / dirLen;
-  const dy = state.input.aimY / dirLen;
+  const dx = Math.cos(state.ship.facingAngle);
+  const dy = Math.sin(state.ship.facingAngle);
   const dirX = dx * cos - dy * sin;
   const dirY = dx * sin + dy * cos;
   state.bullets.push({
@@ -982,9 +986,38 @@ function failSortie(message) {
   sendToHangar(false);
 }
 
+function getNearestLaserTarget() {
+  if (!state.ship.hasLaser) return null;
+  const maxRange = WEAPON_STATS.laser.range;
+  const maxRangeSq = maxRange * maxRange;
+  let closest = null;
+  let closestDistSq = maxRangeSq;
+  const bounds = {
+    left: state.ship.x - maxRange,
+    right: state.ship.x + maxRange,
+    top: state.ship.y - maxRange,
+    bottom: state.ship.y + maxRange,
+  };
+  for (const block of state.planet.blocks) {
+    if (!block.alive) continue;
+    if (block.x < bounds.left || block.x > bounds.right || block.y < bounds.top || block.y > bounds.bottom) continue;
+    const dx = block.x - state.ship.x;
+    const dy = block.y - state.ship.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < closestDistSq) {
+      closestDistSq = distSq;
+      closest = block;
+    }
+  }
+  return closest;
+}
+
 function updateShip(dt) {
   const move = getMoveAxis();
   const ship = state.ship;
+  if (Math.hypot(state.input.aimX, state.input.aimY) > 0.001) {
+    ship.facingAngle = Math.atan2(state.input.aimY, state.input.aimX);
+  }
   state.damageShake = Math.max(0, state.damageShake - dt * 5);
   if (state.wreckTimer > 0) {
     if (state.failMode === "damage") {
@@ -1092,31 +1125,22 @@ function updateShip(dt) {
 function updateWeapons(dt) {
   const ship = state.ship;
   ship.fireCooldown = Math.max(0, ship.fireCooldown - dt);
+  state.laserTarget = null;
   if (!state.input.firing) return;
 
-  if (ship.weapon === "blaster") {
-    const rate = WEAPON_STATS.blaster.rate * ship.rateMult;
-    if (ship.fireCooldown <= 0) {
-      spawnBullet();
-      ship.fireCooldown = rate;
-    }
-  } else if (ship.weapon === "laser" && ship.hasLaser) {
+  const rate = WEAPON_STATS.blaster.rate * ship.rateMult;
+  if (ship.fireCooldown <= 0) {
+    spawnBullet();
+    ship.fireCooldown = rate;
+  }
+
+  if (ship.hasLaser) {
+    const targetBlock = getNearestLaserTarget();
+    state.laserTarget = targetBlock;
+    if (!targetBlock) return;
     const fuelCost = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * dt;
     ship.fuel = Math.max(0, ship.fuel - fuelCost);
-    const aimLen = Math.hypot(state.input.aimX, state.input.aimY) || 1;
-    const dx = state.input.aimX / aimLen;
-    const dy = state.input.aimY / aimLen;
-    const steps = Math.floor(WEAPON_STATS.laser.range / (BLOCK_SIZE * 0.4));
-    for (let i = 1; i <= steps; i += 1) {
-      const x = ship.x + dx * i * BLOCK_SIZE * 0.4;
-      const y = ship.y + dy * i * BLOCK_SIZE * 0.4;
-      const key = `${Math.floor(x / BLOCK_SIZE)},${Math.floor(y / BLOCK_SIZE)}`;
-      const block = state.planet.map.get(key);
-      if (block && block.alive) {
-        pickupBlockDamage(block, WEAPON_STATS.laser.damagePerSecond * ship.laserDamage * dt);
-        break;
-      }
-    }
+    pickupBlockDamage(targetBlock, WEAPON_STATS.laser.damagePerSecond * ship.laserDamage * dt);
   }
 }
 
@@ -1232,12 +1256,6 @@ function updateCamera(dt) {
   state.camera.x = lerp(state.camera.x, targetX, 5 * dt);
   state.camera.y = lerp(state.camera.y, targetY, 5 * dt);
   state.camera.zoom = lerp(state.camera.zoom, desiredZoom, 3 * dt);
-
-  const shipVisibleY = (state.ship.y - state.camera.y) * state.camera.zoom + state.height / 2;
-  const lowerLimit = state.height * 0.76;
-  if (shipVisibleY > lowerLimit) {
-    state.camera.y += (shipVisibleY - lowerLimit) / Math.max(state.camera.zoom, 0.001);
-  }
 }
 
 function updateStatusText() {
@@ -1309,7 +1327,9 @@ function drawBackground() {
     ctx.rotate(obj.rotation + state.time * obj.drift * 0.05);
     if (obj.type === "diamond") {
       ctx.fillStyle = `rgba(88, 223, 255, ${obj.alpha})`;
-      ctx.fillRect(-obj.size * 0.5, -obj.size * 0.5, obj.size, obj.size);
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.size * 0.52, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       const orb = ctx.createRadialGradient(0, 0, 0, 0, 0, obj.size);
       orb.addColorStop(0, `rgba(255, 214, 132, ${obj.alpha})`);
@@ -1329,7 +1349,9 @@ function drawBackground() {
     const y = (star.y - offsetY * star.depth * 18 + state.height * 3) % state.height;
     const alpha = star.alpha * (0.72 + Math.sin(state.time * star.pulse + i * 0.37) * 0.16);
     ctx.fillStyle = `rgba(${star.color}, ${alpha})`;
-    ctx.fillRect(x, y, star.size, star.size);
+    ctx.beginPath();
+    ctx.arc(x, y, star.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -1398,12 +1420,9 @@ function drawBullets() {
 }
 
 function drawLaser() {
-  if (state.mode !== "sortie" || !state.input.firing || state.ship.weapon !== "laser" || !state.ship.hasLaser) return;
-  const aimLen = Math.hypot(state.input.aimX, state.input.aimY) || 1;
-  const dx = state.input.aimX / aimLen;
-  const dy = state.input.aimY / aimLen;
+  if (state.mode !== "sortie" || !state.input.firing || !state.ship.hasLaser || !state.laserTarget) return;
   const start = worldToScreen(state.ship.x, state.ship.y);
-  const end = worldToScreen(state.ship.x + dx * WEAPON_STATS.laser.range, state.ship.y + dy * WEAPON_STATS.laser.range);
+  const end = worldToScreen(state.laserTarget.x, state.laserTarget.y);
   ctx.beginPath();
   ctx.moveTo(start.x, start.y);
   ctx.lineTo(end.x, end.y);
@@ -1437,7 +1456,7 @@ function drawParticles() {
 
 function drawShip() {
   const ship = worldToScreen(state.ship.x, state.ship.y);
-  const angle = state.wreckTimer > 0 ? state.failAngle : Math.atan2(state.input.aimY, state.input.aimX);
+  const angle = state.wreckTimer > 0 ? state.failAngle : state.ship.facingAngle;
   const alpha = state.failMode === "fuel" && state.wreckTimer > 0 ? clamp(state.wreckTimer / 1.1, 0.35, 1) : 1;
   ctx.save();
   ctx.translate(ship.x, ship.y);
@@ -1557,9 +1576,6 @@ window.addEventListener("keydown", (event) => {
   if (event.code === "Tab") {
     if (state.mode !== "sortie") toggleHangar();
     event.preventDefault();
-  }
-  if (event.code === "KeyQ" && state.ship.hasLaser) {
-    state.ship.weapon = state.ship.weapon === "blaster" ? "laser" : "blaster";
   }
   if (event.code === "KeyF") {
     if (document.fullscreenElement) document.exitFullscreen();
@@ -1734,7 +1750,7 @@ window.render_game_to_text = () =>
       hp: Number(state.ship.hp.toFixed(1)),
       cargo: state.ship.cargo,
       cargoCap: state.ship.cargoCap,
-      weapon: state.ship.weapon,
+      laserOnline: state.ship.hasLaser,
     },
     dock: {
       x: state.dock.x,
