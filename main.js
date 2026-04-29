@@ -43,8 +43,10 @@ const SAVE_KEY = "orbit-mine-save-v1";
 
 const WEAPON_STATS = {
   blaster: { rate: 0.34, bulletSpeed: 780, shotFuel: 0.6, spread: 0.02, life: 0.5 },
-  laser: { shotFuel: 9, range: 320, damagePerSecond: 5.2 },
+  laser: { shotFuel: 7.4, range: 320, damagePerSecond: 5.2 },
 };
+
+const MATERIAL_TYPES = ["ore", "platinum", "crystal"];
 
 const audio = {
   ctx: null,
@@ -52,34 +54,31 @@ const audio = {
   enabled: true,
 };
 
-function cost(ore, platinum = 0) {
-  return { ore, platinum };
+function cost(ore = 0, platinum = 0, crystal = 0) {
+  return { ore, platinum, crystal };
 }
 
 const upgradeNodes = [
-  { id: "fuel1", x: 90, y: 90, label: "Fuel Tank", symbol: "⛽", cost: cost(45), requires: [], effect: { fuelMax: 15 } },
-  { id: "cargo1", x: 250, y: 90, label: "Cargo Rack", symbol: "◫", cost: cost(50), requires: ["fuel1"], effect: { cargoCap: 8 } },
-  { id: "fire1", x: 410, y: 90, label: "Fire Rate", symbol: "»", cost: cost(70), requires: ["cargo1"], effect: { rateMult: 0.9 } },
-  { id: "laser", x: 570, y: 90, label: "Unlock Laser", symbol: "⚡", cost: cost(140), requires: ["fire1"], effect: { unlockLaser: true } },
-  { id: "laser2", x: 730, y: 90, label: "Laser Focus", symbol: "◎", cost: cost(120, 8), requires: ["laser"], effect: { laserDamage: 1.35 } },
-  { id: "fuel2", x: 890, y: 90, label: "Fuel Tank II", symbol: "⛽", cost: cost(110, 10), requires: ["laser2"], effect: { fuelMax: 18 } },
-  { id: "hull1", x: 90, y: 250, label: "Hull Plate", symbol: "🛡", cost: cost(55), requires: ["fuel1"], effect: { hpMax: 12 } },
-  { id: "magnet1", x: 250, y: 250, label: "Magnet", symbol: "🧲", cost: cost(65), requires: ["cargo1"], effect: { magnet: 10 } },
-  { id: "drill1", x: 410, y: 250, label: "Bullet Force", symbol: "✦", cost: cost(85), requires: ["fire1"], effect: { bulletDamage: 1 } },
-  { id: "laserFuel", x: 570, y: 250, label: "Laser Saver", symbol: "💧", cost: cost(120, 6), requires: ["laser"], effect: { laserFuelMult: 0.8 } },
-  { id: "cargo2", x: 250, y: 410, label: "Cargo Rack II", symbol: "◫", cost: cost(140), requires: ["magnet1"], effect: { cargoCap: 9 } },
-  { id: "ore1", x: 250, y: 570, label: "Refinery", symbol: "$", cost: cost(130), requires: ["cargo2"], effect: { cargoCap: 6 } },
-  { id: "dash1", x: 90, y: 570, label: "Dash", symbol: "➜", cost: cost(70), requires: ["hull2"], effect: { dash: true } },
-  { id: "thrust1", x: 250, y: 730, label: "Thrusters", symbol: "▲", cost: cost(85), requires: ["dash1"], effect: { thrust: 18 } },
-  { id: "dock1", x: 410, y: 730, label: "Dock Clamp", symbol: "⌂", cost: cost(90), requires: ["dash1"], effect: { dockRate: 1.35 } },
-  { id: "hull2", x: 90, y: 410, label: "Hull Plate II", symbol: "🛡", cost: cost(100, 8), requires: ["hull1"], effect: { hpMax: 16 } },
-  { id: "fire2", x: 410, y: 410, label: "Fire Rate II", symbol: "»", cost: cost(105, 10), requires: ["drill1"], effect: { rateMult: 0.86 } },
-  { id: "fuel3", x: 890, y: 250, label: "Fuel Tank III", symbol: "⛽", cost: cost(150, 16), requires: ["fuel2"], effect: { fuelMax: 22 } },
-  { id: "range1", x: 570, y: 410, label: "Range Boost", symbol: "⇢", cost: cost(112, 10), requires: ["drill1"], effect: { bulletLifeMult: 1.35 } },
-  { id: "splash1", x: 730, y: 410, label: "Blast Rounds", symbol: "✺", cost: cost(140, 24), requires: ["drill1"], effect: { splashRadius: 18, splashFalloff: 0.35 } },
-  { id: "fire3", x: 410, y: 570, label: "Fire Rate III", symbol: "»", cost: cost(120, 18), requires: ["fire2"], effect: { rateMult: 0.8 } },
-  { id: "range2", x: 570, y: 570, label: "Longshot Shells", symbol: "⇢", cost: cost(138, 18), requires: ["range1"], effect: { bulletLifeMult: 1.35 } },
-  { id: "splash2", x: 730, y: 570, label: "AOE Core", symbol: "✹", cost: cost(180, 32), requires: ["splash1"], effect: { splashRadius: 28, splashFalloff: 0.55 } },
+  { id: "hull1", x: 80, y: 90, label: "Hull Plate", symbol: "🛡", cost: cost(42), requires: [], effect: { hpMax: 10 } },
+  { id: "hull2", x: 80, y: 240, label: "Impact Dampers", symbol: "⛨", cost: cost(56), requires: ["hull1"], effect: { collisionCostMult: 0.88 } },
+  { id: "thrust1", x: 80, y: 390, label: "Thrusters", symbol: "▲", cost: cost(68), requires: ["hull2"], effect: { thrust: 14 } },
+  { id: "dash1", x: 80, y: 540, label: "Dash Jets", symbol: "➜", cost: cost(82), requires: ["thrust1"], effect: { dash: true } },
+  { id: "reactive1", x: 80, y: 690, label: "Reactive Weave", symbol: "🛡", cost: cost(108, 8), requires: ["dash1"], effect: { hpMax: 18 } },
+  { id: "combatCore", x: 80, y: 840, label: "Crystal Dampers", symbol: "◈", cost: cost(138, 12, 4), requires: ["reactive1"], effect: { collisionCostMult: 0.74 } },
+
+  { id: "fire1", x: 340, y: 90, label: "Fire Rate", symbol: "»", cost: cost(46), requires: [], effect: { rateMult: 0.94 } },
+  { id: "drill1", x: 340, y: 240, label: "Bullet Force", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.5 } },
+  { id: "laser", x: 340, y: 390, label: "Unlock Laser", symbol: "⚡", cost: cost(94), requires: ["drill1"], effect: { unlockLaser: true } },
+  { id: "range1", x: 340, y: 540, label: "Range Boost", symbol: "⇢", cost: cost(106), requires: ["laser"], effect: { bulletLifeMult: 1.18 } },
+  { id: "laser2", x: 340, y: 690, label: "Laser Focus", symbol: "◎", cost: cost(122, 10), requires: ["range1"], effect: { laserDamage: 1.32 } },
+  { id: "splash2", x: 340, y: 840, label: "Crystal Array", symbol: "✹", cost: cost(148, 12, 4), requires: ["laser2"], effect: { splashRadius: 20, splashFalloff: 0.3 } },
+
+  { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
+  { id: "cargo1", x: 600, y: 240, label: "Cargo Rack", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
+  { id: "magnet1", x: 600, y: 390, label: "Magnet", symbol: "🧲", cost: cost(66), requires: ["cargo1"], effect: { magnet: 8 } },
+  { id: "dock1", x: 600, y: 540, label: "Dock Clamp", symbol: "⌂", cost: cost(80), requires: ["magnet1"], effect: { dockRate: 1.18 } },
+  { id: "cargo2", x: 600, y: 690, label: "Platinum Bins", symbol: "⬒", cost: cost(104, 8), requires: ["dock1"], effect: { cargoCap: 8 } },
+  { id: "fuel2", x: 600, y: 840, label: "Crystal Reservoir", symbol: "◌", cost: cost(136, 10, 4), requires: ["cargo2"], effect: { fuelMax: 20 } },
 ];
 
 function clamp(value, min, max) {
@@ -113,24 +112,30 @@ function fmt(num) {
   return `${Math.floor(num)}`;
 }
 
+function emptyMaterials() {
+  return { ore: 0, platinum: 0, crystal: 0 };
+}
+
 function sumCargo(cargo) {
-  return (cargo.ore || 0) + (cargo.platinum || 0);
+  return MATERIAL_TYPES.reduce((sum, material) => sum + (cargo[material] || 0), 0);
 }
 
 function formatMaterials(materials) {
   const parts = [];
-  if (materials.ore) parts.push(`${fmt(materials.ore)} ore`);
-  if (materials.platinum) parts.push(`${fmt(materials.platinum)} platinum`);
+  for (const material of MATERIAL_TYPES) {
+    if (materials[material]) parts.push(`${fmt(materials[material])} ${material}`);
+  }
   return parts.length ? parts.join(" • ") : "0 ore";
 }
 
 function canAffordCost(bank, nodeCost) {
-  return (bank.ore || 0) >= (nodeCost.ore || 0) && (bank.platinum || 0) >= (nodeCost.platinum || 0);
+  return MATERIAL_TYPES.every((material) => (bank[material] || 0) >= (nodeCost[material] || 0));
 }
 
 function subtractCost(bank, nodeCost) {
-  bank.ore -= nodeCost.ore || 0;
-  bank.platinum -= nodeCost.platinum || 0;
+  for (const material of MATERIAL_TYPES) {
+    bank[material] -= nodeCost[material] || 0;
+  }
 }
 
 function formatCost(nodeCost) {
@@ -154,6 +159,12 @@ function previewTextForNode(node, purchased) {
     const after = purchased ? state.ship.hpMax : state.ship.hpMax + effect.hpMax;
     return `${before} -> ${after} hull`;
   }
+  if (effect.collisionCostMult) {
+    const current = state.ship.collisionCostMult;
+    const before = purchased ? current / effect.collisionCostMult : current;
+    const after = purchased ? current : current * effect.collisionCostMult;
+    return `${Math.round(before * 100)}% -> ${Math.round(after * 100)}% crash dmg`;
+  }
   if (effect.magnet) {
     const before = purchased ? state.ship.magnet - effect.magnet : state.ship.magnet;
     const after = purchased ? state.ship.magnet : state.ship.magnet + effect.magnet;
@@ -167,7 +178,7 @@ function previewTextForNode(node, purchased) {
   if (effect.bulletDamage) {
     const before = purchased ? state.ship.bulletDamage - effect.bulletDamage : state.ship.bulletDamage;
     const after = purchased ? state.ship.bulletDamage : state.ship.bulletDamage + effect.bulletDamage;
-    return `${before} -> ${after} dmg`;
+    return `${before.toFixed(1)} -> ${after.toFixed(1)} dmg`;
   }
   if (effect.bulletLifeMult) {
     const current = WEAPON_STATS.blaster.life * WEAPON_STATS.blaster.bulletSpeed * state.ship.bulletLifeMult;
@@ -215,6 +226,26 @@ function previewTextForNode(node, purchased) {
   return purchased ? "Installed" : "Upgrade";
 }
 
+function noise2D(x, y) {
+  const value = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+function blockMaterialAt(depth, gx, gy) {
+  const pocketNoise = noise2D(gx * 0.73, gy * 0.73);
+  const crystalNoise = noise2D(gx * 1.13 + 41, gy * 1.13 - 19);
+
+  if (depth > 0.92) return "crystal";
+  if (depth > 0.8 && crystalNoise > 0.83) return "crystal";
+  if (depth > 0.74) return "platinum";
+
+  const lowerFirstLayerPocket = depth > 0.35 && depth < 0.46 && pocketNoise > 0.968;
+  const midSecondLayerPocket = depth > 0.54 && depth < 0.66 && pocketNoise > 0.942;
+
+  if (lowerFirstLayerPocket || midSecondLayerPocket) return "platinum";
+  return "ore";
+}
+
 function makePlanet() {
   const blocks = [];
   const map = new Map();
@@ -225,7 +256,8 @@ function makePlanet() {
       if (dist > PLANET_RADIUS_BLOCKS || dist < CORE_RADIUS_BLOCKS) continue;
       const depth = 1 - (dist - CORE_RADIUS_BLOCKS) / (PLANET_RADIUS_BLOCKS - CORE_RADIUS_BLOCKS);
       const key = `${gx},${gy}`;
-      const maxHp = depth > 0.74 ? 4 : depth > 0.46 ? 3 : 2;
+      const maxHp = depth > 0.74 ? 5 : depth > 0.46 ? 4 : 3;
+      const material = blockMaterialAt(depth, gx, gy);
       const block = {
         gx,
         gy,
@@ -235,7 +267,7 @@ function makePlanet() {
         maxHp,
         hp: destroyed.has(key) ? 0 : maxHp,
         oreValue: Math.round(2 + depth * 8),
-        material: depth > 0.58 ? "platinum" : "ore",
+        material,
         materialValue: 1,
         alive: !destroyed.has(key),
       };
@@ -248,10 +280,10 @@ function makePlanet() {
 
 function defaultProgress() {
   return {
-    bank: { ore: 0, platinum: 0 },
+    bank: emptyMaterials(),
     sortie: 1,
     bestCargo: 0,
-    lastDeliveredCargo: { ore: 0, platinum: 0 },
+    lastDeliveredCargo: emptyMaterials(),
     destroyedBlocks: [],
     upgrades: {},
     lastStatus: "Start your first sortie.",
@@ -265,13 +297,13 @@ function loadProgress() {
     if (!raw) return defaultProgress();
     const merged = { ...defaultProgress(), ...JSON.parse(raw) };
     if (typeof merged.bankOre === "number" && (!merged.bank || typeof merged.bank !== "object")) {
-      merged.bank = { ore: merged.bankOre, platinum: 0 };
+      merged.bank = { ore: merged.bankOre, platinum: 0, crystal: 0 };
     }
     if (typeof merged.lastDeliveredCargo === "number") {
-      merged.lastDeliveredCargo = { ore: merged.lastDeliveredCargo, platinum: 0 };
+      merged.lastDeliveredCargo = { ore: merged.lastDeliveredCargo, platinum: 0, crystal: 0 };
     }
-    merged.bank = { ore: 0, platinum: 0, ...(merged.bank || {}) };
-    merged.lastDeliveredCargo = { ore: 0, platinum: 0, ...(merged.lastDeliveredCargo || {}) };
+    merged.bank = { ...emptyMaterials(), ...(merged.bank || {}) };
+    merged.lastDeliveredCargo = { ...emptyMaterials(), ...(merged.lastDeliveredCargo || {}) };
     return merged;
   } catch {
     return defaultProgress();
@@ -323,8 +355,8 @@ function playHit() {
 
 function playPickup(material = "ore") {
   playTone({
-    freq: material === "platinum" ? 880 : 700,
-    slideTo: material === "platinum" ? 1120 : 860,
+    freq: material === "crystal" ? 980 : material === "platinum" ? 880 : 700,
+    slideTo: material === "crystal" ? 1380 : material === "platinum" ? 1120 : 860,
     duration: 0.07,
     type: "triangle",
     gain: 0.22,
@@ -378,7 +410,7 @@ function makeState() {
       hpMax: 80,
       hp: 80,
       cargoCap: 28,
-      cargo: { ore: 0, platinum: 0 },
+      cargo: emptyMaterials(),
       magnet: 56,
       thrust: 170,
       dashImpulse: 220,
@@ -394,6 +426,7 @@ function makeState() {
       laserDamage: 1,
       laserFuelMult: 1,
       oreMult: 1,
+      collisionCostMult: 1,
       facingAngle: 0,
     },
     dock: {
@@ -492,6 +525,7 @@ function applyUpgrades() {
   ship.laserDamage = 1;
   ship.laserFuelMult = 1;
   ship.oreMult = 1;
+  ship.collisionCostMult = 1;
 
   for (const node of upgradeNodes) {
     if (!progress.upgrades[node.id]) continue;
@@ -511,6 +545,7 @@ function applyUpgrades() {
     if (effect.laserDamage) ship.laserDamage *= effect.laserDamage;
     if (effect.laserFuelMult) ship.laserFuelMult *= effect.laserFuelMult;
     if (effect.oreMult) ship.oreMult *= effect.oreMult;
+    if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
     if (effect.dash) ship.dashImpulse = 280;
   }
 }
@@ -555,16 +590,17 @@ function startSortie() {
 function sendToHangar(success) {
   state.mode = "hangar";
   hideOverlays();
-  const delivered = success ? state.ship.cargo : 0;
+  const delivered = success ? state.ship.cargo : emptyMaterials();
   if (success) {
-    progress.bank.ore += delivered.ore || 0;
-    progress.bank.platinum += delivered.platinum || 0;
+    for (const material of MATERIAL_TYPES) {
+      progress.bank[material] += delivered[material] || 0;
+    }
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
-    progress.lastDeliveredCargo = { ore: delivered.ore || 0, platinum: delivered.platinum || 0 };
+    progress.lastDeliveredCargo = { ...emptyMaterials(), ...delivered };
     showHangarStatus(`Dock successful. Delivered ${formatMaterials(delivered)} to the hangar bank.`);
     progress.sortie += 1;
   } else {
-    progress.lastDeliveredCargo = { ore: 0, platinum: 0 };
+    progress.lastDeliveredCargo = emptyMaterials();
     showHangarStatus("Sortie failed. Cargo was lost before docking.");
   }
   progress.hasSeenTip = true;
@@ -778,9 +814,9 @@ function setupUpgradeTreePan() {
 }
 
 function blockColor(block) {
-  if (block.maxHp === 2) return block.hp === 2 ? "#ff5d49" : "#67ff8a";
-  if (block.maxHp === 3) return block.hp === 3 ? "#79d7ff" : block.hp === 2 ? "#ff9f47" : "#67ff8a";
-  return block.hp === 4 ? "#7e63ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  if (block.maxHp === 3) return block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  if (block.maxHp === 4) return block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  return block.hp === 5 ? "#7e63ff" : block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
 }
 
 function worldToScreen(x, y) {
@@ -858,6 +894,7 @@ function applySplashDamage(x, y, directKey) {
 
 function spawnPickup(block) {
   const value = 1;
+  const pickupColor = block.material === "crystal" ? "#b494ff" : block.material === "platinum" ? "#79d7ff" : "#ffd24f";
   state.pickups.push({
     x: block.x + rand(-6, 6),
     y: block.y + rand(-6, 6),
@@ -874,7 +911,7 @@ function spawnPickup(block) {
       vx: rand(-110, 110),
       vy: rand(-110, 110),
       life: 0.5,
-      color: "#ffd24f",
+      color: pickupColor,
     });
   }
 }
@@ -1094,8 +1131,8 @@ function updateShip(dt) {
     const separation = BLOCK_SIZE * 0.5 + SHIP_RADIUS + 4;
     ship.x = hit.x + pushX * separation;
     ship.y = hit.y + pushY * separation;
-    ship.hp = Math.max(0, ship.hp - dt * 68);
-    ship.fuel = Math.max(0, ship.fuel - dt * 24);
+    ship.hp = Math.max(0, ship.hp - dt * 68 * ship.collisionCostMult);
+    ship.fuel = Math.max(0, ship.fuel - dt * 24 * lerp(1, ship.collisionCostMult, 0.8));
     ship.vx = pushX * 145;
     ship.vy = pushY * 145;
     state.damageShake = 1;
@@ -1439,7 +1476,7 @@ function drawPickups() {
     const screen = worldToScreen(pickup.x, pickup.y);
     ctx.beginPath();
     ctx.arc(screen.x, screen.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffd24f";
+    ctx.fillStyle = pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
     ctx.fill();
   }
 }
