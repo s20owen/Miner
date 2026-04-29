@@ -415,6 +415,8 @@ function makeState() {
     hangarStatusUntil: 0,
     treeZoom: 0.72,
     hangarMessage: progress.lastStatus,
+    backgroundStars: [],
+    backgroundObjects: [],
   };
 }
 
@@ -423,10 +425,43 @@ const revealedTreeNodes = new Set();
 
 function getCameraTarget() {
   const targetX = (state.ship.x + state.dock.x) * 0.5;
-  const targetY = (state.ship.y + state.dock.y) * 0.5;
   const dist = Math.hypot(state.ship.x - state.dock.x, state.ship.y - state.dock.y);
   const desiredZoom = clamp(0.78 - dist / 4200, 0.48, 0.84);
+  const targetY = lerp(state.dock.y, state.ship.y, 0.68);
   return { targetX, targetY, desiredZoom };
+}
+
+function rebuildBackgroundField() {
+  state.backgroundStars = [];
+  state.backgroundObjects = [];
+
+  const starCount = Math.max(90, Math.round((state.width * state.height) / 17000));
+  const objectCount = Math.max(12, Math.round((state.width * state.height) / 82000));
+
+  for (let i = 0; i < starCount; i += 1) {
+    state.backgroundStars.push({
+      x: rand(0, state.width),
+      y: rand(0, state.height),
+      size: rand(1, 3.6),
+      depth: rand(0.08, 0.34),
+      pulse: rand(0.2, 1.3),
+      color: Math.random() < 0.22 ? "88,223,255" : "255,255,255",
+      alpha: rand(0.45, 0.95),
+    });
+  }
+
+  for (let i = 0; i < objectCount; i += 1) {
+    state.backgroundObjects.push({
+      x: rand(0, state.width),
+      y: rand(0, state.height),
+      size: rand(10, 34),
+      depth: rand(0.03, 0.12),
+      drift: rand(0.08, 0.5),
+      rotation: rand(0, Math.PI * 2),
+      type: Math.random() < 0.5 ? "diamond" : "glow",
+      alpha: rand(0.08, 0.22),
+    });
+  }
 }
 
 function snapCameraToTarget() {
@@ -1197,6 +1232,12 @@ function updateCamera(dt) {
   state.camera.x = lerp(state.camera.x, targetX, 5 * dt);
   state.camera.y = lerp(state.camera.y, targetY, 5 * dt);
   state.camera.zoom = lerp(state.camera.zoom, desiredZoom, 3 * dt);
+
+  const shipVisibleY = (state.ship.y - state.camera.y) * state.camera.zoom + state.height / 2;
+  const lowerLimit = state.height * 0.76;
+  if (shipVisibleY > lowerLimit) {
+    state.camera.y += (shipVisibleY - lowerLimit) / Math.max(state.camera.zoom, 0.001);
+  }
 }
 
 function updateStatusText() {
@@ -1257,11 +1298,38 @@ function drawBackground() {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, state.width, state.height);
 
-  for (let i = 0; i < 70; i += 1) {
-    const x = ((i * 137) % state.width) + Math.sin(state.time * 0.1 + i) * 8;
-    const y = ((i * 97) % state.height) + Math.cos(state.time * 0.12 + i) * 8;
-    ctx.fillStyle = i % 4 === 0 ? "rgba(88,223,255,0.9)" : "rgba(255,255,255,0.7)";
-    ctx.fillRect(x, y, 2, 2);
+  const offsetX = state.camera.x * 0.035;
+  const offsetY = state.camera.y * 0.035;
+  for (let i = 0; i < state.backgroundObjects.length; i += 1) {
+    const obj = state.backgroundObjects[i];
+    const x = (obj.x - offsetX * obj.depth * 7 + state.time * obj.drift * 3 + state.width * 3) % state.width;
+    const y = (obj.y - offsetY * obj.depth * 7 + Math.sin(state.time * 0.08 + i) * 6 + state.height * 3) % state.height;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(obj.rotation + state.time * obj.drift * 0.05);
+    if (obj.type === "diamond") {
+      ctx.fillStyle = `rgba(88, 223, 255, ${obj.alpha})`;
+      ctx.fillRect(-obj.size * 0.5, -obj.size * 0.5, obj.size, obj.size);
+    } else {
+      const orb = ctx.createRadialGradient(0, 0, 0, 0, 0, obj.size);
+      orb.addColorStop(0, `rgba(255, 214, 132, ${obj.alpha})`);
+      orb.addColorStop(0.45, `rgba(255, 130, 88, ${obj.alpha * 0.55})`);
+      orb.addColorStop(1, "rgba(255, 90, 70, 0)");
+      ctx.fillStyle = orb;
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  for (let i = 0; i < state.backgroundStars.length; i += 1) {
+    const star = state.backgroundStars[i];
+    const x = (star.x - offsetX * star.depth * 18 + state.width * 3) % state.width;
+    const y = (star.y - offsetY * star.depth * 18 + state.height * 3) % state.height;
+    const alpha = star.alpha * (0.72 + Math.sin(state.time * star.pulse + i * 0.37) * 0.16);
+    ctx.fillStyle = `rgba(${star.color}, ${alpha})`;
+    ctx.fillRect(x, y, star.size, star.size);
   }
 }
 
@@ -1450,6 +1518,7 @@ function resize() {
   state.width = rect.width;
   state.height = rect.height;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  rebuildBackgroundField();
 }
 
 canvas.addEventListener("mousemove", (event) => {

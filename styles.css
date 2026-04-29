@@ -213,6 +213,7 @@ canvas,
   background: rgba(5, 1, 10, 0.93);
   border: 1px solid rgba(88, 223, 255, 0.18);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .hangar-screen.visible {
@@ -269,7 +270,7 @@ canvas,
 .upgrade-tree {
   position: relative;
   min-height: 0;
-  min-height: 420px;
+  height: 100%;
   border-radius: 22px;
   overflow: auto;
   background:
@@ -280,7 +281,6 @@ canvas,
 .tree-canvas {
   position: relative;
   min-width: 1040px;
-  min-height: 620px;
 }
 
 .tree-line {
@@ -768,7 +768,7 @@ canvas,
   }
 
   .hangar-screen {
-    inset: 4px;
+    inset: 6px;
     padding: 10px;
     border-radius: 18px;
   }
@@ -803,6 +803,10 @@ canvas,
   .upgrade-tree {
     grid-column: 1 / -1;
     grid-row: 3;
+    min-height: 0;
+    height: 100%;
+    border-radius: 18px;
+    align-self: stretch;
   }
 
   .hangar-stat,
@@ -819,14 +823,8 @@ canvas,
     font-size: 0.94rem;
   }
 
-  .upgrade-tree {
-    min-height: 0;
-    min-height: 590px;
-    border-radius: 18px;
-  }
-
   .tree-canvas {
-    min-height: 640px;
+    min-height: 0;
   }
 
   .viewport {
