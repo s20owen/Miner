@@ -12,10 +12,28 @@ const ui = {
   tipScreen: document.getElementById("tip-screen"),
   tipCloseBtn: document.getElementById("tip-close-btn"),
   hangarScreen: document.getElementById("hangar-screen"),
+  resultsScreen: document.getElementById("results-screen"),
   hangarStatus: document.getElementById("hangar-status"),
   recentCargoValue: document.getElementById("recent-cargo-value"),
   hangarBankValue: document.getElementById("hangar-bank-value"),
   upgradeTree: document.getElementById("upgrade-tree"),
+  resultsTitle: document.getElementById("results-title"),
+  resultsSortieLabel: document.getElementById("results-sortie-label"),
+  resultsMinedLabel: document.getElementById("results-mined-label"),
+  resultsBlocks: document.getElementById("results-blocks"),
+  resultsTotalHaul: document.getElementById("results-total-haul"),
+  resultsBankTotal: document.getElementById("results-bank-total"),
+  resultsBulletDamage: document.getElementById("results-bullet-damage"),
+  resultsLaserDamage: document.getElementById("results-laser-damage"),
+  resultsBulletShots: document.getElementById("results-bullet-shots"),
+  resultsLaserPulses: document.getElementById("results-laser-pulses"),
+  resultsOre: document.getElementById("results-ore"),
+  resultsPlatinum: document.getElementById("results-platinum"),
+  resultsCrystal: document.getElementById("results-crystal"),
+  resultsPeakCargo: document.getElementById("results-peak-cargo"),
+  resultsMap: document.getElementById("results-map"),
+  resultsUpgradesBtn: document.getElementById("results-upgrades-btn"),
+  resultsContinueBtn: document.getElementById("results-continue-btn"),
   bank: document.getElementById("bank-value"),
   cargo: document.getElementById("cargo-value"),
   sortie: document.getElementById("sortie-value"),
@@ -42,8 +60,8 @@ const SHIP_RADIUS = 11;
 const SAVE_KEY = "orbit-mine-save-v1";
 
 const WEAPON_STATS = {
-  blaster: { rate: 0.34, bulletSpeed: 780, shotFuel: 0.6, spread: 0.02, life: 0.5 },
-  laser: { shotFuel: 7.4, range: 320, damagePerSecond: 5.2 },
+  blaster: { rate: 0.34, bulletSpeed: 780, shotFuel: 0.50, spread: 0.02, life: 0.5 },
+  laser: { shotFuel: .65, range: 320, pulseDamage: 1.50, cooldown: 0.50, burstLife: 0.08 },
 };
 
 const MATERIAL_TYPES = ["ore", "platinum", "crystal"];
@@ -71,7 +89,7 @@ const upgradeNodes = [
   { id: "laser", x: 340, y: 390, label: "Unlock Laser", symbol: "⚡", cost: cost(94), requires: ["drill1"], effect: { unlockLaser: true } },
   { id: "range1", x: 340, y: 540, label: "Range Boost", symbol: "⇢", cost: cost(106), requires: ["laser"], effect: { bulletLifeMult: 1.18 } },
   { id: "laser2", x: 340, y: 690, label: "Laser Focus", symbol: "◎", cost: cost(122, 10), requires: ["range1"], effect: { laserDamage: 1.32 } },
-  { id: "splash2", x: 340, y: 840, label: "Crystal Array", symbol: "✹", cost: cost(148, 12, 4), requires: ["laser2"], effect: { splashRadius: 20, splashFalloff: 0.3 } },
+  { id: "splash2", x: 340, y: 840, label: "Crystal Array", symbol: "✹", cost: cost(148, 12, 4), requires: ["laser2"], effect: { splashRadius: 20, splashFalloff: 0.3, addLaser: { color: "#73f0ff", damageMult: 0.82 } } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 240, label: "Cargo Rack", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
@@ -222,6 +240,7 @@ function previewTextForNode(node, purchased) {
     return `${before} -> ${after} aoe`;
   }
   if (effect.unlockLaser) return purchased ? "Laser online" : "Unlock laser";
+  if (effect.addLaser) return purchased ? "Beam online" : "Add support beam";
   if (effect.dash) return purchased ? "Dash ready" : "Unlock dash";
   return purchased ? "Installed" : "Upgrade";
 }
@@ -284,6 +303,7 @@ function defaultProgress() {
     sortie: 1,
     bestCargo: 0,
     lastDeliveredCargo: emptyMaterials(),
+    lastSortieReport: null,
     destroyedBlocks: [],
     upgrades: {},
     lastStatus: "Start your first sortie.",
@@ -304,6 +324,7 @@ function loadProgress() {
     }
     merged.bank = { ...emptyMaterials(), ...(merged.bank || {}) };
     merged.lastDeliveredCargo = { ...emptyMaterials(), ...(merged.lastDeliveredCargo || {}) };
+    merged.lastSortieReport = merged.lastSortieReport || null;
     return merged;
   } catch {
     return defaultProgress();
@@ -374,6 +395,23 @@ function saveProgress() {
   localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
 }
 
+function makeSortieReport(success, delivered) {
+  const minedPercent = (state.runStats.blocksMined / Math.max(1, state.planet.totalBlocks)) * 100;
+  return {
+    success,
+    sortieNumber: progress.sortie,
+    blocksMined: state.runStats.blocksMined,
+    minedPercent,
+    delivered: { ...emptyMaterials(), ...delivered },
+    bankAfter: { ...progress.bank },
+    bulletDamage: state.runStats.bulletDamage,
+    laserDamage: state.runStats.laserDamage,
+    bulletShots: state.runStats.bulletShots,
+    laserPulses: state.runStats.laserPulses,
+    peakCargo: state.runStats.peakCargo,
+  };
+}
+
 function makeState() {
   const planet = makePlanet();
   const dockY = -PLANET_RADIUS - 220;
@@ -425,6 +463,8 @@ function makeState() {
       hasLaser: false,
       laserDamage: 1,
       laserFuelMult: 1,
+      laserCooldown: 0,
+      lasers: [],
       oreMult: 1,
       collisionCostMult: 1,
       facingAngle: 0,
@@ -445,12 +485,21 @@ function makeState() {
     failMode: "",
     failMessage: "",
     failAngle: 0,
-    laserTarget: null,
+    laserBursts: [],
     hangarStatusUntil: 0,
     treeZoom: 0.72,
     hangarMessage: progress.lastStatus,
     backgroundStars: [],
     backgroundObjects: [],
+    runStats: {
+      blocksMined: 0,
+      bulletShots: 0,
+      bulletDamage: 0,
+      laserPulses: 0,
+      laserDamage: 0,
+      materials: emptyMaterials(),
+      peakCargo: 0,
+    },
   };
 }
 
@@ -524,6 +573,8 @@ function applyUpgrades() {
   ship.hasLaser = false;
   ship.laserDamage = 1;
   ship.laserFuelMult = 1;
+  ship.laserCooldown = 0;
+  ship.lasers = [];
   ship.oreMult = 1;
   ship.collisionCostMult = 1;
 
@@ -541,9 +592,21 @@ function applyUpgrades() {
     if (effect.splashRadius) ship.bulletSplashRadius = Math.max(ship.bulletSplashRadius, effect.splashRadius);
     if (effect.splashFalloff) ship.bulletSplashFalloff = Math.max(ship.bulletSplashFalloff, effect.splashFalloff);
     if (effect.rateMult) ship.rateMult *= effect.rateMult;
-    if (effect.unlockLaser) ship.hasLaser = true;
+    if (effect.unlockLaser) {
+      ship.hasLaser = true;
+      if (!ship.lasers.some((laser) => laser.id === "amber")) {
+        ship.lasers.push({ id: "amber", color: "#fff1ac", damageMult: 1 });
+      }
+    }
     if (effect.laserDamage) ship.laserDamage *= effect.laserDamage;
     if (effect.laserFuelMult) ship.laserFuelMult *= effect.laserFuelMult;
+    if (effect.addLaser && !ship.lasers.some((laser) => laser.color === effect.addLaser.color)) {
+      ship.lasers.push({
+        id: `laser-${ship.lasers.length + 1}`,
+        color: effect.addLaser.color,
+        damageMult: effect.addLaser.damageMult || 1,
+      });
+    }
     if (effect.oreMult) ship.oreMult *= effect.oreMult;
     if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
     if (effect.dash) ship.dashImpulse = 280;
@@ -588,7 +651,7 @@ function startSortie() {
 }
 
 function sendToHangar(success) {
-  state.mode = "hangar";
+  state.mode = success ? "results" : "hangar";
   hideOverlays();
   const delivered = success ? state.ship.cargo : emptyMaterials();
   if (success) {
@@ -597,15 +660,16 @@ function sendToHangar(success) {
     }
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
     progress.lastDeliveredCargo = { ...emptyMaterials(), ...delivered };
+    progress.lastSortieReport = makeSortieReport(true, delivered);
     showHangarStatus(`Dock successful. Delivered ${formatMaterials(delivered)} to the hangar bank.`);
     progress.sortie += 1;
   } else {
     progress.lastDeliveredCargo = emptyMaterials();
+    progress.lastSortieReport = makeSortieReport(false, emptyMaterials());
     showHangarStatus("Sortie failed. Cargo was lost before docking.");
   }
   progress.hasSeenTip = true;
   saveProgress();
-  renderUpgradeTree();
   syncUi();
 }
 
@@ -625,6 +689,15 @@ function hideOverlays() {
   ui.tipScreen.classList.remove("visible");
   ui.settingsScreen.classList.remove("visible");
   ui.hangarScreen.classList.remove("visible");
+  ui.resultsScreen.classList.remove("visible");
+}
+
+function showHangarScreen() {
+  state.mode = "hangar";
+  hideOverlays();
+  ui.hangarScreen.classList.add("visible");
+  renderUpgradeTree();
+  syncUi();
 }
 
 function toggleHangar() {
@@ -633,10 +706,7 @@ function toggleHangar() {
     state.mode = "menu";
     ui.title.classList.add("visible");
   } else if (state.mode !== "sortie") {
-    state.mode = "hangar";
-    hideOverlays();
-    ui.hangarScreen.classList.add("visible");
-    renderUpgradeTree();
+    showHangarScreen();
   }
   syncUi();
 }
@@ -655,6 +725,12 @@ function showHangarStatus(message, duration = 3.6) {
   progress.lastStatus = message;
   state.hangarMessage = message;
   state.hangarStatusUntil = state.time + duration;
+}
+
+function getNodeTier(node) {
+  if (node.cost.crystal) return "crystal";
+  if (node.cost.platinum) return "platinum";
+  return "ore";
 }
 
 function buyNode(id) {
@@ -719,7 +795,8 @@ function renderUpgradeTree() {
     const purchased = !!progress.upgrades[node.id];
     const unlocked = purchased || nodeUnlocked(node);
     const firstReveal = unlocked && !revealedTreeNodes.has(node.id);
-    button.className = `tree-node${purchased ? " purchased" : ""}${unlocked ? "" : " locked"}${firstReveal ? " reveal" : ""}`;
+    const tier = getNodeTier(node);
+    button.className = `tree-node tier-${tier}${purchased ? " purchased" : ""}${unlocked ? "" : " locked"}${firstReveal ? " reveal" : ""}`;
     button.style.left = `${node.x * scale}px`;
     button.style.top = `${node.y * scale}px`;
     button.disabled = purchased || !unlocked || !canAffordCost(progress.bank, node.cost);
@@ -814,6 +891,12 @@ function setupUpgradeTreePan() {
 }
 
 function blockColor(block) {
+  if (block.material === "crystal") {
+    return block.hp === block.maxHp ? "#ff78dd" : block.hp >= 4 ? "#d06cff" : block.hp === 3 ? "#ff9aef" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  }
+  if (block.material === "platinum") {
+    return block.hp === block.maxHp ? "#79e8ff" : block.hp >= 3 ? "#9dd9ff" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  }
   if (block.maxHp === 3) return block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
   if (block.maxHp === 4) return block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
   return block.hp === 5 ? "#7e63ff" : block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
@@ -851,6 +934,8 @@ function pickupBlockDamage(block, damage) {
   block.hp -= damage;
   if (block.hp <= 0) {
     block.alive = false;
+    state.runStats.blocksMined += 1;
+    state.runStats.materials[block.material] += 1;
     if (!progress.destroyedBlocks.includes(block.key)) {
       progress.destroyedBlocks.push(block.key);
       saveProgress();
@@ -858,6 +943,11 @@ function pickupBlockDamage(block, damage) {
     spawnPickup(block);
   }
   return true;
+}
+
+function recordDamage(source, amount) {
+  if (source === "bullet") state.runStats.bulletDamage += amount;
+  if (source === "laser") state.runStats.laserDamage += amount;
 }
 
 function applySplashDamage(x, y, directKey) {
@@ -997,7 +1087,6 @@ function shipHitsBlock() {
 function spawnBullet() {
   const stats = WEAPON_STATS.blaster;
   const angleJitter = rand(-stats.spread, stats.spread);
-  const facingAngle = state.ship.facingAngle + angleJitter;
   const cos = Math.cos(angleJitter);
   const sin = Math.sin(angleJitter);
   const dx = Math.cos(state.ship.facingAngle);
@@ -1012,6 +1101,7 @@ function spawnBullet() {
     life: stats.life * state.ship.bulletLifeMult,
     damage: state.ship.bulletDamage,
   });
+  state.runStats.bulletShots += 1;
   state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel);
   playShoot();
 }
@@ -1021,32 +1111,6 @@ function failSortie(message) {
   progress.lastStatus = message;
   saveProgress();
   sendToHangar(false);
-}
-
-function getNearestLaserTarget() {
-  if (!state.ship.hasLaser) return null;
-  const maxRange = WEAPON_STATS.laser.range;
-  const maxRangeSq = maxRange * maxRange;
-  let closest = null;
-  let closestDistSq = maxRangeSq;
-  const bounds = {
-    left: state.ship.x - maxRange,
-    right: state.ship.x + maxRange,
-    top: state.ship.y - maxRange,
-    bottom: state.ship.y + maxRange,
-  };
-  for (const block of state.planet.blocks) {
-    if (!block.alive) continue;
-    if (block.x < bounds.left || block.x > bounds.right || block.y < bounds.top || block.y > bounds.bottom) continue;
-    const dx = block.x - state.ship.x;
-    const dy = block.y - state.ship.y;
-    const distSq = dx * dx + dy * dy;
-    if (distSq < closestDistSq) {
-      closestDistSq = distSq;
-      closest = block;
-    }
-  }
-  return closest;
 }
 
 function updateShip(dt) {
@@ -1133,8 +1197,13 @@ function updateShip(dt) {
     ship.y = hit.y + pushY * separation;
     ship.hp = Math.max(0, ship.hp - dt * 68 * ship.collisionCostMult);
     ship.fuel = Math.max(0, ship.fuel - dt * 24 * lerp(1, ship.collisionCostMult, 0.8));
-    ship.vx = pushX * 145;
-    ship.vy = pushY * 145;
+    const normalVelocity = ship.vx * pushX + ship.vy * pushY;
+    if (normalVelocity < 0) {
+      ship.vx -= pushX * normalVelocity;
+      ship.vy -= pushY * normalVelocity;
+    }
+    ship.vx = ship.vx * 0.42 + pushX * 18;
+    ship.vy = ship.vy * 0.42 + pushY * 18;
     state.damageShake = 1;
     playHit();
   }
@@ -1162,7 +1231,7 @@ function updateShip(dt) {
 function updateWeapons(dt) {
   const ship = state.ship;
   ship.fireCooldown = Math.max(0, ship.fireCooldown - dt);
-  state.laserTarget = null;
+  ship.laserCooldown = Math.max(0, ship.laserCooldown - dt);
   if (!state.input.firing) return;
 
   const rate = WEAPON_STATS.blaster.rate * ship.rateMult;
@@ -1171,13 +1240,42 @@ function updateWeapons(dt) {
     ship.fireCooldown = rate;
   }
 
-  if (ship.hasLaser) {
-    const targetBlock = getNearestLaserTarget();
-    state.laserTarget = targetBlock;
-    if (!targetBlock) return;
-    const fuelCost = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * dt;
-    ship.fuel = Math.max(0, ship.fuel - fuelCost);
-    pickupBlockDamage(targetBlock, WEAPON_STATS.laser.damagePerSecond * ship.laserDamage * dt);
+  if (ship.hasLaser && ship.lasers.length && ship.laserCooldown <= 0) {
+    const availableTargets = state.planet.blocks
+      .filter((block) => {
+        if (!block.alive) return false;
+        const dx = block.x - ship.x;
+        const dy = block.y - ship.y;
+        return dx * dx + dy * dy <= WEAPON_STATS.laser.range * WEAPON_STATS.laser.range;
+      })
+      .sort((a, b) => {
+        const da = (a.x - ship.x) ** 2 + (a.y - ship.y) ** 2;
+        const db = (b.x - ship.x) ** 2 + (b.y - ship.y) ** 2;
+        return da - db;
+      });
+    if (!availableTargets.length) return;
+
+    const neededFuel = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * ship.lasers.length;
+    if (ship.fuel < neededFuel) return;
+
+    ship.fuel = Math.max(0, ship.fuel - neededFuel);
+    ship.laserCooldown = WEAPON_STATS.laser.cooldown;
+    state.runStats.laserPulses += ship.lasers.length;
+    ship.lasers.forEach((laser, index) => {
+      const targetBlock = availableTargets[Math.min(index, availableTargets.length - 1)];
+      if (!targetBlock) return;
+      const damage = WEAPON_STATS.laser.pulseDamage * ship.laserDamage * laser.damageMult;
+      pickupBlockDamage(targetBlock, damage);
+      recordDamage("laser", damage);
+      state.laserBursts.push({
+        sx: ship.x,
+        sy: ship.y,
+        tx: targetBlock.x,
+        ty: targetBlock.y,
+        color: laser.color,
+        life: WEAPON_STATS.laser.burstLife,
+      });
+    });
   }
 }
 
@@ -1198,6 +1296,7 @@ function updateBullets(dt) {
       const key = `${Math.floor(sampleX / BLOCK_SIZE)},${Math.floor(sampleY / BLOCK_SIZE)}`;
       const block = state.planet.map.get(key);
       if (block && block.alive && pickupBlockDamage(block, bullet.damage)) {
+        recordDamage("bullet", bullet.damage);
         bullet.x = sampleX;
         bullet.y = sampleY;
         applySplashDamage(sampleX, sampleY, key);
@@ -1236,6 +1335,7 @@ function updatePickups(dt) {
         const room = state.ship.cargoCap - cargoCount;
         const gained = Math.min(room, pickup.value);
         state.ship.cargo[pickup.material] += gained;
+        state.runStats.peakCargo = Math.max(state.runStats.peakCargo, sumCargo(state.ship.cargo));
         playPickup(pickup.material);
       }
       pickup.life = 0;
@@ -1253,6 +1353,13 @@ function updateParticles(dt) {
     particle.vy *= 0.93;
   }
   state.particles = state.particles.filter((particle) => particle.life > 0);
+}
+
+function updateLaserBursts(dt) {
+  for (const burst of state.laserBursts) {
+    burst.life -= dt;
+  }
+  state.laserBursts = state.laserBursts.filter((burst) => burst.life > 0);
 }
 
 function updateDocking(dt) {
@@ -1315,6 +1422,7 @@ function updateStatusText() {
 function update(dt) {
   state.time += dt;
   updateParticles(dt);
+  updateLaserBursts(dt);
   if (state.mode !== "sortie") {
     updateStatusText();
     syncUi();
@@ -1443,6 +1551,26 @@ function drawPlanetBlocks() {
     ctx.shadowBlur = 0;
     ctx.strokeStyle = ctx.fillStyle;
     ctx.strokeRect(screen.x, screen.y, size, size);
+    if (block.material === "platinum") {
+      ctx.strokeStyle = "rgba(149, 239, 255, 0.82)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(screen.x + size * 0.2, screen.y + size * 0.2);
+      ctx.lineTo(screen.x + size * 0.8, screen.y + size * 0.8);
+      ctx.moveTo(screen.x + size * 0.8, screen.y + size * 0.2);
+      ctx.lineTo(screen.x + size * 0.2, screen.y + size * 0.8);
+      ctx.stroke();
+    } else if (block.material === "crystal") {
+      ctx.strokeStyle = "rgba(255, 180, 255, 0.9)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(screen.x + size * 0.5, screen.y + size * 0.12);
+      ctx.lineTo(screen.x + size * 0.88, screen.y + size * 0.5);
+      ctx.lineTo(screen.x + size * 0.5, screen.y + size * 0.88);
+      ctx.lineTo(screen.x + size * 0.12, screen.y + size * 0.5);
+      ctx.closePath();
+      ctx.stroke();
+    }
   }
 }
 
@@ -1457,18 +1585,21 @@ function drawBullets() {
 }
 
 function drawLaser() {
-  if (state.mode !== "sortie" || !state.input.firing || !state.ship.hasLaser || !state.laserTarget) return;
-  const start = worldToScreen(state.ship.x, state.ship.y);
-  const end = worldToScreen(state.laserTarget.x, state.laserTarget.y);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.strokeStyle = "#fff1ac";
-  ctx.lineWidth = 4;
-  ctx.shadowColor = "#ffd24f";
-  ctx.shadowBlur = 20;
-  ctx.stroke();
-  ctx.shadowBlur = 0;
+  for (const burst of state.laserBursts) {
+    const start = worldToScreen(burst.sx, burst.sy);
+    const end = worldToScreen(burst.tx, burst.ty);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.strokeStyle = burst.color;
+    ctx.lineWidth = 4;
+    ctx.shadowColor = burst.color;
+    ctx.shadowBlur = 20;
+    ctx.globalAlpha = clamp(burst.life / WEAPON_STATS.laser.burstLife, 0.28, 1);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
 }
 
 function drawPickups() {
@@ -1538,6 +1669,84 @@ function render() {
   drawShip();
 }
 
+function drawResultsMap(report) {
+  const mapCanvas = ui.resultsMap;
+  if (!mapCanvas || !report) return;
+  const mapCtx = mapCanvas.getContext("2d");
+  const size = mapCanvas.width;
+  mapCtx.clearRect(0, 0, size, size);
+  mapCtx.save();
+  mapCtx.translate(size / 2, size / 2);
+  mapCtx.beginPath();
+  mapCtx.arc(0, 0, size * 0.42, 0, Math.PI * 2);
+  mapCtx.clip();
+
+  const fill = mapCtx.createRadialGradient(0, 0, size * 0.04, 0, 0, size * 0.42);
+  fill.addColorStop(0, "rgba(220, 156, 58, 0.86)");
+  fill.addColorStop(0.18, "rgba(156, 183, 93, 0.76)");
+  fill.addColorStop(0.56, "rgba(91, 184, 232, 0.78)");
+  fill.addColorStop(1, "rgba(68, 164, 214, 0.94)");
+  mapCtx.fillStyle = fill;
+  mapCtx.fillRect(-size / 2, -size / 2, size, size);
+
+  const slices = [
+    { start: 2.1, end: 4.1, color: "rgba(176, 175, 97, 0.34)" },
+    { start: 0.35, end: 2.2, color: "rgba(134, 183, 104, 0.24)" },
+  ];
+  for (const slice of slices) {
+    mapCtx.beginPath();
+    mapCtx.moveTo(0, 0);
+    mapCtx.arc(0, 0, size * 0.42, slice.start, slice.end);
+    mapCtx.closePath();
+    mapCtx.fillStyle = slice.color;
+    mapCtx.fill();
+  }
+
+  mapCtx.beginPath();
+  mapCtx.arc(0, 0, size * 0.095, 0, Math.PI * 2);
+  mapCtx.fillStyle = "rgba(203, 145, 50, 0.6)";
+  mapCtx.fill();
+
+  for (let i = 0; i < 1500; i += 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * size * 0.41;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    mapCtx.fillStyle = Math.random() < 0.94 ? "rgba(210, 247, 255, 0.22)" : "rgba(255, 93, 73, 0.48)";
+    mapCtx.fillRect(x, y, 1, 1);
+  }
+
+  for (let i = 0; i < 16; i += 1) {
+    const angle = (i / 16) * Math.PI * 2 + 0.28;
+    const radius = size * (0.12 + (i % 5) * 0.06);
+    mapCtx.beginPath();
+    mapCtx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, 2.2, 0, Math.PI * 2);
+    mapCtx.fillStyle = "rgba(255, 86, 61, 0.8)";
+    mapCtx.fill();
+  }
+  mapCtx.restore();
+}
+
+function renderResultsScreen() {
+  const report = progress.lastSortieReport;
+  if (!report) return;
+  ui.resultsTitle.textContent = report.success ? "Return Complete" : "Sortie Lost";
+  ui.resultsSortieLabel.textContent = `Sortie #${report.sortieNumber}`;
+  ui.resultsMinedLabel.textContent = `Mining ${report.minedPercent.toFixed(1)}%`;
+  ui.resultsBlocks.textContent = fmt(report.blocksMined);
+  ui.resultsTotalHaul.textContent = formatMaterials(report.delivered);
+  ui.resultsBankTotal.textContent = formatMaterials(report.bankAfter);
+  ui.resultsBulletDamage.textContent = fmt(report.bulletDamage);
+  ui.resultsLaserDamage.textContent = fmt(report.laserDamage);
+  ui.resultsBulletShots.textContent = fmt(report.bulletShots);
+  ui.resultsLaserPulses.textContent = fmt(report.laserPulses);
+  ui.resultsOre.textContent = fmt(report.delivered.ore || 0);
+  ui.resultsPlatinum.textContent = fmt(report.delivered.platinum || 0);
+  ui.resultsCrystal.textContent = fmt(report.delivered.crystal || 0);
+  ui.resultsPeakCargo.textContent = fmt(report.peakCargo);
+  drawResultsMap(report);
+}
+
 function syncUi() {
   ui.bank.textContent = formatMaterials(progress.bank);
   ui.cargo.textContent = `${fmt(sumCargo(state.ship.cargo))} / ${fmt(state.ship.cargoCap)}`;
@@ -1553,8 +1762,10 @@ function syncUi() {
   ui.hangarStatus.classList.toggle("hidden", state.mode !== "hangar" || state.time > state.hangarStatusUntil);
   ui.continueBtn.disabled = progress.sortie === 1 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
   const inGameplay = state.mode === "sortie";
-  const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip";
+  const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip" && state.mode !== "results";
   const inHangar = state.mode === "hangar";
+  const inResults = state.mode === "results";
+  if (inResults) renderResultsScreen();
   ui.hudLeft.classList.toggle("hidden", !inGameplay);
   ui.hudRight.classList.toggle("hidden", !inGameplay);
   ui.mobileControls.classList.toggle("hidden", !inGameplay);
@@ -1563,6 +1774,7 @@ function syncUi() {
   ui.title.classList.toggle("visible", inMenu);
   ui.hangarScreen.classList.toggle("visible", inHangar);
   ui.tipScreen.classList.toggle("visible", state.mode === "tip");
+  ui.resultsScreen.classList.toggle("visible", inResults);
 }
 
 function resize() {
@@ -1606,6 +1818,8 @@ window.addEventListener("keydown", (event) => {
       else ui.tipScreen.classList.add("visible");
     } else if (state.mode === "hangar") {
       startSortie();
+    } else if (state.mode === "results") {
+      showHangarScreen();
     } else if (state.mode === "tip") {
       startSortie();
     }
@@ -1627,12 +1841,9 @@ window.addEventListener("keyup", (event) => {
 ui.startBtn.addEventListener("click", startNewGame);
 ui.continueBtn.addEventListener("click", () => {
   playUiClick();
-  hideOverlays();
-  state.mode = "hangar";
-  syncUi();
+  showHangarScreen();
   resize();
   render();
-  renderUpgradeTree();
 });
 ui.settingsBtn.addEventListener("click", showSettings);
 ui.settingsCloseBtn.addEventListener("click", hideSettings);
@@ -1650,6 +1861,14 @@ ui.tipCloseBtn.addEventListener("click", () => {
   startSortie();
 });
 ui.launchSortieBtn.addEventListener("click", () => {
+  playUiClick();
+  startSortie();
+});
+ui.resultsUpgradesBtn.addEventListener("click", () => {
+  playUiClick();
+  showHangarScreen();
+});
+ui.resultsContinueBtn.addEventListener("click", () => {
   playUiClick();
   startSortie();
 });

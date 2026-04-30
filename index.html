@@ -60,6 +60,11 @@
         </section>
 
         <section id="hangar-screen" class="overlay hangar-screen">
+          <div class="branch-legend">
+            <span class="legend-chip combat">Combat</span>
+            <span class="legend-chip weapons">Weapons</span>
+            <span class="legend-chip capacity">Capacity</span>
+          </div>
           <div class="hangar-launch">
             <button id="launch-sortie-btn" class="ui-btn primary">Start New Sortie</button>
           </div>
@@ -75,6 +80,62 @@
           </div>
           <div id="hangar-status" class="hangar-status"></div>
           <div id="upgrade-tree" class="upgrade-tree"></div>
+        </section>
+
+        <section id="results-screen" class="overlay results-screen">
+          <div class="results-shell">
+            <div class="results-header">
+              <p class="eyebrow">Return Complete</p>
+              <h3 id="results-title">Sortie Debrief</h3>
+              <div class="results-subhead">
+                <span id="results-sortie-label">Sortie #1</span>
+                <span id="results-mined-label">Mining 0.0%</span>
+              </div>
+            </div>
+            <div class="results-grid">
+              <div class="results-tally-card">
+                <div class="results-statline">
+                  <span>Blocks mined</span>
+                  <strong id="results-blocks">0</strong>
+                </div>
+                <div class="results-statline">
+                  <span>Total haul</span>
+                  <strong id="results-total-haul">0 ore</strong>
+                </div>
+                <div class="results-total">
+                  <span>Bank after return</span>
+                  <strong id="results-bank-total">0 ore</strong>
+                </div>
+              </div>
+              <div class="results-panels">
+                <div class="results-panel">
+                  <span class="panel-label">Weapon Output</span>
+                  <div class="results-panel-grid">
+                    <div><span>Bullets</span><strong id="results-bullet-damage">0</strong></div>
+                    <div><span>Laser</span><strong id="results-laser-damage">0</strong></div>
+                    <div><span>Shots</span><strong id="results-bullet-shots">0</strong></div>
+                    <div><span>Pulses</span><strong id="results-laser-pulses">0</strong></div>
+                  </div>
+                </div>
+                <div class="results-panel">
+                  <span class="panel-label">Cargo Breakdown</span>
+                  <div class="results-panel-grid">
+                    <div><span>Ore</span><strong id="results-ore">0</strong></div>
+                    <div><span>Platinum</span><strong id="results-platinum">0</strong></div>
+                    <div><span>Crystal</span><strong id="results-crystal">0</strong></div>
+                    <div><span>Peak Cargo</span><strong id="results-peak-cargo">0</strong></div>
+                  </div>
+                </div>
+              </div>
+              <div class="results-map-card">
+                <canvas id="results-map" width="320" height="320"></canvas>
+              </div>
+            </div>
+            <div class="results-actions">
+              <button id="results-upgrades-btn" class="ui-btn">Upgrades</button>
+              <button id="results-continue-btn" class="ui-btn primary">Continue</button>
+            </div>
+          </div>
         </section>
 
         <div class="hud hud-left">
