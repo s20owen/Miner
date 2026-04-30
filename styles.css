@@ -163,6 +163,7 @@ canvas,
 .menu-card,
 .modal-card,
 .tip-card {
+  position: relative;
   width: min(440px, calc(100% - 30px));
   max-height: calc(100% - 30px);
   overflow: auto;
@@ -172,6 +173,21 @@ canvas,
   border: 1px solid var(--line-warm);
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
+}
+
+.menu-cache-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(88, 223, 255, 0.18);
+  background: rgba(10, 16, 22, 0.66);
+  color: rgba(164, 238, 255, 0.88);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 .menu-card h2 {
@@ -955,6 +971,13 @@ canvas,
   .menu-card h2 {
     font-size: clamp(2.4rem, 6vw, 4rem);
     margin-bottom: 16px;
+  }
+
+  .menu-cache-badge {
+    top: 12px;
+    right: 12px;
+    padding: 5px 8px;
+    font-size: 0.58rem;
   }
 
   .menu-actions {

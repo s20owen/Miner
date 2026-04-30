@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 
 const ui = {
   title: document.getElementById("title-screen"),
+  menuCacheBadge: document.getElementById("menu-cache-badge"),
   startBtn: document.getElementById("start-btn"),
   continueBtn: document.getElementById("continue-btn"),
   settingsBtn: document.getElementById("settings-btn"),
@@ -110,6 +111,18 @@ function syncViewportVars() {
   document.documentElement.style.setProperty("--app-width", `${width}px`);
   document.documentElement.style.setProperty("--app-height", `${height}px`);
   document.body.classList.toggle("is-standalone", isStandaloneDisplay());
+}
+
+async function updateMenuCacheBadge() {
+  if (!ui.menuCacheBadge) return;
+  try {
+    const response = await fetch(`./sw.js?ts=${Date.now()}`, { cache: "no-store" });
+    const source = await response.text();
+    const match = source.match(/CACHE_NAME\s*=\s*["']([^"']+)["']/);
+    ui.menuCacheBadge.textContent = match ? match[1] : "cache unknown";
+  } catch {
+    ui.menuCacheBadge.textContent = "cache unavailable";
+  }
 }
 
 function lerp(a, b, t) {
@@ -2071,6 +2084,7 @@ renderUpgradeTree();
 setupUpgradeTreeZoom();
 setupUpgradeTreePan();
 syncUi();
+updateMenuCacheBadge();
 requestAnimationFrame(frame);
 window.addEventListener("resize", () => {
   resize();
