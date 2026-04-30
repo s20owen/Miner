@@ -426,6 +426,7 @@ canvas,
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 18px;
   padding: 34px 36px;
+  overflow: auto;
 }
 
 .results-header h3 {
@@ -976,55 +977,74 @@ canvas,
   }
 
   .results-shell {
-    gap: 10px;
-    padding: 14px 18px 16px;
+    gap: 8px;
+    padding: 12px 16px 14px;
   }
 
   .results-header h3 {
-    font-size: clamp(1.8rem, 5vw, 3.2rem);
+    font-size: clamp(1.55rem, 4.6vw, 2.8rem);
   }
 
   .results-subhead {
-    margin-top: 6px;
-    gap: 14px;
-    font-size: 0.9rem;
+    margin-top: 4px;
+    gap: 12px;
+    font-size: 0.82rem;
   }
 
   .results-grid {
-    grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1fr) minmax(180px, 0.9fr);
-    gap: 10px;
+    grid-template-columns: minmax(160px, 0.88fr) minmax(0, 1fr) minmax(160px, 0.86fr);
+    gap: 8px;
   }
 
   .results-tally-card,
   .results-panel,
   .results-map-card {
-    border-radius: 18px;
+    border-radius: 16px;
   }
 
   .results-tally-card,
   .results-panel {
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
 
   .results-statline strong,
   .results-panel-grid strong,
   .results-total strong {
-    font-size: 1.25rem;
+    font-size: 1.08rem;
   }
 
   .results-panel-grid {
-    margin-top: 10px;
-    gap: 10px 14px;
+    margin-top: 8px;
+    gap: 8px 12px;
   }
 
-  .results-actions {
+  .results-statline span,
+  .results-total span,
+  .panel-label,
+  .results-panel-grid span {
+    font-size: 0.7rem;
+  }
+
+  .results-tally-card {
     gap: 12px;
   }
 
+  .results-total {
+    padding-top: 8px;
+  }
+
+  #results-map {
+    width: min(100%, 250px);
+  }
+
+  .results-actions {
+    gap: 10px;
+  }
+
   .results-actions .ui-btn {
-    min-width: 140px;
-    padding: 11px 18px;
-    font-size: 0.95rem;
+    min-width: 120px;
+    padding: 10px 14px;
+    font-size: 0.86rem;
   }
 
   .hangar-screen.visible {
