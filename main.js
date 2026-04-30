@@ -1691,54 +1691,62 @@ function drawResultsMap(report) {
   if (!mapCanvas || !report) return;
   const mapCtx = mapCanvas.getContext("2d");
   const size = mapCanvas.width;
+  const radius = size * 0.42;
+  const blockRadius = Math.max(1.3, radius / (PLANET_RADIUS_BLOCKS * 1.35));
   mapCtx.clearRect(0, 0, size, size);
   mapCtx.save();
   mapCtx.translate(size / 2, size / 2);
   mapCtx.beginPath();
-  mapCtx.arc(0, 0, size * 0.42, 0, Math.PI * 2);
+  mapCtx.arc(0, 0, radius, 0, Math.PI * 2);
   mapCtx.clip();
 
-  const fill = mapCtx.createRadialGradient(0, 0, size * 0.04, 0, 0, size * 0.42);
-  fill.addColorStop(0, "rgba(220, 156, 58, 0.86)");
-  fill.addColorStop(0.18, "rgba(156, 183, 93, 0.76)");
-  fill.addColorStop(0.56, "rgba(91, 184, 232, 0.78)");
-  fill.addColorStop(1, "rgba(68, 164, 214, 0.94)");
+  const fill = mapCtx.createRadialGradient(0, 0, size * 0.05, 0, 0, radius);
+  fill.addColorStop(0, "rgba(32, 22, 18, 0.96)");
+  fill.addColorStop(0.5, "rgba(20, 34, 40, 0.98)");
+  fill.addColorStop(1, "rgba(22, 64, 84, 0.98)");
   mapCtx.fillStyle = fill;
   mapCtx.fillRect(-size / 2, -size / 2, size, size);
 
-  const slices = [
-    { start: 2.1, end: 4.1, color: "rgba(176, 175, 97, 0.34)" },
-    { start: 0.35, end: 2.2, color: "rgba(134, 183, 104, 0.24)" },
-  ];
-  for (const slice of slices) {
-    mapCtx.beginPath();
-    mapCtx.moveTo(0, 0);
-    mapCtx.arc(0, 0, size * 0.42, slice.start, slice.end);
-    mapCtx.closePath();
-    mapCtx.fillStyle = slice.color;
-    mapCtx.fill();
+  for (const block of state.planet.blocks) {
+    if (!block.alive) continue;
+    const x = (block.gx / PLANET_RADIUS_BLOCKS) * radius;
+    const y = (block.gy / PLANET_RADIUS_BLOCKS) * radius;
+    const hpRatio = block.hp / Math.max(1, block.maxHp);
+    if (block.material === "crystal") {
+      mapCtx.fillStyle = `rgba(255, 112, 228, ${0.62 + hpRatio * 0.18})`;
+    } else if (block.material === "platinum") {
+      mapCtx.fillStyle = `rgba(122, 208, 255, ${0.58 + hpRatio * 0.16})`;
+    } else {
+      mapCtx.fillStyle = `rgba(108, 232, 132, ${0.48 + hpRatio * 0.18})`;
+    }
+    mapCtx.fillRect(x - blockRadius * 0.5, y - blockRadius * 0.5, blockRadius, blockRadius);
   }
+
+  mapCtx.strokeStyle = "rgba(132, 235, 255, 0.16)";
+  mapCtx.lineWidth = 2;
+  mapCtx.beginPath();
+  mapCtx.arc(0, 0, radius, 0, Math.PI * 2);
+  mapCtx.stroke();
 
   mapCtx.beginPath();
-  mapCtx.arc(0, 0, size * 0.095, 0, Math.PI * 2);
-  mapCtx.fillStyle = "rgba(203, 145, 50, 0.6)";
+  mapCtx.arc(0, 0, (CORE_RADIUS_BLOCKS / PLANET_RADIUS_BLOCKS) * radius, 0, Math.PI * 2);
+  mapCtx.fillStyle = "rgba(232, 174, 58, 0.72)";
   mapCtx.fill();
 
-  for (let i = 0; i < 1500; i += 1) {
-    const angle = Math.random() * Math.PI * 2;
-    const radius = Math.random() * size * 0.41;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    mapCtx.fillStyle = Math.random() < 0.94 ? "rgba(210, 247, 255, 0.22)" : "rgba(255, 93, 73, 0.48)";
-    mapCtx.fillRect(x, y, 1, 1);
-  }
+  const dockAngle = -Math.PI / 2;
+  const dockX = Math.cos(dockAngle) * radius * 0.86;
+  const dockY = Math.sin(dockAngle) * radius * 0.86;
+  mapCtx.fillStyle = "rgba(255, 245, 225, 0.9)";
+  mapCtx.beginPath();
+  mapCtx.arc(dockX, dockY, 3, 0, Math.PI * 2);
+  mapCtx.fill();
 
-  for (let i = 0; i < 16; i += 1) {
-    const angle = (i / 16) * Math.PI * 2 + 0.28;
-    const radius = size * (0.12 + (i % 5) * 0.06);
+  for (let i = 0; i < 14; i += 1) {
+    const angle = (i / 14) * Math.PI * 2 + 0.21;
+    const markerRadius = radius * (0.2 + (i % 4) * 0.14);
     mapCtx.beginPath();
-    mapCtx.arc(Math.cos(angle) * radius, Math.sin(angle) * radius, 2.2, 0, Math.PI * 2);
-    mapCtx.fillStyle = "rgba(255, 86, 61, 0.8)";
+    mapCtx.arc(Math.cos(angle) * markerRadius, Math.sin(angle) * markerRadius, 2, 0, Math.PI * 2);
+    mapCtx.fillStyle = "rgba(255, 86, 61, 0.66)";
     mapCtx.fill();
   }
   mapCtx.restore();
