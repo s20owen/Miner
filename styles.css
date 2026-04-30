@@ -431,7 +431,7 @@ canvas,
 
 .results-header h3 {
   margin: 0;
-  font-size: clamp(2rem, 4.8vw, 3.1rem);
+  font-size: clamp(1.45rem, 3.6vw, 2.2rem);
   color: #58dfff;
   text-shadow: 0 0 20px rgba(88, 223, 255, 0.18);
 }
@@ -439,9 +439,9 @@ canvas,
 .results-subhead {
   display: flex;
   gap: 24px;
-  margin-top: 12px;
+  margin-top: 6px;
   color: rgba(247, 238, 215, 0.7);
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .results-subhead span:last-child {
@@ -450,7 +450,7 @@ canvas,
 
 .results-grid {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  grid-template-columns: 240px minmax(0, 1fr) minmax(240px, 0.78fr);
   gap: 18px;
   min-height: 0;
 }
@@ -977,23 +977,23 @@ canvas,
   }
 
   .results-shell {
-    gap: 8px;
-    padding: 12px 16px 14px;
+    gap: 6px;
+    padding: 10px 14px 12px;
   }
 
   .results-header h3 {
-    font-size: clamp(1.55rem, 4.6vw, 2.8rem);
+    font-size: clamp(1.05rem, 3.1vw, 1.7rem);
   }
 
   .results-subhead {
-    margin-top: 4px;
-    gap: 12px;
-    font-size: 0.82rem;
+    margin-top: 2px;
+    gap: 10px;
+    font-size: 0.68rem;
   }
 
   .results-grid {
-    grid-template-columns: minmax(160px, 0.88fr) minmax(0, 1fr) minmax(160px, 0.86fr);
-    gap: 8px;
+    grid-template-columns: minmax(145px, 0.94fr) minmax(145px, 0.84fr) minmax(130px, 0.66fr);
+    gap: 6px;
   }
 
   .results-tally-card,
@@ -1004,47 +1004,51 @@ canvas,
 
   .results-tally-card,
   .results-panel {
-    padding: 12px 14px;
+    padding: 10px 12px;
+  }
+
+  .results-panel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .results-statline strong,
   .results-panel-grid strong,
   .results-total strong {
-    font-size: 1.08rem;
+    font-size: 0.98rem;
   }
 
   .results-panel-grid {
-    margin-top: 8px;
-    gap: 8px 12px;
+    margin-top: 6px;
+    gap: 6px 10px;
   }
 
   .results-statline span,
   .results-total span,
   .panel-label,
   .results-panel-grid span {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
   }
 
   .results-tally-card {
-    gap: 12px;
+    gap: 9px;
   }
 
   .results-total {
-    padding-top: 8px;
+    padding-top: 6px;
   }
 
   #results-map {
-    width: min(100%, 250px);
+    width: min(100%, 200px);
   }
 
   .results-actions {
-    gap: 10px;
+    gap: 8px;
   }
 
   .results-actions .ui-btn {
-    min-width: 120px;
-    padding: 10px 14px;
-    font-size: 0.86rem;
+    min-width: 108px;
+    padding: 9px 12px;
+    font-size: 0.78rem;
   }
 
   .hangar-screen.visible {

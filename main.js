@@ -23,10 +23,6 @@ const ui = {
   resultsBlocks: document.getElementById("results-blocks"),
   resultsTotalHaul: document.getElementById("results-total-haul"),
   resultsBankTotal: document.getElementById("results-bank-total"),
-  resultsBulletDamage: document.getElementById("results-bullet-damage"),
-  resultsLaserDamage: document.getElementById("results-laser-damage"),
-  resultsBulletShots: document.getElementById("results-bullet-shots"),
-  resultsLaserPulses: document.getElementById("results-laser-pulses"),
   resultsOre: document.getElementById("results-ore"),
   resultsPlatinum: document.getElementById("results-platinum"),
   resultsCrystal: document.getElementById("results-crystal"),
@@ -1757,10 +1753,6 @@ function renderResultsScreen() {
   ui.resultsBlocks.textContent = fmt(report.blocksMined);
   ui.resultsTotalHaul.textContent = formatMaterials(report.delivered);
   ui.resultsBankTotal.textContent = formatMaterials(report.bankAfter);
-  ui.resultsBulletDamage.textContent = fmt(report.bulletDamage);
-  ui.resultsLaserDamage.textContent = fmt(report.laserDamage);
-  ui.resultsBulletShots.textContent = fmt(report.bulletShots);
-  ui.resultsLaserPulses.textContent = fmt(report.laserPulses);
   ui.resultsOre.textContent = fmt(report.delivered.ore || 0);
   ui.resultsPlatinum.textContent = fmt(report.delivered.platinum || 0);
   ui.resultsCrystal.textContent = fmt(report.delivered.crystal || 0);
