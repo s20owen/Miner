@@ -970,6 +970,63 @@ canvas,
     border-radius: 18px;
   }
 
+  .results-screen {
+    inset: 6px;
+    border-radius: 18px;
+  }
+
+  .results-shell {
+    gap: 10px;
+    padding: 14px 18px 16px;
+  }
+
+  .results-header h3 {
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
+  }
+
+  .results-subhead {
+    margin-top: 6px;
+    gap: 14px;
+    font-size: 0.9rem;
+  }
+
+  .results-grid {
+    grid-template-columns: minmax(180px, 0.9fr) minmax(0, 1fr) minmax(180px, 0.9fr);
+    gap: 10px;
+  }
+
+  .results-tally-card,
+  .results-panel,
+  .results-map-card {
+    border-radius: 18px;
+  }
+
+  .results-tally-card,
+  .results-panel {
+    padding: 14px 16px;
+  }
+
+  .results-statline strong,
+  .results-panel-grid strong,
+  .results-total strong {
+    font-size: 1.25rem;
+  }
+
+  .results-panel-grid {
+    margin-top: 10px;
+    gap: 10px 14px;
+  }
+
+  .results-actions {
+    gap: 12px;
+  }
+
+  .results-actions .ui-btn {
+    min-width: 140px;
+    padding: 11px 18px;
+    font-size: 0.95rem;
+  }
+
   .hangar-screen.visible {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
     grid-template-rows: auto auto minmax(0, 1fr);

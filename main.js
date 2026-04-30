@@ -891,15 +891,16 @@ function setupUpgradeTreePan() {
 }
 
 function blockColor(block) {
+  const visualHp = Math.max(1, Math.ceil(block.hp));
   if (block.material === "crystal") {
-    return block.hp === block.maxHp ? "#ff78dd" : block.hp >= 4 ? "#d06cff" : block.hp === 3 ? "#ff9aef" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+    return visualHp === block.maxHp ? "#ff78dd" : visualHp >= 4 ? "#d06cff" : visualHp === 3 ? "#ff9aef" : visualHp === 2 ? "#ffd24f" : "#67ff8a";
   }
   if (block.material === "platinum") {
-    return block.hp === block.maxHp ? "#79e8ff" : block.hp >= 3 ? "#9dd9ff" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+    return visualHp === block.maxHp ? "#79e8ff" : visualHp >= 3 ? "#9dd9ff" : visualHp === 2 ? "#ffd24f" : "#67ff8a";
   }
-  if (block.maxHp === 3) return block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
-  if (block.maxHp === 4) return block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
-  return block.hp === 5 ? "#7e63ff" : block.hp === 4 ? "#79d7ff" : block.hp === 3 ? "#ff5d49" : block.hp === 2 ? "#ffd24f" : "#67ff8a";
+  if (block.maxHp === 3) return visualHp === 3 ? "#ff5d49" : visualHp === 2 ? "#ffd24f" : "#67ff8a";
+  if (block.maxHp === 4) return visualHp === 4 ? "#79d7ff" : visualHp === 3 ? "#ff5d49" : visualHp === 2 ? "#ffd24f" : "#67ff8a";
+  return visualHp === 5 ? "#7e63ff" : visualHp === 4 ? "#79d7ff" : visualHp === 3 ? "#ff5d49" : visualHp === 2 ? "#ffd24f" : "#67ff8a";
 }
 
 function worldToScreen(x, y) {
@@ -927,6 +928,41 @@ function visibleWorldBounds() {
     top: state.camera.y - halfH - BLOCK_SIZE,
     bottom: state.camera.y + halfH + BLOCK_SIZE,
   };
+}
+
+function forEachBlockInBounds(bounds, visitor) {
+  const minGX = Math.floor(bounds.left / BLOCK_SIZE);
+  const maxGX = Math.floor(bounds.right / BLOCK_SIZE);
+  const minGY = Math.floor(bounds.top / BLOCK_SIZE);
+  const maxGY = Math.floor(bounds.bottom / BLOCK_SIZE);
+  for (let gy = minGY; gy <= maxGY; gy += 1) {
+    for (let gx = minGX; gx <= maxGX; gx += 1) {
+      const block = state.planet.map.get(`${gx},${gy}`);
+      if (!block || !block.alive) continue;
+      visitor(block);
+    }
+  }
+}
+
+function nearestLaserTargets(maxCount) {
+  const range = WEAPON_STATS.laser.range;
+  const rangeSq = range * range;
+  const candidates = [];
+  const bounds = {
+    left: state.ship.x - range,
+    right: state.ship.x + range,
+    top: state.ship.y - range,
+    bottom: state.ship.y + range,
+  };
+  forEachBlockInBounds(bounds, (block) => {
+    const dx = block.x - state.ship.x;
+    const dy = block.y - state.ship.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq > rangeSq) return;
+    candidates.push({ block, distSq });
+  });
+  candidates.sort((a, b) => a.distSq - b.distSq);
+  return candidates.slice(0, maxCount).map((entry) => entry.block);
 }
 
 function pickupBlockDamage(block, damage) {
@@ -1241,18 +1277,7 @@ function updateWeapons(dt) {
   }
 
   if (ship.hasLaser && ship.lasers.length && ship.laserCooldown <= 0) {
-    const availableTargets = state.planet.blocks
-      .filter((block) => {
-        if (!block.alive) return false;
-        const dx = block.x - ship.x;
-        const dy = block.y - ship.y;
-        return dx * dx + dy * dy <= WEAPON_STATS.laser.range * WEAPON_STATS.laser.range;
-      })
-      .sort((a, b) => {
-        const da = (a.x - ship.x) ** 2 + (a.y - ship.y) ** 2;
-        const db = (b.x - ship.x) ** 2 + (b.y - ship.y) ** 2;
-        return da - db;
-      });
+    const availableTargets = nearestLaserTargets(ship.lasers.length);
     if (!availableTargets.length) return;
 
     const neededFuel = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * ship.lasers.length;
@@ -1537,19 +1562,15 @@ function drawDock() {
 
 function drawPlanetBlocks() {
   const bounds = visibleWorldBounds();
-  for (const block of state.planet.blocks) {
-    if (!block.alive) continue;
+  forEachBlockInBounds(bounds, (block) => {
     const left = block.x - BLOCK_SIZE * 0.5;
     const top = block.y - BLOCK_SIZE * 0.5;
-    if (left > bounds.right || left + BLOCK_SIZE < bounds.left || top > bounds.bottom || top + BLOCK_SIZE < bounds.top) continue;
     const screen = worldToScreen(left, top);
     const size = BLOCK_SIZE * state.camera.zoom;
     ctx.fillStyle = blockColor(block);
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 10;
     ctx.fillRect(screen.x, screen.y, size, size);
-    ctx.shadowBlur = 0;
     ctx.strokeStyle = ctx.fillStyle;
+    ctx.lineWidth = 1;
     ctx.strokeRect(screen.x, screen.y, size, size);
     if (block.material === "platinum") {
       ctx.strokeStyle = "rgba(149, 239, 255, 0.82)";
@@ -1571,7 +1592,7 @@ function drawPlanetBlocks() {
       ctx.closePath();
       ctx.stroke();
     }
-  }
+  });
 }
 
 function drawBullets() {
