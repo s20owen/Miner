@@ -61,25 +61,66 @@
         </section>
 
         <section id="hangar-screen" class="overlay hangar-screen">
-          <div class="branch-legend">
-            <span class="legend-chip combat">Combat</span>
-            <span class="legend-chip weapons">Weapons</span>
-            <span class="legend-chip capacity">Capacity</span>
-          </div>
-          <div class="hangar-launch">
-            <button id="launch-sortie-btn" class="ui-btn primary">Start New Sortie</button>
-          </div>
-          <div class="hangar-summary">
-            <div class="hangar-stat">
-              <span>Recent Sortie</span>
-              <strong id="recent-cargo-value">0 ore</strong>
+          <div class="hangar-ops-column">
+            <div class="hangar-launch">
+              <button id="launch-sortie-btn" class="ui-btn primary">Start New Sortie</button>
             </div>
-            <div class="hangar-stat">
-              <span>Available Currency</span>
-              <strong id="hangar-bank-value">0 ore</strong>
+            <div class="hangar-contract-bar">
+              <button id="planet-prev-btn" class="mini-ui-btn" aria-label="Previous contract">◀</button>
+              <div class="hangar-contract-copy">
+                <span>Contract</span>
+                <strong id="hangar-contract-name">Vesper-1</strong>
+                <small id="hangar-contract-detail">Threat I • Stable ore bands</small>
+                <small id="hangar-contract-yield">Yield Bias: Ore</small>
+              </div>
+              <button id="planet-next-btn" class="mini-ui-btn" aria-label="Next contract">▶</button>
             </div>
+            <div class="hangar-summary">
+              <div class="hangar-stat">
+                <span>Recent Sortie</span>
+                <strong id="recent-cargo-value">0 ore</strong>
+                <small id="recent-sortie-detail">No debrief yet</small>
+              </div>
+              <div class="hangar-stat">
+                <span>Available Currency</span>
+                <strong id="hangar-bank-value">0 ore</strong>
+                <small id="hangar-bank-detail">Banked across all unlocked contracts</small>
+              </div>
+              <div class="hangar-stat">
+                <span>Current Planet</span>
+                <strong id="hangar-planet-value">Vesper-1</strong>
+                <small id="hangar-planet-detail">Primary contract shell</small>
+              </div>
+              <div class="hangar-stat">
+                <span>Active Sector</span>
+                <strong id="hangar-sector-value">Surface 0%</strong>
+                <small id="hangar-sector-detail">Sector progress persists between sorties</small>
+              </div>
+            </div>
+            <div class="hangar-progress-strip">
+              <div class="hangar-progress-card">
+                <span>Planet Completion</span>
+                <strong id="hangar-completion-value">0%</strong>
+              </div>
+              <div class="hangar-progress-card">
+                <span>Core Status</span>
+                <strong id="hangar-core-value">Sealed</strong>
+              </div>
+              <div class="hangar-progress-card">
+                <span>Contract Pressure</span>
+                <strong id="hangar-contract-pressure">Threat I</strong>
+              </div>
+              <div class="hangar-progress-card">
+                <span>Upgrade Grid</span>
+                <strong id="hangar-upgrade-grid">0 / 0 online</strong>
+              </div>
+              <div class="hangar-progress-card">
+                <span>Next System</span>
+                <strong id="hangar-next-upgrade">No upgrade queued</strong>
+              </div>
+            </div>
+            <div id="hangar-status" class="hangar-status"></div>
           </div>
-          <div id="hangar-status" class="hangar-status"></div>
           <div id="upgrade-tree" class="upgrade-tree"></div>
         </section>
 
@@ -115,6 +156,15 @@
                     <div><span>Platinum</span><strong id="results-platinum">0</strong></div>
                     <div><span>Crystal</span><strong id="results-crystal">0</strong></div>
                     <div><span>Peak Cargo</span><strong id="results-peak-cargo">0</strong></div>
+                  </div>
+                </div>
+                <div class="results-panel">
+                  <span class="panel-label">Planet Status</span>
+                  <div class="results-panel-grid">
+                    <div><span>Planet</span><strong id="results-planet">Vesper-1</strong></div>
+                    <div><span>Sector</span><strong id="results-sector">Surface</strong></div>
+                    <div><span>Completion</span><strong id="results-completion">0%</strong></div>
+                    <div><span>Core</span><strong id="results-core-status">Sealed</strong></div>
                   </div>
                 </div>
               </div>

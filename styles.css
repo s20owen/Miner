@@ -234,55 +234,99 @@ canvas,
 
 .hangar-screen.visible {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 14px;
 }
 
-.branch-legend {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-
-.legend-chip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.legend-chip.combat {
-  color: #ffbf7c;
-  border-color: rgba(255, 147, 77, 0.28);
-}
-
-.legend-chip.weapons {
-  color: #72ecff;
-  border-color: rgba(88, 223, 255, 0.24);
-}
-
-.legend-chip.capacity {
-  color: #9dff8f;
-  border-color: rgba(109, 255, 139, 0.24);
+.hangar-ops-column {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding-right: 6px;
 }
 
 .hangar-launch {
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
+}
+
+.hangar-launch .ui-btn {
+  width: 100%;
+}
+
+.hangar-contract-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(88, 223, 255, 0.14);
+}
+
+.hangar-contract-copy {
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.hangar-contract-copy span,
+.hangar-contract-copy small {
+  color: var(--muted);
+}
+
+.hangar-contract-copy span {
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hangar-contract-copy strong {
+  font-size: 1.2rem;
+}
+
+.hangar-contract-copy small {
+  font-size: 0.82rem;
+}
+
+#hangar-contract-yield {
+  color: rgba(247, 238, 215, 0.88);
+}
+
+.mini-ui-btn {
+  min-width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 210, 79, 0.18);
+  background: rgba(18, 9, 29, 0.92);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.mini-ui-btn:disabled {
+  opacity: 0.42;
+  cursor: default;
 }
 
 .hangar-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.hangar-progress-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .hangar-stat,
-.hangar-status {
-  padding: 16px;
+.hangar-status,
+.hangar-progress-card {
+  padding: 12px 14px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 210, 79, 0.12);
@@ -301,13 +345,35 @@ canvas,
 }
 
 .hangar-stat strong {
-  font-size: 1.25rem;
+  font-size: 1.08rem;
+}
+
+.hangar-stat small {
+  color: rgba(247, 238, 215, 0.64);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.hangar-progress-card {
+  display: grid;
+  gap: 6px;
+}
+
+.hangar-progress-card span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hangar-progress-card strong {
+  font-size: 1rem;
 }
 
 .hangar-status {
   color: rgba(247, 238, 215, 0.9);
   text-align: center;
-  font-size: 1.1rem;
+  font-size: 0.96rem;
 }
 
 .hangar-status.hidden {
@@ -411,6 +477,14 @@ canvas,
 .tree-node .name {
   font-size: 0.7rem;
   line-height: 1.1;
+}
+
+.tree-node .lane {
+  font-size: 0.54rem;
+  line-height: 1.15;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(247, 238, 215, 0.52);
 }
 
 .tree-node .preview {
@@ -580,6 +654,10 @@ canvas,
 
 .tree-canvas.compact .tree-node .name {
   font-size: 0.62rem;
+}
+
+.tree-canvas.compact .tree-node .lane {
+  font-size: 0.5rem;
 }
 
 .tree-canvas.compact .tree-node .preview {
@@ -861,8 +939,19 @@ canvas,
     border-radius: 18px;
   }
 
-  .hangar-summary {
+  .hangar-screen.visible {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+  }
+
+  .hangar-ops-column {
+    max-height: 42svh;
+    padding-right: 2px;
+  }
+
+  .hangar-contract-bar {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    padding: 12px;
   }
 }
 
@@ -1075,35 +1164,25 @@ canvas,
   }
 
   .hangar-screen.visible {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
     gap: 10px;
   }
 
-  .hangar-launch {
-    grid-column: 3;
-    grid-row: 1;
-    align-items: center;
+  .hangar-ops-column {
+    gap: 8px;
+    padding-right: 2px;
   }
 
   .hangar-launch .ui-btn {
-    padding: 9px 16px;
+    padding: 9px 14px;
   }
 
-  .hangar-summary {
-    grid-column: 1 / 3;
-    grid-row: 1;
-    gap: 10px;
-  }
-
-  .hangar-status {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .hangar-contract-bar {
+    padding: 10px 12px;
+    border-radius: 14px;
   }
 
   .upgrade-tree {
-    grid-column: 1 / -1;
-    grid-row: 3;
     min-height: 0;
     height: 100%;
     border-radius: 18px;
@@ -1111,17 +1190,33 @@ canvas,
   }
 
   .hangar-stat,
-  .hangar-status {
-    padding: 10px 12px;
+  .hangar-status,
+  .hangar-progress-card {
+    padding: 8px 10px;
     border-radius: 14px;
   }
 
-  .hangar-stat strong {
-    font-size: 1.05rem;
+  .hangar-stat strong,
+  .hangar-progress-card strong {
+    font-size: 0.92rem;
+  }
+
+  .hangar-contract-copy strong {
+    font-size: 0.94rem;
+  }
+
+  .hangar-contract-copy small {
+    font-size: 0.68rem;
+  }
+
+  .hangar-stat small,
+  .hangar-progress-card span,
+  .hangar-stat span {
+    font-size: 0.62rem;
   }
 
   .hangar-status {
-    font-size: 0.94rem;
+    font-size: 0.82rem;
   }
 
   .tree-canvas {
