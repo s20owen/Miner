@@ -62,7 +62,6 @@ const ui = {
   launchSortieBtn: document.getElementById("launch-sortie-btn"),
   moveStick: document.getElementById("move-stick"),
   aimStick: document.getElementById("aim-stick"),
-  dashTouchBtn: document.getElementById("dash-touch-btn"),
   hudLeft: document.querySelector(".hud-left"),
   hudRight: document.querySelector(".hud-right"),
   mobileControls: document.querySelector(".mobile-controls"),
@@ -195,23 +194,61 @@ const upgradeNodes = [
   { id: "hull1", x: 80, y: 90, label: "Hull Plate", lane: "Survival", symbol: "🛡", cost: cost(42), requires: [], effect: { hpMax: 10 } },
   { id: "hull2", x: 80, y: 240, label: "Impact Dampers", lane: "Survival", symbol: "⛨", cost: cost(56), requires: ["hull1"], effect: { collisionCostMult: 0.88 } },
   { id: "thrust1", x: 80, y: 390, label: "Thrusters", lane: "Mobility / Docking", symbol: "▲", cost: cost(68), requires: ["hull2"], effect: { thrust: 14 } },
-  { id: "dash1", x: 80, y: 540, label: "Dash Jets", lane: "Mobility / Docking", symbol: "➜", cost: cost(82), requires: ["thrust1"], effect: { dash: true } },
-  { id: "reactive1", x: 80, y: 690, label: "Reactive Weave", lane: "Survival", symbol: "🛡", cost: cost(108, 8), requires: ["dash1"], effect: { hpMax: 18 } },
+  { id: "engineEco1", x: 80, y: 540, label: "Engine Efficiency", lane: "Mobility / Docking", symbol: "◌", cost: cost(82), requires: ["thrust1"], effect: { thrustFuelMult: 0.92 } },
+  { id: "reactive1", x: 80, y: 690, label: "Reactive Weave", lane: "Survival", symbol: "🛡", cost: cost(108, 8), requires: ["engineEco1"], effect: { hpMax: 18 } },
   { id: "combatCore", x: 80, y: 840, label: "Crystal Dampers", lane: "Survival", symbol: "◈", cost: cost(138, 12, 4), requires: ["reactive1"], effect: { collisionCostMult: 0.74 } },
+  { id: "hull3", x: 80, y: 990, label: "Reinforced Spine", lane: "Survival", symbol: "⛨", cost: cost(154, 14, 4), requires: ["combatCore"], effect: { hpMax: 12 } },
+  { id: "thrust2", x: 80, y: 1140, label: "Vector Thrusters", lane: "Mobility / Docking", symbol: "▲", cost: cost(170, 16, 5), requires: ["hull3"], effect: { thrust: 18 } },
+  { id: "engineEco2", x: 80, y: 1290, label: "Reaction Routing", lane: "Mobility / Docking", symbol: "◌", cost: cost(184, 18, 6), requires: ["thrust2"], effect: { thrustFuelMult: 0.92 } },
+  { id: "dock2", x: 80, y: 1440, label: "Approach Thralls", lane: "Mobility / Docking", symbol: "⌂", cost: cost(198, 20, 7), requires: ["engineEco2"], effect: { dockRate: 1.15 } },
+  { id: "reactive2", x: 80, y: 1590, label: "Reactive Spine", lane: "Survival", symbol: "🛡", cost: cost(214, 22, 8), requires: ["dock2"], effect: { collisionCostMult: 0.9 } },
+  { id: "thrust3", x: 80, y: 1740, label: "Afterburn Coils", lane: "Mobility / Docking", symbol: "▲", cost: cost(228, 24, 9), requires: ["reactive2"], effect: { thrust: 22 } },
+  { id: "engineEco3", x: 80, y: 1890, label: "Impulse Saver", lane: "Mobility / Docking", symbol: "◌", cost: cost(244, 26, 10), requires: ["thrust3"], effect: { thrustFuelMult: 0.9 } },
 
   { id: "fire1", x: 340, y: 90, label: "Fire Rate", lane: "Combat: Fire Rate", symbol: "»", cost: cost(46), requires: [], effect: { rateMult: 0.94 } },
-  { id: "drill1", x: 340, y: 240, label: "Bullet Force", lane: "Combat: Range", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.5 } },
-  { id: "laser", x: 340, y: 390, label: "Unlock Laser", lane: "Combat: Range", symbol: "⚡", cost: cost(94), requires: ["drill1"], effect: { unlockLaser: true } },
-  { id: "range1", x: 340, y: 540, label: "Range Boost", lane: "Combat: Range", symbol: "⇢", cost: cost(106), requires: ["laser"], effect: { bulletLifeMult: 1.18 } },
-  { id: "laser2", x: 340, y: 690, label: "Laser Focus", lane: "Combat: AOE / Advanced", symbol: "◎", cost: cost(122, 10), requires: ["range1"], effect: { laserDamage: 1.32 } },
-  { id: "splash2", x: 340, y: 840, label: "Crystal Array", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(148, 12, 4), requires: ["laser2"], effect: { splashRadius: 20, splashFalloff: 0.3, addLaser: { color: "#73f0ff", damageMult: 0.82 } } },
+  { id: "drill1", x: 340, y: 210, label: "Bullet Force", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.5 } },
+  { id: "drill2", x: 340, y: 330, label: "Rifled Payloads", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(70), requires: ["drill1"], effect: { bulletDamage: 0.16 } },
+  { id: "blasterEco1", x: 340, y: 450, label: "Ammo Economy", lane: "Combat: Fire Rate", symbol: "◌", cost: cost(86), requires: ["drill2"], effect: { blasterFuelMult: 0.92 } },
+  { id: "laser", x: 340, y: 570, label: "Unlock Laser", lane: "Combat: Range", symbol: "⚡", cost: cost(94), requires: ["blasterEco1"], effect: { unlockLaser: true } },
+  { id: "range1", x: 340, y: 690, label: "Range Boost", lane: "Combat: Range", symbol: "⇢", cost: cost(106), requires: ["laser"], effect: { bulletLifeMult: 1.18 } },
+  { id: "drill3", x: 340, y: 810, label: "Dense Slugs", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(116, 8), requires: ["range1"], effect: { bulletDamage: 0.18 } },
+  { id: "laser2", x: 340, y: 930, label: "Laser Focus", lane: "Combat: AOE / Advanced", symbol: "◎", cost: cost(122, 10), requires: ["drill3"], effect: { laserDamage: 1.32 } },
+  { id: "drill4", x: 340, y: 1050, label: "Kinetic Feed", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(132, 10), requires: ["laser2"], effect: { bulletDamage: 0.18 } },
+  { id: "fire2", x: 340, y: 1170, label: "Cycler Core", lane: "Combat: Fire Rate", symbol: "»", cost: cost(142, 12), requires: ["drill4"], effect: { rateMult: 0.95 } },
+  { id: "splash2", x: 340, y: 1290, label: "Crystal Array", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(148, 12, 4), requires: ["fire2"], effect: { splashRadius: 20, splashFalloff: 0.3, addLaser: { color: "#73f0ff", damageMult: 0.82 } } },
+  { id: "drill5", x: 340, y: 1410, label: "Pressure Rounds", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(160, 14, 4), requires: ["splash2"], effect: { bulletDamage: 0.2 } },
+  { id: "blasterEco2", x: 340, y: 1530, label: "Recycled Charges", lane: "Combat: Fire Rate", symbol: "◌", cost: cost(172, 16, 5), requires: ["drill5"], effect: { blasterFuelMult: 0.92 } },
+  { id: "range2", x: 340, y: 1650, label: "Long Barrel", lane: "Combat: Range", symbol: "⇢", cost: cost(182, 18, 5), requires: ["blasterEco2"], effect: { bulletLifeMult: 1.12 } },
+  { id: "drill6", x: 340, y: 1770, label: "Ablative Tips", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(194, 20, 6), requires: ["range2"], effect: { bulletDamage: 0.2 } },
+  { id: "laserFuel1", x: 340, y: 1890, label: "Beam Recycler", lane: "Combat: AOE / Advanced", symbol: "◌", cost: cost(208, 22, 7), requires: ["drill6"], effect: { laserFuelMult: 0.92 } },
+  { id: "drill7", x: 340, y: 2010, label: "Corebreaker Slugs", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(222, 24, 8), requires: ["laserFuel1"], effect: { bulletDamage: 0.22 } },
+  { id: "fire3", x: 340, y: 2130, label: "Accelerant Feed", lane: "Combat: Fire Rate", symbol: "»", cost: cost(236, 26, 10), requires: ["drill7"], effect: { rateMult: 0.96 } },
+  { id: "drill8", x: 340, y: 2250, label: "Mass Driver", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(248, 28, 12), requires: ["fire3"], effect: { bulletDamage: 0.22 } },
+  { id: "laserFuel2", x: 340, y: 2370, label: "Prism Recycler", lane: "Combat: AOE / Advanced", symbol: "◌", cost: cost(264, 30, 14), requires: ["drill8"], effect: { laserFuelMult: 0.9 } },
+  { id: "splash3", x: 340, y: 2490, label: "Shock Bloom", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(278, 32, 16), requires: ["laserFuel2"], effect: { splashRadius: 28, splashFalloff: 0.34 } },
+  { id: "drill9", x: 340, y: 2610, label: "Siege Payloads", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(294, 34, 18), requires: ["splash3"], effect: { bulletDamage: 0.24 } },
+  { id: "fire4", x: 340, y: 2730, label: "Burst Cyclers", lane: "Combat: Fire Rate", symbol: "»", cost: cost(312, 38, 22), requires: ["drill9"], effect: { rateMult: 0.96 } },
+  { id: "splash4", x: 340, y: 2850, label: "Nova Array", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(330, 42, 26), requires: ["fire4"], effect: { splashRadius: 36, splashFalloff: 0.38 } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
-  { id: "cargo1", x: 600, y: 240, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
-  { id: "magnet1", x: 600, y: 390, label: "Magnet", lane: "Cargo / Collection", symbol: "🧲", cost: cost(66), requires: ["cargo1"], effect: { magnet: 8 } },
-  { id: "dock1", x: 600, y: 540, label: "Dock Clamp", lane: "Mobility / Docking", symbol: "⌂", cost: cost(80), requires: ["magnet1"], effect: { dockRate: 1.18 } },
-  { id: "cargo2", x: 600, y: 690, label: "Platinum Bins", lane: "Cargo / Collection", symbol: "⬒", cost: cost(104, 8), requires: ["dock1"], effect: { cargoCap: 8 } },
-  { id: "fuel2", x: 600, y: 840, label: "Crystal Reservoir", lane: "Cargo / Collection", symbol: "◌", cost: cost(136, 10, 4), requires: ["cargo2"], effect: { fuelMax: 20 } },
+  { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
+  { id: "magnet1", x: 600, y: 330, label: "Magnet", lane: "Cargo / Collection", symbol: "🧲", cost: cost(66), requires: ["cargo1"], effect: { magnet: 8 } },
+  { id: "dock1", x: 600, y: 450, label: "Dock Clamp", lane: "Mobility / Docking", symbol: "⌂", cost: cost(80), requires: ["magnet1"], effect: { dockRate: 1.18 } },
+  { id: "cargo2", x: 600, y: 570, label: "Platinum Bins", lane: "Cargo / Collection", symbol: "⬒", cost: cost(104, 8), requires: ["dock1"], effect: { cargoCap: 8 } },
+  { id: "fuel2", x: 600, y: 690, label: "Crystal Reservoir", lane: "Cargo / Collection", symbol: "⛽", cost: cost(136, 10, 4), requires: ["cargo2"], effect: { fuelMax: 20 } },
+  { id: "cargo3", x: 600, y: 810, label: "Expanded Crates", lane: "Cargo / Collection", symbol: "◫", cost: cost(148, 12, 4), requires: ["fuel2"], effect: { cargoCap: 5 } },
+  { id: "fuel3", x: 600, y: 930, label: "Reserve Cells", lane: "Cargo / Collection", symbol: "⛽", cost: cost(162, 14, 5), requires: ["cargo3"], effect: { fuelMax: 10 } },
+  { id: "magnet2", x: 600, y: 1050, label: "Collection Field", lane: "Cargo / Collection", symbol: "🧲", cost: cost(176, 16, 6), requires: ["fuel3"], effect: { magnet: 10 } },
+  { id: "fuelEco1", x: 600, y: 1170, label: "Fuel Recycler", lane: "Cargo / Collection", symbol: "◌", cost: cost(190, 18, 6), requires: ["magnet2"], effect: { collisionFuelMult: 0.92 } },
+  { id: "cargo4", x: 600, y: 1290, label: "Freight Lattice", lane: "Cargo / Collection", symbol: "⬒", cost: cost(204, 20, 7), requires: ["fuelEco1"], effect: { cargoCap: 6 } },
+  { id: "fuel4", x: 600, y: 1410, label: "Aux Tanks", lane: "Cargo / Collection", symbol: "⛽", cost: cost(216, 22, 8), requires: ["cargo4"], effect: { fuelMax: 12 } },
+  { id: "dock3", x: 600, y: 1530, label: "Auto Dock Grid", lane: "Mobility / Docking", symbol: "⌂", cost: cost(232, 24, 9), requires: ["fuel4"], effect: { dockRate: 1.14 } },
+  { id: "cargo5", x: 600, y: 1650, label: "Bulk Holds", lane: "Cargo / Collection", symbol: "◫", cost: cost(246, 26, 10), requires: ["dock3"], effect: { cargoCap: 6 } },
+  { id: "fuel5", x: 600, y: 1770, label: "Deep Core Fuel", lane: "Cargo / Collection", symbol: "⛽", cost: cost(260, 28, 12), requires: ["cargo5"], effect: { fuelMax: 14 } },
+  { id: "magnet3", x: 600, y: 1890, label: "Grav Scoop", lane: "Cargo / Collection", symbol: "🧲", cost: cost(276, 30, 14), requires: ["fuel5"], effect: { magnet: 12 } },
+  { id: "fuelEco2", x: 600, y: 2010, label: "Fuel Catalysts", lane: "Cargo / Collection", symbol: "◌", cost: cost(292, 32, 16), requires: ["magnet3"], effect: { collisionFuelMult: 0.88 } },
+  { id: "cargo6", x: 600, y: 2130, label: "Vault Compartments", lane: "Cargo / Collection", symbol: "⬒", cost: cost(308, 34, 18), requires: ["fuelEco2"], effect: { cargoCap: 7 } },
+  { id: "fuel6", x: 600, y: 2250, label: "Apex Reactor", lane: "Cargo / Collection", symbol: "⛽", cost: cost(326, 38, 22), requires: ["cargo6"], effect: { fuelMax: 16 } },
 ];
 
 function clamp(value, min, max) {
@@ -422,6 +459,12 @@ function previewTextForNode(node, purchased) {
     const after = purchased ? state.ship.thrust : state.ship.thrust + effect.thrust;
     return `${before} -> ${after} thrust`;
   }
+  if (effect.thrustFuelMult) {
+    const current = state.ship.thrustFuelMult;
+    const before = purchased ? current / effect.thrustFuelMult : current;
+    const after = purchased ? current : current * effect.thrustFuelMult;
+    return `${before.toFixed(2)}x -> ${after.toFixed(2)}x thrust fuel`;
+  }
   if (effect.bulletDamage) {
     const before = purchased ? state.ship.bulletDamage - effect.bulletDamage : state.ship.bulletDamage;
     const after = purchased ? state.ship.bulletDamage : state.ship.bulletDamage + effect.bulletDamage;
@@ -457,11 +500,17 @@ function previewTextForNode(node, purchased) {
     const after = purchased ? current : current * effect.laserFuelMult;
     return `${before.toFixed(2)}x -> ${after.toFixed(2)}x fuel use`;
   }
-  if (effect.oreMult) {
-    const current = state.ship.oreMult;
-    const before = purchased ? current / effect.oreMult : current;
-    const after = purchased ? current : current * effect.oreMult;
-    return `${before.toFixed(1)}x -> ${after.toFixed(1)}x ore`;
+  if (effect.blasterFuelMult) {
+    const current = state.ship.blasterFuelMult;
+    const before = purchased ? current / effect.blasterFuelMult : current;
+    const after = purchased ? current : current * effect.blasterFuelMult;
+    return `${before.toFixed(2)}x -> ${after.toFixed(2)}x blaster fuel`;
+  }
+  if (effect.collisionFuelMult) {
+    const current = state.ship.collisionFuelMult;
+    const before = purchased ? current / effect.collisionFuelMult : current;
+    const after = purchased ? current : current * effect.collisionFuelMult;
+    return `${before.toFixed(2)}x -> ${after.toFixed(2)}x impact fuel`;
   }
   if (effect.splashRadius) {
     const before = purchased ? effect.splashRadius : state.ship.bulletSplashRadius;
@@ -470,7 +519,6 @@ function previewTextForNode(node, purchased) {
   }
   if (effect.unlockLaser) return purchased ? "Laser online" : "Unlock laser";
   if (effect.addLaser) return purchased ? "Beam online" : "Add support beam";
-  if (effect.dash) return purchased ? "Dash ready" : "Unlock dash";
   return purchased ? "Installed" : "Upgrade";
 }
 
@@ -862,7 +910,6 @@ function makeState() {
       aimX: 1,
       aimY: 0,
       firing: false,
-      dashQueued: false,
       touchMoveX: 0,
       touchMoveY: 0,
       touchAimX: 1,
@@ -887,11 +934,11 @@ function makeState() {
       cargo: emptyMaterials(),
       magnet: 56,
       thrust: 170,
-      dashImpulse: 220,
-      dashCooldown: 0,
+      thrustFuelMult: 1,
       dockRate: 1,
       fireCooldown: 0,
       bulletDamage: 1,
+      blasterFuelMult: 1,
       bulletLifeMult: 1,
       bulletSplashRadius: 0,
       bulletSplashFalloff: 0,
@@ -902,6 +949,7 @@ function makeState() {
       laserCooldown: 0,
       lasers: [],
       oreMult: 1,
+      collisionFuelMult: 1,
       collisionCostMult: 1,
       facingAngle: 0,
     },
@@ -1024,8 +1072,10 @@ function applyUpgrades() {
   ship.cargoCap = 28;
   ship.magnet = 56;
   ship.thrust = 170;
+  ship.thrustFuelMult = 1;
   ship.dockRate = 1;
   ship.bulletDamage = 1;
+  ship.blasterFuelMult = 1;
   ship.bulletLifeMult = 1;
   ship.bulletSplashRadius = 0;
   ship.bulletSplashFalloff = 0;
@@ -1036,6 +1086,7 @@ function applyUpgrades() {
   ship.laserCooldown = 0;
   ship.lasers = [];
   ship.oreMult = 1;
+  ship.collisionFuelMult = 1;
   ship.collisionCostMult = 1;
 
   for (const node of upgradeNodes) {
@@ -1046,8 +1097,10 @@ function applyUpgrades() {
     if (effect.cargoCap) ship.cargoCap += effect.cargoCap;
     if (effect.magnet) ship.magnet += effect.magnet;
     if (effect.thrust) ship.thrust += effect.thrust;
+    if (effect.thrustFuelMult) ship.thrustFuelMult *= effect.thrustFuelMult;
     if (effect.dockRate) ship.dockRate *= effect.dockRate;
     if (effect.bulletDamage) ship.bulletDamage += effect.bulletDamage;
+    if (effect.blasterFuelMult) ship.blasterFuelMult *= effect.blasterFuelMult;
     if (effect.bulletLifeMult) ship.bulletLifeMult *= effect.bulletLifeMult;
     if (effect.splashRadius) ship.bulletSplashRadius = Math.max(ship.bulletSplashRadius, effect.splashRadius);
     if (effect.splashFalloff) ship.bulletSplashFalloff = Math.max(ship.bulletSplashFalloff, effect.splashFalloff);
@@ -1068,8 +1121,8 @@ function applyUpgrades() {
       });
     }
     if (effect.oreMult) ship.oreMult *= effect.oreMult;
+    if (effect.collisionFuelMult) ship.collisionFuelMult *= effect.collisionFuelMult;
     if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
-    if (effect.dash) ship.dashImpulse = 280;
   }
 }
 
@@ -1669,7 +1722,7 @@ function spawnBullet() {
     damage: state.ship.bulletDamage,
   });
   state.runStats.bulletShots += 1;
-  state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel);
+  state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel * state.ship.blasterFuelMult);
   playShoot();
 }
 
@@ -1696,7 +1749,7 @@ function shipSectorDefinition() {
 function damageShip(hullDamage, fuelDamage, dtMultiplier = 1) {
   if (state.wrecked || state.cinematic.active) return;
   state.ship.hp = Math.max(0, state.ship.hp - hullDamage * dtMultiplier);
-  state.ship.fuel = Math.max(0, state.ship.fuel - fuelDamage * dtMultiplier);
+  state.ship.fuel = Math.max(0, state.ship.fuel - fuelDamage * dtMultiplier * state.ship.collisionFuelMult);
   state.damageShake = Math.max(state.damageShake, 0.55);
   state.hazardFlash = 0.18;
 }
@@ -1841,19 +1894,8 @@ function updateShip(dt) {
   if (move.active) {
     ship.vx += move.x * ship.thrust * dt;
     ship.vy += move.y * ship.thrust * dt;
-    ship.fuel = Math.max(0, ship.fuel - dt * 2.8);
+    ship.fuel = Math.max(0, ship.fuel - dt * 2.8 * ship.thrustFuelMult);
   }
-  if (state.input.dashQueued && ship.dashCooldown <= 0) {
-    const dashX = move.active ? move.x : state.input.aimX;
-    const dashY = move.active ? move.y : state.input.aimY;
-    const dashLen = Math.hypot(dashX, dashY) || 1;
-    ship.vx += (dashX / dashLen) * ship.dashImpulse;
-    ship.vy += (dashY / dashLen) * ship.dashImpulse;
-    ship.dashCooldown = 1.5;
-    ship.fuel = Math.max(0, ship.fuel - 8);
-  }
-  state.input.dashQueued = false;
-  ship.dashCooldown = Math.max(0, ship.dashCooldown - dt);
 
   ship.x += ship.vx * dt;
   ship.y += ship.vy * dt;
@@ -1876,7 +1918,7 @@ function updateShip(dt) {
     ship.x = hit.x + pushX * separation;
     ship.y = hit.y + pushY * separation;
     ship.hp = Math.max(0, ship.hp - dt * 68 * ship.collisionCostMult);
-    ship.fuel = Math.max(0, ship.fuel - dt * 24 * lerp(1, ship.collisionCostMult, 0.8));
+    ship.fuel = Math.max(0, ship.fuel - dt * 24 * lerp(1, ship.collisionCostMult, 0.8) * ship.collisionFuelMult);
     const normalVelocity = ship.vx * pushX + ship.vy * pushY;
     if (normalVelocity < 0) {
       ship.vx -= pushX * normalVelocity;
@@ -2837,10 +2879,6 @@ window.addEventListener("mouseup", () => {
 window.addEventListener("keydown", (event) => {
   ensureAudio()?.resume?.();
   state.keys.add(event.code);
-  if (event.code === "Space") {
-    state.input.dashQueued = true;
-    event.preventDefault();
-  }
   if (event.code === "Enter") {
     if (state.mode === "menu") {
       if (progress.hasSeenTip) startSortie();
@@ -2984,19 +3022,12 @@ setupStick(ui.aimStick, {
   },
 });
 
-ui.dashTouchBtn.addEventListener("click", () => {
-  ensureAudio()?.resume?.();
-  playUiClick();
-  state.input.dashQueued = true;
-});
-
 function blockIOSGameGestures() {
   const targets = [
     canvas,
     ui.mobileControls,
     ui.moveStick,
     ui.aimStick,
-    ui.dashTouchBtn,
   ].filter(Boolean);
 
   for (const element of targets) {

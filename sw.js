@@ -1,4 +1,4 @@
-const CACHE_NAME = "orbit-mine-v1.8.02";
+const CACHE_NAME = "orbit-mine-v1.9.02";
 const ASSETS = ["./", "./index.html", "./styles.css", "./main.js", "./manifest.webmanifest", "./icon.svg", "./apple-launch-1125x2436.png",
   "./apple-launch-1179x2556.png"];
 const NETWORK_FIRST = new Set(["/", "/index.html", "/styles.css", "/main.js", "/manifest.webmanifest"]);
