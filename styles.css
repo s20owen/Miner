@@ -359,6 +359,11 @@ canvas,
   font-size: 0.82rem;
 }
 
+#hangar-contract-objective {
+  color: rgba(255, 210, 79, 0.96);
+  font-weight: 700;
+}
+
 #hangar-contract-yield {
   color: rgba(247, 238, 215, 0.88);
 }

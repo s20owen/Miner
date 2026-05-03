@@ -37,12 +37,15 @@ const ui = {
   hangarCoreValue: document.getElementById("hangar-core-value"),
   hangarContractName: document.getElementById("hangar-contract-name"),
   hangarContractDetail: document.getElementById("hangar-contract-detail"),
+  hangarContractObjective: document.getElementById("hangar-contract-objective"),
   hangarContractYield: document.getElementById("hangar-contract-yield"),
   hangarContractPressure: document.getElementById("hangar-contract-pressure"),
   hangarUpgradeGrid: document.getElementById("hangar-upgrade-grid"),
   hangarNextUpgrade: document.getElementById("hangar-next-upgrade"),
   planetPrevBtn: document.getElementById("planet-prev-btn"),
   planetNextBtn: document.getElementById("planet-next-btn"),
+  showCoreContractsBtn: document.getElementById("show-core-contracts-btn"),
+  showFieldContractsBtn: document.getElementById("show-field-contracts-btn"),
   upgradeTree: document.getElementById("upgrade-tree"),
   resultsTitle: document.getElementById("results-title"),
   resultsSortieLabel: document.getElementById("results-sortie-label"),
@@ -164,6 +167,28 @@ const TIPS = [
 ];
 
 const MATERIAL_TYPES = ["ore", "platinum", "crystal"];
+const CORE_SAMPLE_LAYOUT = [
+  [0, 0],
+  [-1, 0],
+  [1, 0],
+  [0, -1],
+  [0, 1],
+  [-1, -1],
+  [1, -1],
+  [-1, 1],
+  [1, 1],
+  [-2, 0],
+  [2, 0],
+  [0, -2],
+  [0, 2],
+  [-2, 1],
+  [2, -1],
+  [-1, 2],
+  [1, -2],
+  [-2, -1],
+  [2, 1],
+  [1, 2],
+];
 const MATERIAL_SALE_VALUES = {
   ore: 12,
   platinum: 36,
@@ -263,9 +288,67 @@ const PLANETS = [
   },
 ];
 
+const FIELD_CONTRACTS = [
+  {
+    id: "ore-sweep-1",
+    name: "Ore Sweep",
+    contractType: "field",
+    threatLabel: "Starter I",
+    contractDetail: "Small asteroid • bulk ore quota",
+    objective: { requirements: { ore: 1000 } },
+    payoutCredits: 4200,
+    radiusBlocks: 56,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial"],
+    materialBias: { ore: 1.55, platinum: 0.7, crystal: 0.45 },
+    blockHpBonus: -1,
+    hazardRateMult: 1,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "platinum-recovery-1",
+    name: "Platinum Recovery",
+    contractType: "field",
+    threatLabel: "Starter II",
+    contractDetail: "Moon fragment • richer shell with recoverable core",
+    objective: { requirements: { ore: 1000, platinum: 150, coreSamples: 5 } },
+    payoutCredits: 9200,
+    radiusBlocks: 62,
+    coreRadiusBlocks: 5,
+    sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
+    materialBias: { ore: 0.92, platinum: 1.42, crystal: 0.7 },
+    blockHpBonus: 0,
+    coreSampleYield: 5,
+    hazardRateMult: 0.94,
+    sectorCompletionMult: 1,
+    hasCoreEvent: true,
+  },
+  {
+    id: "crystal-probe-1",
+    name: "Crystal Probe",
+    contractType: "field",
+    threatLabel: "Starter III",
+    contractDetail: "Micro-planet • deep shell contract with core extraction",
+    objective: { requirements: { ore: 2000, platinum: 200, crystal: 100, coreSamples: 15 } },
+    payoutCredits: 16800,
+    radiusBlocks: 68,
+    coreRadiusBlocks: 5,
+    sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
+    materialBias: { ore: 0.64, platinum: 1.08, crystal: 1.58 },
+    blockHpBonus: 1,
+    coreSampleYield: 15,
+    hazardRateMult: 0.88,
+    sectorCompletionMult: 1.05,
+    hasCoreEvent: true,
+  },
+];
+
 const SECTOR_BY_ID = Object.fromEntries(SECTORS.map((sector) => [sector.id, sector]));
 const PLANET_BY_ID = Object.fromEntries(PLANETS.map((planet) => [planet.id, planet]));
+const FIELD_CONTRACT_BY_ID = Object.fromEntries(FIELD_CONTRACTS.map((contract) => [contract.id, contract]));
 const DEFAULT_PLANET_ID = PLANETS[0].id;
+const DEFAULT_FIELD_CONTRACT_ID = FIELD_CONTRACTS[0].id;
 
 const audio = {
   ctx: null,
@@ -274,7 +357,8 @@ const audio = {
 };
 
 function cost(ore = 0, platinum = 0, crystal = 0) {
-  return ore * MATERIAL_SALE_VALUES.ore + platinum * MATERIAL_SALE_VALUES.platinum + crystal * MATERIAL_SALE_VALUES.crystal;
+  const base = ore * MATERIAL_SALE_VALUES.ore + platinum * MATERIAL_SALE_VALUES.platinum + crystal * MATERIAL_SALE_VALUES.crystal;
+  return Math.round((base * 1.45) / 5) * 5;
 }
 
 function researchCost(ore = 0, platinum = 0, crystal = 0) {
@@ -306,6 +390,11 @@ const upgradeNodes = [
   { id: "hull4", x: 80, y: 2040, label: "Aegis Plating", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(72, 88, 52), requires: ["engineEco3"], effect: { hpMax: 16 } },
   { id: "reactive3", x: 80, y: 2190, label: "Shock Baffles", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(84, 102, 64), requires: ["hull4"], effect: { collisionCostMult: 0.86 } },
   { id: "hull5", x: 80, y: 2340, label: "Bastion Hull", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 118, 78), requires: ["reactive3"], effect: { hpMax: 20 } },
+  { id: "shield1", x: 80, y: 2490, label: "Shield Matrix", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(102, 126, 82), requires: ["hull5"], effect: { shieldMult: 0.92 } },
+  { id: "hull6", x: 80, y: 2640, label: "Bulwark Frame", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(112, 138, 94), requires: ["shield1"], effect: { hpMax: 18 } },
+  { id: "reactive4", x: 80, y: 2790, label: "Gravitic Bracing", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(122, 148, 104), requires: ["hull6"], effect: { collisionCostMult: 0.82 } },
+  { id: "shield2", x: 80, y: 2940, label: "Barrier Lattice", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(132, 160, 116), requires: ["reactive4"], effect: { shieldMult: 0.9 } },
+  { id: "hull7", x: 80, y: 3090, label: "Citadel Shell", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(142, 174, 128), requires: ["shield2"], effect: { hpMax: 24 } },
 
   { id: "fire1", x: 340, y: 90, label: "Fire Rate", lane: "Combat: Fire Rate", symbol: "»", cost: cost(46), requires: [], effect: { rateMult: 0.94 } },
   { id: "drill1", x: 340, y: 210, label: "Bullet Force", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.56 } },
@@ -334,6 +423,14 @@ const upgradeNodes = [
   { id: "fire5", x: 340, y: 2970, label: "Overdrive Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(76, 104, 58), requires: ["splash4"], effect: { rateMult: 0.96 } },
   { id: "drill10", x: 340, y: 3090, label: "Planetcracker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(88, 118, 72), requires: ["fire5"], effect: { bulletDamage: 0.24 } },
   { id: "laser3", x: 340, y: 3210, label: "Prism Lance", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 132, 86), requires: ["drill10"], effect: { laserDamage: 1.22 } },
+  { id: "fire6", x: 340, y: 3330, label: "Hyper Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(106, 144, 98), requires: ["laser3"], effect: { rateMult: 0.95 } },
+  { id: "drill11", x: 340, y: 3450, label: "Sharddriver", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(116, 156, 108), requires: ["fire6"], effect: { bulletDamage: 0.26 } },
+  { id: "laser4", x: 340, y: 3570, label: "Tri-Beam Bus", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(126, 168, 120), requires: ["drill11"], effect: { addLaser: { color: "#ff8be8", damageMult: 0.9 } } },
+  { id: "laserFuel3", x: 340, y: 3690, label: "Emitter Recycler", lane: "Combat Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(136, 180, 132), requires: ["laser4"], effect: { laserFuelMult: 0.88 } },
+  { id: "drill12", x: 340, y: 3810, label: "Siegebreaker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(148, 194, 146), requires: ["laserFuel3"], effect: { bulletDamage: 0.28 } },
+  { id: "splash5", x: 340, y: 3930, label: "Cataclysm Array", lane: "Combat Mk II", symbol: "✹", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(160, 208, 160), requires: ["drill12"], effect: { splashRadius: 44, splashFalloff: 0.42 } },
+  { id: "fire7", x: 340, y: 4050, label: "Redline Cyclers", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(172, 222, 174), requires: ["splash5"], effect: { rateMult: 0.95 } },
+  { id: "laser5", x: 340, y: 4170, label: "Escort Emitter", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(184, 236, 188), requires: ["fire7"], effect: { addLaser: { color: "#8dffb7", damageMult: 0.72 } } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
@@ -357,6 +454,15 @@ const upgradeNodes = [
   { id: "fuel7", x: 600, y: 2370, label: "Long Haul Cells", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(74, 98, 56), requires: ["fuel6"], effect: { fuelMax: 12 } },
   { id: "cargo7", x: 600, y: 2490, label: "Deep Vaults", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(86, 112, 68), requires: ["fuel7"], effect: { cargoCap: 5 } },
   { id: "fuelEco3", x: 600, y: 2610, label: "Catalytic Return", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(94, 126, 82), requires: ["cargo7"], effect: { thrustFuelMult: 0.92, collisionFuelMult: 0.86 } },
+  { id: "cargo8", x: 600, y: 2730, label: "Freighter Spine", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(104, 138, 92), requires: ["fuelEco3"], effect: { cargoCap: 6 } },
+  { id: "fuel8", x: 600, y: 2850, label: "Reserve Manifold", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(114, 150, 102), requires: ["cargo8"], effect: { fuelMax: 14 } },
+  { id: "fuelEco4", x: 600, y: 2970, label: "Burn Recovery", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(124, 162, 114), requires: ["fuel8"], effect: { thrustFuelMult: 0.9, collisionFuelMult: 0.9 } },
+  { id: "cargo9", x: 600, y: 3090, label: "Vault Grid", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(136, 176, 126), requires: ["fuelEco4"], effect: { cargoCap: 7 } },
+  { id: "fuel9", x: 600, y: 3210, label: "Longburn Stack", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(148, 190, 138), requires: ["cargo9"], effect: { fuelMax: 16 } },
+  { id: "fuelEco5", x: 600, y: 3330, label: "Closed-Loop Routing", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(160, 204, 152), requires: ["fuel9"], effect: { thrustFuelMult: 0.88, collisionFuelMult: 0.88 } },
+  { id: "cargo10", x: 600, y: 3450, label: "Grand Holds", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(172, 218, 166), requires: ["fuelEco5"], effect: { cargoCap: 8 } },
+  { id: "fuel10", x: 600, y: 3570, label: "Expedition Core", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(186, 234, 182), requires: ["cargo10"], effect: { fuelMax: 20 } },
+  { id: "magnet4", x: 600, y: 3690, label: "Void Scoop", lane: "Cargo Mk II", symbol: "🧲", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(198, 248, 196), requires: ["fuel10"], effect: { magnet: 14 } },
 ];
 
 const RESEARCH_NODES = [
@@ -433,6 +539,9 @@ function defaultPlanetProgress() {
     coreCleared: false,
     cleared: false,
     sectors: {},
+    contractDelivered: emptyMaterials(),
+    contractCoreSamples: 0,
+    contractCoreClaimed: false,
   };
 }
 
@@ -442,6 +551,9 @@ function clonePlanetProgress(progressState = defaultPlanetProgress()) {
     ...progressState,
     destroyedBlocks: [...(progressState.destroyedBlocks || [])],
     sectors: { ...(progressState.sectors || {}) },
+    contractDelivered: { ...emptyMaterials(), ...(progressState.contractDelivered || {}) },
+    contractCoreSamples: progressState.contractCoreSamples || 0,
+    contractCoreClaimed: !!progressState.contractCoreClaimed,
   };
 }
 
@@ -449,49 +561,161 @@ function getPlanetDefinition(planetId = DEFAULT_PLANET_ID) {
   return PLANET_BY_ID[planetId] || PLANET_BY_ID[DEFAULT_PLANET_ID];
 }
 
-function planetContractDetail(planetId = DEFAULT_PLANET_ID) {
-  const planet = getPlanetDefinition(planetId);
-  return planet.contractDetail || "Standard mining contract";
+function planetContractDetail(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return contract.contractDetail || "Standard mining contract";
 }
 
-function planetMaterialBias(planetId = DEFAULT_PLANET_ID) {
-  return { ore: 1, platinum: 1, crystal: 1, ...(getPlanetDefinition(planetId).materialBias || {}) };
+function planetMaterialBias(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return { ore: 1, platinum: 1, crystal: 1, ...(contract.materialBias || {}) };
 }
 
-function planetCoreReward(planetId = DEFAULT_PLANET_ID) {
-  return { ore: 0, platinum: 8, crystal: 18, ...(getPlanetDefinition(planetId).coreReward || {}) };
+function planetCoreReward(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return { ore: 0, platinum: 8, crystal: 18, ...(contract.coreReward || {}) };
 }
 
-function planetThreatLabel(planetId = DEFAULT_PLANET_ID) {
-  const planet = getPlanetDefinition(planetId);
-  return planet.threatLabel || "Threat I";
+function planetThreatLabel(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return contract.threatLabel || "Threat I";
 }
 
-function coreHpForPlanet(planetId = DEFAULT_PLANET_ID) {
-  return getPlanetDefinition(planetId).coreHp || 92;
+function coreHpForPlanet(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return contract.coreHp || 92;
 }
 
-function planetYieldLabel(planetId = DEFAULT_PLANET_ID) {
-  const bias = planetMaterialBias(planetId);
+function planetYieldLabel(contractRef = DEFAULT_PLANET_ID) {
+  const bias = planetMaterialBias(contractRef);
   const ranked = MATERIAL_TYPES.slice().sort((a, b) => bias[b] - bias[a]);
   return `${ranked[0][0].toUpperCase()}${ranked[0].slice(1)} focus`;
+}
+
+function getFieldContractDefinition(contractId = DEFAULT_FIELD_CONTRACT_ID) {
+  return FIELD_CONTRACT_BY_ID[contractId] || FIELD_CONTRACTS[0];
+}
+
+function getActiveContractDefinition() {
+  return progress.currentContractLane === "field"
+    ? getFieldContractDefinition(progress.currentFieldContractId)
+    : getPlanetDefinition(progress.currentPlanetId);
+}
+
+function contractRadiusBlocks(contract) {
+  return contract?.radiusBlocks || PLANET_RADIUS_BLOCKS;
+}
+
+function contractCoreRadiusBlocks(contract) {
+  return contract?.coreRadiusBlocks ?? CORE_RADIUS_BLOCKS;
+}
+
+function contractPlanetRadius(contract) {
+  return contractRadiusBlocks(contract) * BLOCK_SIZE;
+}
+
+function contractCoreRadius(contract) {
+  return contractCoreRadiusBlocks(contract) * BLOCK_SIZE;
+}
+
+function contractHasCoreEvent(contract) {
+  return contract?.hasCoreEvent !== false;
+}
+
+function contractObjectiveLabel(contract) {
+  const requirements = contract?.objective?.requirements || {};
+  const parts = [];
+  if (requirements.ore) parts.push(`${fmt(requirements.ore)} ore`);
+  if (requirements.platinum) parts.push(`${fmt(requirements.platinum)} platinum`);
+  if (requirements.crystal) parts.push(`${fmt(requirements.crystal)} crystal`);
+  if (requirements.coreSamples) parts.push(`${fmt(requirements.coreSamples)} core samples`);
+  if (requirements.minedPercent) parts.push(`${fmt(requirements.minedPercent)}% mined`);
+  return parts.length ? parts.join(" • ") : contractYieldLabel(contract);
+}
+
+function contractYieldLabel(contract) {
+  const bias = contract?.materialBias || emptyMaterials();
+  const ranked = MATERIAL_TYPES.slice().sort((a, b) => (bias[b] || 0) - (bias[a] || 0));
+  return `${ranked[0][0].toUpperCase()}${ranked[0].slice(1)} focus`;
+}
+
+function contractObjectiveRequirements(contract) {
+  return {
+    ore: 0,
+    platinum: 0,
+    crystal: 0,
+    coreSamples: 0,
+    minedPercent: 0,
+    ...(contract?.objective?.requirements || {}),
+  };
+}
+
+function contractObjectiveProgress(contract, contractProgressState = defaultPlanetProgress()) {
+  const requirements = contractObjectiveRequirements(contract);
+  const delivered = { ...emptyMaterials(), ...(contractProgressState.contractDelivered || {}) };
+  const progressState = {
+    ore: delivered.ore || 0,
+    platinum: delivered.platinum || 0,
+    crystal: delivered.crystal || 0,
+    coreSamples: contractProgressState.contractCoreSamples || 0,
+    minedPercent: contractProgressState.terrainClearedPercent || 0,
+  };
+  const parts = [];
+  const missingParts = [];
+  let complete = true;
+  for (const [key, target] of Object.entries(requirements)) {
+    if (!target) continue;
+    const current = Math.min(progressState[key] || 0, target);
+    const label = key === "coreSamples"
+      ? "core"
+      : key === "minedPercent"
+        ? "mined"
+        : key;
+    if (key === "minedPercent") {
+      parts.push(`${label} ${fmt(current)}% / ${fmt(target)}%`);
+      if (current < target) missingParts.push(`${fmt(target - current)}% mined`);
+    } else {
+      parts.push(`${label} ${fmt(current)} / ${fmt(target)}`);
+      if (current < target) missingParts.push(`${fmt(target - current)} ${label}`);
+    }
+    if (current < target) complete = false;
+  }
+  return {
+    complete,
+    progressByType: progressState,
+    progressLabel: parts.join(" • "),
+    missingLabel: missingParts.join(" • "),
+  };
 }
 
 function getSectorDefinition(sectorId) {
   return SECTOR_BY_ID[sectorId] || SECTORS[0];
 }
 
-function orderedMiningSectors(planetId = DEFAULT_PLANET_ID) {
-  return getPlanetDefinition(planetId).sectors
+function orderedMiningSectors(contractRef = DEFAULT_PLANET_ID) {
+  const contract = typeof contractRef === "string"
+    ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
+    : contractRef;
+  return contract.sectors
     .map((sectorId) => getSectorDefinition(sectorId))
     .filter((sector) => sector.kind === "mining");
 }
 
-function sectorForDepth(planetId, depth) {
-  return orderedMiningSectors(planetId).find((sector, index, list) => {
+function sectorForDepth(contractRef, depth) {
+  return orderedMiningSectors(contractRef).find((sector, index, list) => {
     const isLast = index === list.length - 1;
     return depth >= sector.minDepth && (depth < sector.maxDepth || (isLast && depth <= sector.maxDepth));
-  }) || orderedMiningSectors(planetId)[0];
+  }) || orderedMiningSectors(contractRef)[0];
 }
 
 function sectorLabel(sectorId) {
@@ -585,6 +809,12 @@ function previewTextForNode(node, purchased) {
     const after = purchased ? state.ship.hpMax : state.ship.hpMax + effect.hpMax;
     return `${before} -> ${after} hull`;
   }
+  if (effect.shieldMult) {
+    const current = state.ship.shieldMult;
+    const before = purchased ? current / effect.shieldMult : current;
+    const after = purchased ? current : current * effect.shieldMult;
+    return `${Math.round(before * 100)}% -> ${Math.round(after * 100)}% hull dmg`;
+  }
   if (effect.collisionCostMult) {
     const current = state.ship.collisionCostMult;
     const before = purchased ? current / effect.collisionCostMult : current;
@@ -669,10 +899,10 @@ function noise2D(x, y) {
   return value - Math.floor(value);
 }
 
-function blockMaterialAt(planetId, sector, depth, gx, gy) {
+function blockMaterialAt(contractRef, sector, depth, gx, gy) {
   const pocketNoise = noise2D(gx * 0.73, gy * 0.73);
   const richNoise = noise2D(gx * 1.13 + 41, gy * 1.13 - 19);
-  const bias = planetMaterialBias(planetId);
+  const bias = planetMaterialBias(contractRef);
 
   if (sector.id === "surface") return "ore";
   if (sector.id === "industrial") {
@@ -707,29 +937,47 @@ function ensurePlanetProgressRecord(progressState, planetId = DEFAULT_PLANET_ID)
   return progressState.planetProgress[planetId];
 }
 
+function ensureFieldContractProgressRecord(progressState, contractId = DEFAULT_FIELD_CONTRACT_ID) {
+  if (!progressState.fieldContractProgress || typeof progressState.fieldContractProgress !== "object") {
+    progressState.fieldContractProgress = {};
+  }
+  if (!progressState.fieldContractProgress[contractId]) {
+    progressState.fieldContractProgress[contractId] = defaultPlanetProgress();
+  }
+  progressState.fieldContractProgress[contractId] = clonePlanetProgress(progressState.fieldContractProgress[contractId]);
+  return progressState.fieldContractProgress[contractId];
+}
+
 function getActivePlanetProgress() {
+  if (state?.contractLane === "field") return ensureFieldContractProgressRecord(progress, progress.currentFieldContractId);
   return ensurePlanetProgressRecord(progress, progress.currentPlanetId);
 }
 
 function syncLegacyDestroyedBlocks() {
+  if (state?.contractLane === "field") return;
   progress.destroyedBlocks = [...getActivePlanetProgress().destroyedBlocks];
 }
 
-function makePlanet(planetId = DEFAULT_PLANET_ID) {
+function makePlanet(contract = getPlanetDefinition(DEFAULT_PLANET_ID), persistProgress = true) {
   const blocks = [];
   const map = new Map();
   const sectorTotals = {};
-  const planetDefinition = getPlanetDefinition(planetId);
-  const destroyed = new Set(ensurePlanetProgressRecord(progress, planetId).destroyedBlocks || []);
-  for (let gy = -PLANET_RADIUS_BLOCKS; gy <= PLANET_RADIUS_BLOCKS; gy += 1) {
-    for (let gx = -PLANET_RADIUS_BLOCKS; gx <= PLANET_RADIUS_BLOCKS; gx += 1) {
+  const planetDefinition = contract;
+  const radiusBlocks = contractRadiusBlocks(contract);
+  const coreRadiusBlocks = contractCoreRadiusBlocks(contract);
+  const storedProgress = contract.contractType === "field"
+    ? ensureFieldContractProgressRecord(progress, contract.id)
+    : ensurePlanetProgressRecord(progress, contract.id);
+  const destroyed = new Set(persistProgress ? storedProgress.destroyedBlocks || [] : []);
+  for (let gy = -radiusBlocks; gy <= radiusBlocks; gy += 1) {
+    for (let gx = -radiusBlocks; gx <= radiusBlocks; gx += 1) {
       const dist = length2D(gx, gy);
-      if (dist > PLANET_RADIUS_BLOCKS || dist < CORE_RADIUS_BLOCKS) continue;
-      const depth = 1 - (dist - CORE_RADIUS_BLOCKS) / (PLANET_RADIUS_BLOCKS - CORE_RADIUS_BLOCKS);
-      const sector = sectorForDepth(planetId, depth);
+      if (dist > radiusBlocks || dist < coreRadiusBlocks) continue;
+      const depth = 1 - (dist - coreRadiusBlocks) / Math.max(1, radiusBlocks - coreRadiusBlocks);
+      const sector = sectorForDepth(contract, depth);
       const key = `${gx},${gy}`;
       const maxHp = clamp(blockHpAt(sector, gx, gy) + (planetDefinition.blockHpBonus || 0), 2, 10);
-      const material = blockMaterialAt(planetId, sector, depth, gx, gy);
+      const material = blockMaterialAt(contract, sector, depth, gx, gy);
       const block = {
         gx,
         gy,
@@ -748,7 +996,39 @@ function makePlanet(planetId = DEFAULT_PLANET_ID) {
       sectorTotals[sector.id] = (sectorTotals[sector.id] || 0) + 1;
     }
   }
-  return { id: planetId, definition: planetDefinition, blocks, map, totalBlocks: blocks.length, sectorTotals };
+  addCoreSampleBlocksToPlanet({ id: contract.id, definition: planetDefinition, blocks, map, sectorTotals, radiusBlocks, coreRadiusBlocks }, contract, storedProgress);
+  return { id: contract.id, definition: planetDefinition, blocks, map, totalBlocks: blocks.length, sectorTotals, radiusBlocks, coreRadiusBlocks };
+}
+
+function addCoreSampleBlocksToPlanet(planet, contract, contractProgressState) {
+  if (!contract?.coreSampleYield || !contractProgressState?.coreCleared) return;
+  const sampleCount = contract.coreSampleYield;
+  const sampleSector = getSectorDefinition("coreEvent");
+  for (const [gx, gy] of CORE_SAMPLE_LAYOUT.slice(0, sampleCount)) {
+    const key = `${gx},${gy}`;
+    if (planet.map.has(key)) continue;
+    const alive = !contractProgressState.destroyedBlocks.includes(key);
+    const block = {
+      gx,
+      gy,
+      x: gx * BLOCK_SIZE,
+      y: gy * BLOCK_SIZE,
+      key,
+      sectorId: sampleSector.id,
+      maxHp: 14 + Math.max(0, contract.blockHpBonus || 0) * 2,
+      hp: alive ? 14 + Math.max(0, contract.blockHpBonus || 0) * 2 : 0,
+      material: "coreSample",
+      materialValue: 1,
+      alive,
+      isCoreSample: true,
+      pickupMaterial: "coreSample",
+      pickupValue: 1,
+    };
+    planet.blocks.push(block);
+    planet.map.set(key, block);
+    planet.sectorTotals[sampleSector.id] = (planet.sectorTotals[sampleSector.id] || 0) + 1;
+  }
+  planet.totalBlocks = planet.blocks.length;
 }
 
 function defaultProgress() {
@@ -763,8 +1043,13 @@ function defaultProgress() {
     destroyedBlocks: [],
     unlockedPlanets: [DEFAULT_PLANET_ID],
     currentPlanetId: DEFAULT_PLANET_ID,
+    currentContractLane: "core",
+    currentFieldContractId: DEFAULT_FIELD_CONTRACT_ID,
     planetProgress: {
       [DEFAULT_PLANET_ID]: defaultPlanetProgress(),
+    },
+    fieldContractProgress: {
+      [DEFAULT_FIELD_CONTRACT_ID]: defaultPlanetProgress(),
     },
     settings: {
       qualityProfile: defaultQualityProfileId(),
@@ -801,16 +1086,22 @@ function loadProgress() {
     merged.settings.showFps = !!merged.settings.showFps;
     merged.research = typeof merged.research === "object" && merged.research ? { ...merged.research } : {};
     merged.currentPlanetId = getPlanetDefinition(merged.currentPlanetId).id;
+    merged.currentContractLane = merged.currentContractLane === "field" ? "field" : "core";
+    merged.currentFieldContractId = FIELD_CONTRACT_BY_ID[merged.currentFieldContractId] ? merged.currentFieldContractId : DEFAULT_FIELD_CONTRACT_ID;
     merged.unlockedPlanets = Array.isArray(merged.unlockedPlanets) && merged.unlockedPlanets.length
       ? Array.from(new Set(merged.unlockedPlanets.filter((planetId) => PLANET_BY_ID[planetId])))
       : [DEFAULT_PLANET_ID];
     if (!merged.unlockedPlanets.includes(DEFAULT_PLANET_ID)) merged.unlockedPlanets.unshift(DEFAULT_PLANET_ID);
     if (!merged.unlockedPlanets.includes(merged.currentPlanetId)) merged.unlockedPlanets.push(merged.currentPlanetId);
     if (!merged.planetProgress || typeof merged.planetProgress !== "object") merged.planetProgress = {};
+    if (!merged.fieldContractProgress || typeof merged.fieldContractProgress !== "object") merged.fieldContractProgress = {};
     const migratedDestroyedBlocks = Array.isArray(merged.destroyedBlocks) ? merged.destroyedBlocks : [];
     for (const planetId of merged.unlockedPlanets) {
       const existing = merged.planetProgress[planetId];
       merged.planetProgress[planetId] = clonePlanetProgress(existing || (planetId === merged.currentPlanetId ? { destroyedBlocks: migratedDestroyedBlocks } : defaultPlanetProgress()));
+    }
+    for (const contract of FIELD_CONTRACTS) {
+      merged.fieldContractProgress[contract.id] = clonePlanetProgress(merged.fieldContractProgress[contract.id] || defaultPlanetProgress());
     }
     if (merged.upgrades?.laser) merged.research.laserTheory = true;
     if (merged.upgrades?.splash2) merged.research.arrayTheory = true;
@@ -831,7 +1122,6 @@ function syncLegacyDestroyedBlocksForLoad(progressState) {
 }
 
 const progress = loadProgress();
-syncLegacyDestroyedBlocks();
 let fpsSampleTime = 0;
 let fpsSampleFrames = 0;
 let displayedFps = 0;
@@ -930,7 +1220,8 @@ function computePlanetProgressSnapshot(planet, planetProgressState) {
     };
   }
 
-  const coreUnlocked = miningSectors.every((sector) => sectorStates[sector.id]?.completed);
+  const hasCoreEvent = contractHasCoreEvent(planet.definition);
+  const coreUnlocked = hasCoreEvent && miningSectors.every((sector) => sectorStates[sector.id]?.completed);
   const coreCleared = !!planetProgressState.coreCleared;
   const coreState = {
     id: "coreEvent",
@@ -942,27 +1233,28 @@ function computePlanetProgressSnapshot(planet, planetProgressState) {
     hazardLabel: "reactor pulse",
   };
 
-  let currentSectorId = "coreEvent";
+  let currentSectorId = hasCoreEvent ? "coreEvent" : miningSectors[miningSectors.length - 1]?.id || "surface";
   for (const sector of miningSectors) {
     if (!sectorStates[sector.id].completed) {
       currentSectorId = sector.id;
       break;
     }
   }
-  if (currentSectorId === "coreEvent" && !coreUnlocked) currentSectorId = miningSectors[miningSectors.length - 1].id;
+  if (hasCoreEvent && currentSectorId === "coreEvent" && !coreUnlocked) currentSectorId = miningSectors[miningSectors.length - 1].id;
 
   const completedSteps = completedMiningSectors + (coreCleared ? 1 : 0);
-  const completionPercent = (completedSteps / planet.definition.sectors.length) * 100;
+  const completionDivisor = hasCoreEvent ? planet.definition.sectors.length : Math.max(1, miningSectors.length);
+  const completionPercent = (completedSteps / completionDivisor) * 100;
   const terrainClearedPercent = totalMiningBlocks ? (totalClearedBlocks / totalMiningBlocks) * 100 : 0;
 
   return {
     planetId: planet.id,
     planetName: planet.definition.name,
-    sectors: { ...sectorStates, coreEvent: coreState },
+    sectors: hasCoreEvent ? { ...sectorStates, coreEvent: coreState } : { ...sectorStates },
     currentSectorId,
     currentSector: currentSectorId === "coreEvent" ? coreState : sectorStates[currentSectorId],
     coreUnlocked,
-    coreCleared,
+    coreCleared: hasCoreEvent ? coreCleared : false,
     cleared: coreCleared,
     completionPercent,
     terrainClearedPercent,
@@ -970,7 +1262,9 @@ function computePlanetProgressSnapshot(planet, planetProgressState) {
 }
 
 function savePlanetProgressSnapshot(snapshot, persist = true) {
-  const active = ensurePlanetProgressRecord(progress, snapshot.planetId);
+  const active = state?.contractLane === "field"
+    ? ensureFieldContractProgressRecord(progress, snapshot.planetId)
+    : ensurePlanetProgressRecord(progress, snapshot.planetId);
   active.currentSectorId = snapshot.currentSectorId;
   active.completionPercent = snapshot.completionPercent;
   active.coreUnlocked = snapshot.coreUnlocked;
@@ -985,7 +1279,7 @@ function savePlanetProgressSnapshot(snapshot, persist = true) {
       completed: !!sectorState.completed,
     };
   }
-  syncLegacyDestroyedBlocks();
+  if (state?.contractLane !== "field") syncLegacyDestroyedBlocks();
   if (persist) saveProgress();
 }
 
@@ -1002,7 +1296,7 @@ function setCorePhase(phase, timer = 0) {
 function triggerCorePulse(strength = 310) {
   state.core.pulseFlash = 0.42;
   state.gravityPulse.life = 0.82;
-  state.gravityPulse.radius = PLANET_RADIUS * 0.24;
+  state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.24;
   state.gravityPulse.strength = strength;
   state.gravityPulse.timer = 4.2;
   showGameplayBanner("Core pulse. Stay clear of the center.", 1.8);
@@ -1096,8 +1390,10 @@ function saveProgress() {
 function makeSortieReport(success, delivered, reportPlanetSnapshot = null, reportPlanetDefinition = null) {
   const planetSnapshot = reportPlanetSnapshot || state.planetProgressSnapshot || computePlanetProgressSnapshot(state.planet, getActivePlanetProgress());
   const planetDefinition = reportPlanetDefinition || state.planet.definition;
+  const hasCoreEvent = contractHasCoreEvent(planetDefinition);
   return {
     success,
+    contractType: state.contract.contractType || "core",
     sortieNumber: progress.sortie,
     blocksMined: state.runStats.blocksMined,
     minedPercent: planetSnapshot.terrainClearedPercent ?? 0,
@@ -1112,19 +1408,22 @@ function makeSortieReport(success, delivered, reportPlanetSnapshot = null, repor
     bonusMaterials: { ...state.runStats.bonusMaterials },
     planetId: planetSnapshot.planetId,
     planetName: planetDefinition.name || planetSnapshot.planetName,
+    radiusBlocks: state.planet.radiusBlocks,
+    coreRadiusBlocks: state.planet.coreRadiusBlocks,
     sectorId: planetSnapshot.currentSectorId,
     sectorName: planetSnapshot.currentSector.name,
     planetCompletionPercent: planetSnapshot.completionPercent,
     coreUnlocked: planetSnapshot.coreUnlocked,
     coreCleared: planetSnapshot.coreCleared,
-    coreStatusLabel: planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed",
+    coreStatusLabel: hasCoreEvent ? (planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed") : "No Core",
   };
 }
 
 function makeState() {
-  const currentPlanetId = progress.currentPlanetId;
-  const planet = makePlanet(currentPlanetId);
-  const dockY = -PLANET_RADIUS - 220;
+  const contract = getActiveContractDefinition();
+  const persistProgress = true;
+  const planet = makePlanet(contract, persistProgress);
+  const dockY = -contractPlanetRadius(contract) - 220;
   const spawnY = dockY + 120;
   return {
     mode: "menu",
@@ -1145,7 +1444,12 @@ function makeState() {
     },
     keys: new Set(),
     camera: { x: 0, y: spawnY - 75, zoom: 0.78 },
+    contractLane: progress.currentContractLane,
+    contract,
     planet,
+    fieldProgress: progress.currentContractLane === "field"
+      ? ensureFieldContractProgressRecord(progress, contract.id)
+      : defaultPlanetProgress(),
     planetProgressSnapshot: null,
     ship: {
       x: 0,
@@ -1159,6 +1463,7 @@ function makeState() {
       hp: 80,
       cargoCap: 28,
       cargo: emptyMaterials(),
+      coreSamples: 0,
       magnet: 56,
       thrust: 170,
       thrustFuelMult: 1,
@@ -1176,6 +1481,7 @@ function makeState() {
       laserCooldown: 0,
       lasers: [],
       oreMult: 1,
+      shieldMult: 1,
       collisionFuelMult: 1,
       collisionCostMult: 1,
       facingAngle: Math.PI / 2,
@@ -1210,8 +1516,8 @@ function makeState() {
     },
     core: {
       radius: 58,
-      hpMax: coreHpForPlanet(currentPlanetId),
-      hp: coreHpForPlanet(currentPlanetId),
+      hpMax: coreHpForPlanet(contract),
+      hp: coreHpForPlanet(contract),
       phase: "sealed",
       phaseTimer: 0,
       shieldDuration: 2.8,
@@ -1237,6 +1543,7 @@ function makeState() {
       laserPulses: 0,
       laserDamage: 0,
       materials: emptyMaterials(),
+      coreSamples: 0,
       peakCargo: 0,
       bonusMaterials: emptyMaterials(),
     },
@@ -1438,6 +1745,20 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
   targetCtx.save();
   targetCtx.fillStyle = color;
   targetCtx.fillRect(left, top, BLOCK_SIZE, BLOCK_SIZE);
+  if (block.isCoreSample || block.material === "coreSample") {
+    targetCtx.strokeStyle = "rgba(255, 247, 205, 0.96)";
+    targetCtx.lineWidth = 1.5;
+    targetCtx.strokeRect(left + 0.75, top + 0.75, BLOCK_SIZE - 1.5, BLOCK_SIZE - 1.5);
+    targetCtx.beginPath();
+    targetCtx.moveTo(left + BLOCK_SIZE * 0.5, top + 2);
+    targetCtx.lineTo(left + BLOCK_SIZE - 2, top + BLOCK_SIZE * 0.5);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE - 2);
+    targetCtx.lineTo(left + 2, top + BLOCK_SIZE * 0.5);
+    targetCtx.closePath();
+    targetCtx.stroke();
+    targetCtx.restore();
+    return;
+  }
   targetCtx.strokeStyle = "rgba(255, 245, 215, 0.28)";
   targetCtx.lineWidth = 1;
   targetCtx.strokeRect(left + 0.5, top + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
@@ -1492,6 +1813,7 @@ function applyUpgrades() {
   ship.laserCooldown = 0;
   ship.lasers = [];
   ship.oreMult = 1;
+  ship.shieldMult = 1;
   ship.collisionFuelMult = 1;
   ship.collisionCostMult = 1;
 
@@ -1527,6 +1849,7 @@ function applyUpgrades() {
       });
     }
     if (effect.oreMult) ship.oreMult *= effect.oreMult;
+    if (effect.shieldMult) ship.shieldMult *= effect.shieldMult;
     if (effect.collisionFuelMult) ship.collisionFuelMult *= effect.collisionFuelMult;
     if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
   }
@@ -1541,7 +1864,7 @@ function resetSortie() {
   applyUpgrades();
   state.ship.fuel = state.ship.fuelMax;
   state.ship.hp = state.ship.hpMax;
-  refreshPlanetProgress({ persist: true });
+  refreshPlanetProgress({ persist: state.contractLane === "core" });
   snapCameraToTarget();
 }
 
@@ -1569,7 +1892,11 @@ function startSortie() {
   state.mode = "sortie";
   if (state.planetProgressSnapshot?.currentSector) {
     const sector = state.planetProgressSnapshot.currentSector;
-    showGameplayBanner(`${state.planet.definition.name} sortie. ${sector.name} at ${formatPercent(sector.percentCleared)}.`);
+    const contract = state.contract;
+    const objectiveText = contract.contractType === "field"
+      ? ` Primary objective: ${contractObjectiveLabel(contract)}.`
+      : " Primary objective: clear the sectors and break the core.";
+    showGameplayBanner(`${state.planet.definition.name} sortie. ${sector.name} at ${formatPercent(sector.percentCleared)}.${objectiveText}`);
   }
   hideOverlays();
   syncUi();
@@ -1582,15 +1909,34 @@ function unlockedPlanetIds() {
   return PLANETS.map((planet) => planet.id).filter((planetId) => progress.unlockedPlanets.includes(planetId));
 }
 
+function currentContractIds() {
+  return progress.currentContractLane === "field" ? FIELD_CONTRACTS.map((contract) => contract.id) : unlockedPlanetIds();
+}
+
+function setContractLane(lane) {
+  progress.currentContractLane = lane === "field" ? "field" : "core";
+  saveProgress();
+  const previousZoom = state.treeZoom;
+  resetSortie();
+  state.treeZoom = previousZoom;
+  state.hangarView = progress.currentContractLane === "field" ? "upgrades" : state.hangarView;
+  if (state.mode !== "sortie") showHangarScreen();
+}
+
 function selectPlanet(direction) {
-  const unlocked = unlockedPlanetIds();
-  if (unlocked.length <= 1) return;
-  const currentIndex = Math.max(0, unlocked.indexOf(progress.currentPlanetId));
-  const nextIndex = (currentIndex + direction + unlocked.length) % unlocked.length;
-  const nextPlanetId = unlocked[nextIndex];
-  if (!nextPlanetId || nextPlanetId === progress.currentPlanetId) return;
-  progress.currentPlanetId = nextPlanetId;
-  ensurePlanetProgressRecord(progress, nextPlanetId);
+  const available = currentContractIds();
+  if (available.length <= 1) return;
+  const currentId = progress.currentContractLane === "field" ? progress.currentFieldContractId : progress.currentPlanetId;
+  const currentIndex = Math.max(0, available.indexOf(currentId));
+  const nextIndex = (currentIndex + direction + available.length) % available.length;
+  const nextId = available[nextIndex];
+  if (!nextId || nextId === currentId) return;
+  if (progress.currentContractLane === "field") {
+    progress.currentFieldContractId = nextId;
+  } else {
+    progress.currentPlanetId = nextId;
+    ensurePlanetProgressRecord(progress, nextId);
+  }
   saveProgress();
   const previousZoom = state.treeZoom;
   resetSortie();
@@ -1600,7 +1946,7 @@ function selectPlanet(direction) {
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
   renderResearchTree();
-  showHangarStatus(`Contract routed to ${getPlanetDefinition(nextPlanetId).name}.`);
+  showHangarStatus(`Contract routed to ${getActiveContractDefinition().name}.`);
   syncUi();
   render();
 }
@@ -1609,14 +1955,40 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
   state.mode = success ? "results" : "hangar";
   hideOverlays();
   const delivered = success ? addMaterials(state.ship.cargo, state.runStats.bonusMaterials) : emptyMaterials();
+  const contract = state.contract;
   if (success) {
     for (const material of MATERIAL_TYPES) {
       progress.bank[material] += delivered[material] || 0;
     }
+    let objectiveProgress = null;
+    let contractPayoutCredits = 0;
+    if (contract.contractType === "field") {
+      const fieldProgress = ensureFieldContractProgressRecord(progress, contract.id);
+      fieldProgress.contractDelivered = addMaterials(fieldProgress.contractDelivered, delivered);
+      fieldProgress.contractCoreSamples += state.ship.coreSamples || 0;
+      objectiveProgress = contractObjectiveProgress(contract, fieldProgress);
+      if (objectiveProgress.complete) {
+        contractPayoutCredits = contract.payoutCredits || 0;
+        progress.credits += contractPayoutCredits;
+        progress.fieldContractProgress[contract.id] = defaultPlanetProgress();
+      }
+    }
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
     progress.lastDeliveredCargo = { ...emptyMaterials(), ...delivered };
-    progress.lastSortieReport = makeSortieReport(true, delivered, reportPlanetSnapshot, reportPlanetDefinition);
-    if (sumCargo(state.runStats.bonusMaterials) > 0) {
+    progress.lastSortieReport = {
+      ...makeSortieReport(true, delivered, reportPlanetSnapshot, reportPlanetDefinition),
+      contractType: contract.contractType || "core",
+      objectiveLabel: contractObjectiveLabel(contract),
+      objectiveProgressLabel: objectiveProgress?.progressLabel || "",
+      objectiveMissingLabel: objectiveProgress?.missingLabel || "",
+      objectiveComplete: objectiveProgress?.complete ?? true,
+      contractPayoutCredits,
+    };
+    if (contract.contractType === "field") {
+      showHangarStatus(objectiveProgress.complete
+        ? `Field contract complete. Stored ${formatMaterials(delivered)} and paid out ${formatCredits(contractPayoutCredits)}.`
+        : `Contract progress updated. Still need ${objectiveProgress.missingLabel}.`);
+    } else if (sumCargo(state.runStats.bonusMaterials) > 0) {
       showHangarStatus(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`);
     } else {
       showHangarStatus(`Dock successful. Stored ${formatMaterials(delivered)} in the hangar hold.`);
@@ -1624,7 +1996,15 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
     progress.sortie += 1;
   } else {
     progress.lastDeliveredCargo = emptyMaterials();
-    progress.lastSortieReport = makeSortieReport(false, emptyMaterials(), reportPlanetSnapshot, reportPlanetDefinition);
+    progress.lastSortieReport = {
+      ...makeSortieReport(false, emptyMaterials(), reportPlanetSnapshot, reportPlanetDefinition),
+      contractType: contract.contractType || "core",
+      objectiveLabel: contractObjectiveLabel(contract),
+      objectiveProgressLabel: "",
+      objectiveMissingLabel: "",
+      objectiveComplete: false,
+      contractPayoutCredits: 0,
+    };
     showHangarStatus("Sortie failed. Cargo was lost before docking.");
   }
   progress.hasSeenTip = true;
@@ -1997,6 +2377,9 @@ function setupUpgradeTreePan() {
 
 function blockColor(block) {
   const visualHp = blockVisualHp(block);
+  if (block.isCoreSample || block.material === "coreSample") {
+    return visualHp >= 12 ? "#fff5b8" : visualHp >= 9 ? "#ffd86b" : visualHp >= 6 ? "#ffae5d" : visualHp >= 3 ? "#ff7b47" : "#8cffba";
+  }
   if (block.sectorId === "surface") {
     return visualHp >= 3 ? "#ff8c63" : visualHp === 2 ? "#ffd24f" : "#79ff9e";
   }
@@ -2137,7 +2520,7 @@ function nearestLaserTargets(maxCount) {
     if (segmentBlockedByDefenseRing(state.ship.x, state.ship.y, block.x, block.y)) return;
     candidates.push({ type: "block", block, x: block.x, y: block.y, distSq });
   });
-  if (state.planetProgressSnapshot?.coreUnlocked && state.core.phase === "vulnerable") {
+  if (contractHasCoreEvent(state.contract) && state.planetProgressSnapshot?.coreUnlocked && state.core.phase === "vulnerable") {
     const dx = -state.ship.x;
     const dy = -state.ship.y;
     const distSq = dx * dx + dy * dy;
@@ -2164,7 +2547,11 @@ function pickupBlockDamage(block, damage) {
     drawBlockOnPlanetLayer(planetLayerCache.ctx, block);
     invalidateResultsMapCache();
     state.runStats.blocksMined += 1;
-    state.runStats.materials[block.material] += 1;
+    if (block.isCoreSample || block.material === "coreSample") {
+      state.runStats.coreSamples += block.pickupValue || 1;
+    } else {
+      state.runStats.materials[block.material] += 1;
+    }
     const activePlanetProgress = getActivePlanetProgress();
     if (!activePlanetProgress.destroyedBlocks.includes(block.key)) {
       activePlanetProgress.destroyedBlocks.push(block.key);
@@ -2216,15 +2603,18 @@ function applySplashDamage(x, y, directKey) {
 }
 
 function spawnPickup(block) {
-  const value = 1;
-  const pickupColor = block.material === "crystal" ? "#b494ff" : block.material === "platinum" ? "#79d7ff" : "#ffd24f";
+  const value = block.pickupValue || 1;
+  const pickupMaterial = block.pickupMaterial || block.material;
+  const pickupColor = pickupMaterial === "coreSample"
+    ? "#fff1ac"
+    : pickupMaterial === "crystal" ? "#b494ff" : pickupMaterial === "platinum" ? "#79d7ff" : "#ffd24f";
   state.pickups.push({
     x: block.x + rand(-6, 6),
     y: block.y + rand(-6, 6),
     vx: rand(-45, 45),
     vy: rand(-45, 45),
     value,
-    material: block.material,
+    material: pickupMaterial,
     life: 14,
   });
   for (let i = 0; i < 5; i += 1) {
@@ -2348,27 +2738,51 @@ function failSortie(message) {
 
 function shipDepth() {
   const distBlocks = length2D(state.ship.x, state.ship.y) / BLOCK_SIZE;
-  const depth = 1 - (distBlocks - CORE_RADIUS_BLOCKS) / (PLANET_RADIUS_BLOCKS - CORE_RADIUS_BLOCKS);
+  const depth = 1 - (distBlocks - state.planet.coreRadiusBlocks) / Math.max(1, state.planet.radiusBlocks - state.planet.coreRadiusBlocks);
   return clamp(depth, 0, 1);
 }
 
 function shipSectorDefinition() {
-  if (state.planetProgressSnapshot?.coreUnlocked && state.core.phase !== "cleared" && shipDepth() >= 0.9) {
+  if (contractHasCoreEvent(state.contract) && state.planetProgressSnapshot?.coreUnlocked && state.core.phase !== "cleared" && shipDepth() >= 0.9) {
     return getSectorDefinition("coreEvent");
   }
-  return sectorForDepth(state.planet.id, shipDepth());
+  return sectorForDepth(state.contract, shipDepth());
 }
 
 function damageShip(hullDamage, fuelDamage, dtMultiplier = 1) {
   if (state.wrecked || state.cinematic.active) return;
-  state.ship.hp = Math.max(0, state.ship.hp - hullDamage * dtMultiplier);
+  state.ship.hp = Math.max(0, state.ship.hp - hullDamage * dtMultiplier * state.ship.shieldMult);
   state.ship.fuel = Math.max(0, state.ship.fuel - fuelDamage * dtMultiplier * state.ship.collisionFuelMult);
   state.damageShake = Math.max(state.damageShake, 0.55);
   state.hazardFlash = 0.18;
 }
 
+function completeFieldCoreEvent() {
+  const activePlanetProgress = getActivePlanetProgress();
+  activePlanetProgress.coreCleared = true;
+  activePlanetProgress.cleared = false;
+  addCoreSampleBlocksToPlanet(state.planet, state.contract, activePlanetProgress);
+  ensurePlanetLayerCache();
+  for (const block of state.planet.blocks) {
+    if (block.isCoreSample) drawBlockOnPlanetLayer(planetLayerCache.ctx, block);
+  }
+  invalidateResultsMapCache();
+  state.hazards = [];
+  state.gravityPulse.life = 0;
+  setCorePhase("cleared", 0);
+  state.planetProgressDirty = true;
+  state.planetProgressPersistNeeded = true;
+  refreshPlanetProgress({ persist: true });
+  showGameplayBanner(`Core event beaten. ${fmt(state.contract.coreSampleYield || 0)} core samples exposed in the breach.`, 3.2);
+}
+
 function startCoreMeltdown() {
+  if (!contractHasCoreEvent(state.contract)) return;
   if (state.cinematic.active || state.core.phase === "cleared") return;
+  if (state.contract.contractType === "field" && state.contract.coreSampleYield) {
+    completeFieldCoreEvent();
+    return;
+  }
   setCorePhase("meltdown", 0);
   state.cinematic.active = true;
   state.cinematic.type = "planet-break";
@@ -2377,9 +2791,9 @@ function startCoreMeltdown() {
   state.cinematic.blastRadius = 0;
   state.hazards = [];
   state.gravityPulse.life = 1.25;
-  state.gravityPulse.radius = CORE_RADIUS_BLOCKS * BLOCK_SIZE * 0.8;
+  state.gravityPulse.radius = contractCoreRadius(state.contract) * 0.8;
   state.gravityPulse.strength = 320;
-  state.runStats.bonusMaterials = addMaterials(state.runStats.bonusMaterials, planetCoreReward(state.planet.id));
+  state.runStats.bonusMaterials = addMaterials(state.runStats.bonusMaterials, planetCoreReward(state.contract));
   showGameplayBanner("Ancient core destabilized. Planet failure imminent.", 4);
   const activePlanetProgress = getActivePlanetProgress();
   activePlanetProgress.coreCleared = true;
@@ -2397,7 +2811,7 @@ function finishCoreMeltdown() {
       }
     : null;
   const reportPlanetDefinition = { ...state.planet.definition };
-  const activePlanet = getPlanetDefinition(state.planet.id);
+  const activePlanet = state.contract;
   const activePlanetProgress = getActivePlanetProgress();
   activePlanetProgress.coreCleared = true;
   activePlanetProgress.cleared = true;
@@ -2413,6 +2827,7 @@ function finishCoreMeltdown() {
 }
 
 function coreHitTest(x, y) {
+  if (!contractHasCoreEvent(state.contract)) return false;
   if (!state.planetProgressSnapshot?.coreUnlocked || state.core.phase !== "vulnerable") return false;
   return x * x + y * y <= state.core.radius * state.core.radius;
 }
@@ -2439,6 +2854,7 @@ function damageCore(amount, hitX = 0, hitY = 0, source = "bullet") {
 }
 
 function updateCoreEvent(dt) {
+  if (!contractHasCoreEvent(state.contract)) return;
   state.core.pulseFlash = Math.max(0, state.core.pulseFlash - dt);
   if (!state.planetProgressSnapshot?.coreUnlocked || state.cinematic.active) return;
   if (state.core.phase === "sealed" || state.core.phase === "cleared" || state.core.phase === "meltdown") return;
@@ -2546,7 +2962,7 @@ function updateShip(dt) {
   }
 
   const distFromCenterSq = ship.x * ship.x + ship.y * ship.y;
-  const boundaryRadius = PLANET_RADIUS + 420;
+  const boundaryRadius = contractPlanetRadius(state.contract) + 420;
   if (distFromCenterSq > boundaryRadius * boundaryRadius) {
     const distFromCenter = Math.sqrt(distFromCenterSq);
     const nx = ship.x / distFromCenter;
@@ -2680,13 +3096,18 @@ function updatePickups(dt) {
     }
     const pickupRange = SHIP_RADIUS + 8;
     if (distSq < pickupRange * pickupRange) {
-      const cargoCount = sumCargo(state.ship.cargo);
-      if (cargoCount < state.ship.cargoCap) {
-        const room = state.ship.cargoCap - cargoCount;
-        const gained = Math.min(room, pickup.value);
-        state.ship.cargo[pickup.material] += gained;
-        state.runStats.peakCargo = Math.max(state.runStats.peakCargo, sumCargo(state.ship.cargo));
-        playPickup(pickup.material);
+      if (pickup.material === "coreSample") {
+        state.ship.coreSamples += pickup.value;
+        playPickup("crystal");
+      } else {
+        const cargoCount = sumCargo(state.ship.cargo);
+        if (cargoCount < state.ship.cargoCap) {
+          const room = state.ship.cargoCap - cargoCount;
+          const gained = Math.min(room, pickup.value);
+          state.ship.cargo[pickup.material] += gained;
+          state.runStats.peakCargo = Math.max(state.runStats.peakCargo, sumCargo(state.ship.cargo));
+          playPickup(pickup.material);
+        }
       }
       pickup.life = 0;
     }
@@ -2769,7 +3190,7 @@ function spawnHazardForSector(sector) {
 
   if (sector.hazardType === "gravity") {
     state.gravityPulse.life = 0.95;
-    state.gravityPulse.radius = PLANET_RADIUS * 0.3;
+    state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.3;
     state.gravityPulse.strength = 240;
     showGameplayBanner("Gravity pulse. Stabilizers straining.", 2.2);
   }
@@ -2834,14 +3255,14 @@ function updateHazards(dt) {
     const ny = dist > 0 ? -state.ship.y / dist : 0;
     state.ship.vx += nx * state.gravityPulse.strength * dt;
     state.ship.vy += ny * state.gravityPulse.strength * dt;
-    if (dist < PLANET_RADIUS * 0.46) {
+    if (dist < contractPlanetRadius(state.contract) * 0.46) {
       const pulseMult = state.planetProgressSnapshot?.coreUnlocked ? 1.2 : 1;
       damageShip(6 * pulseMult, 8 * pulseMult, dt);
     }
   } else if (state.gravityPulse.timer <= 0 && shipSectorDefinition().id === "coreShell" && !state.cinematic.active) {
     state.gravityPulse.timer = 4.8;
     state.gravityPulse.life = 0.85;
-    state.gravityPulse.radius = PLANET_RADIUS * 0.26;
+    state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.26;
     state.gravityPulse.strength = 220;
   }
 }
@@ -2850,7 +3271,7 @@ function updateCinematic(dt) {
   if (!state.cinematic.active) return false;
   state.cinematic.timer += dt;
   const progressRatio = clamp(state.cinematic.timer / Math.max(0.001, state.cinematic.duration), 0, 1);
-  state.cinematic.blastRadius = lerp(CORE_RADIUS_BLOCKS * BLOCK_SIZE, PLANET_RADIUS * 1.15, progressRatio);
+  state.cinematic.blastRadius = lerp(contractCoreRadius(state.contract), contractPlanetRadius(state.contract) * 1.15, progressRatio);
   state.damageShake = Math.max(state.damageShake, 0.75 + progressRatio * 1.25);
   const shipDist = Math.max(1, length2D(state.ship.x, state.ship.y));
   state.ship.vx += (state.ship.x / shipDist) * 40 * dt;
@@ -2862,7 +3283,7 @@ function updateCinematic(dt) {
 
   for (let i = 0; i < 14; i += 1) {
     const angle = rand(-Math.PI, Math.PI);
-    const radius = rand(CORE_RADIUS_BLOCKS * BLOCK_SIZE, state.cinematic.blastRadius);
+    const radius = rand(contractCoreRadius(state.contract), state.cinematic.blastRadius);
     pushParticle({
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
@@ -3248,7 +3669,7 @@ function drawPickups() {
     const screen = worldToScreen(pickup.x, pickup.y);
     ctx.beginPath();
     ctx.arc(screen.x, screen.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
+    ctx.fillStyle = pickup.material === "coreSample" ? "#fff1ac" : pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
     ctx.fill();
   }
 }
@@ -3288,8 +3709,9 @@ function drawShip() {
 }
 
 function drawCoreGlow() {
+  if (!contractHasCoreEvent(state.contract)) return;
   const center = worldToScreen(0, 0);
-  const radius = (state.core.phase === "vulnerable" || state.core.phase === "shielded" || state.core.phase === "meltdown" ? state.core.radius : CORE_RADIUS_BLOCKS * BLOCK_SIZE) * state.camera.zoom;
+  const radius = (state.core.phase === "vulnerable" || state.core.phase === "shielded" || state.core.phase === "meltdown" ? state.core.radius : contractCoreRadius(state.contract)) * state.camera.zoom;
   const g = ctx.createRadialGradient(center.x, center.y, 4, center.x, center.y, radius);
   if (state.core.phase === "vulnerable") {
     g.addColorStop(0, "#fff3bf");
@@ -3347,7 +3769,7 @@ function drawCoreGlow() {
 function drawSectorBoundaries() {
   const center = worldToScreen(0, 0);
   for (const sector of orderedMiningSectors(state.planet.id)) {
-    const worldRadius = lerp(PLANET_RADIUS, CORE_RADIUS_BLOCKS * BLOCK_SIZE, sector.maxDepth);
+    const worldRadius = lerp(contractPlanetRadius(state.contract), contractCoreRadius(state.contract), sector.maxDepth);
     ctx.beginPath();
     ctx.arc(center.x, center.y, worldRadius * state.camera.zoom, 0, Math.PI * 2);
     ctx.strokeStyle = sector.ringColor;
@@ -3386,8 +3808,10 @@ function drawResultsMap(report) {
   resultsMapCacheKey = reportKey;
   const mapCtx = mapCanvas.getContext("2d");
   const size = mapCanvas.width;
+  const radiusBlocks = report.radiusBlocks || PLANET_RADIUS_BLOCKS;
+  const coreRadiusBlocks = report.coreRadiusBlocks || CORE_RADIUS_BLOCKS;
   const radius = size * 0.42;
-  const blockRadius = Math.max(1.3, radius / (PLANET_RADIUS_BLOCKS * 1.35));
+  const blockRadius = Math.max(1.3, radius / (radiusBlocks * 1.35));
   mapCtx.clearRect(0, 0, size, size);
   mapCtx.save();
   mapCtx.translate(size / 2, size / 2);
@@ -3404,10 +3828,12 @@ function drawResultsMap(report) {
 
   for (const block of state.planet.blocks) {
     if (!block.alive) continue;
-    const x = (block.gx / PLANET_RADIUS_BLOCKS) * radius;
-    const y = (block.gy / PLANET_RADIUS_BLOCKS) * radius;
+    const x = (block.gx / radiusBlocks) * radius;
+    const y = (block.gy / radiusBlocks) * radius;
     const hpRatio = block.hp / Math.max(1, block.maxHp);
-    if (block.material === "crystal") {
+    if (block.material === "coreSample") {
+      mapCtx.fillStyle = `rgba(255, 232, 142, ${0.66 + hpRatio * 0.18})`;
+    } else if (block.material === "crystal") {
       mapCtx.fillStyle = `rgba(255, 112, 228, ${0.62 + hpRatio * 0.18})`;
     } else if (block.material === "platinum") {
       mapCtx.fillStyle = `rgba(122, 208, 255, ${0.58 + hpRatio * 0.16})`;
@@ -3423,10 +3849,12 @@ function drawResultsMap(report) {
   mapCtx.arc(0, 0, radius, 0, Math.PI * 2);
   mapCtx.stroke();
 
-  mapCtx.beginPath();
-  mapCtx.arc(0, 0, (CORE_RADIUS_BLOCKS / PLANET_RADIUS_BLOCKS) * radius, 0, Math.PI * 2);
-  mapCtx.fillStyle = "rgba(232, 174, 58, 0.72)";
-  mapCtx.fill();
+  if (report.contractType === "core") {
+    mapCtx.beginPath();
+    mapCtx.arc(0, 0, (coreRadiusBlocks / radiusBlocks) * radius, 0, Math.PI * 2);
+    mapCtx.fillStyle = "rgba(232, 174, 58, 0.72)";
+    mapCtx.fill();
+  }
 
   const dockAngle = -Math.PI / 2;
   const dockX = Math.cos(dockAngle) * radius * 0.86;
@@ -3452,7 +3880,9 @@ function renderResultsScreen() {
   if (!report) return;
   ui.resultsTitle.textContent = report.success ? "Return Complete" : "Sortie Lost";
   ui.resultsSortieLabel.textContent = `Sortie #${report.sortieNumber}`;
-  ui.resultsMinedLabel.textContent = `Mining ${report.minedPercent.toFixed(1)}%`;
+  ui.resultsMinedLabel.textContent = report.contractType === "field"
+    ? `${report.objectiveLabel}${report.objectiveProgressLabel ? ` • ${report.objectiveProgressLabel}` : ""}`
+    : `Mining ${report.minedPercent.toFixed(1)}%`;
   ui.resultsBlocks.textContent = fmt(report.blocksMined);
   ui.resultsTotalHaul.textContent = formatMaterials(report.delivered);
   ui.resultsBankTotal.textContent = formatCredits(report.creditsAfter || 0);
@@ -3470,10 +3900,10 @@ function renderResultsScreen() {
 function syncUi(force = true) {
   if (!force && state.mode === "sortie" && state.time - lastUiSyncTime < 0.12) return;
   lastUiSyncTime = state.time;
-  const activePlanet = getPlanetDefinition(progress.currentPlanetId);
+  const activePlanet = getActiveContractDefinition();
   const planetSnapshot = state.planetProgressSnapshot || computePlanetProgressSnapshot(state.planet, getActivePlanetProgress());
-  const unlocked = unlockedPlanetIds();
-  const canCyclePlanets = unlocked.length > 1;
+  const availableContracts = currentContractIds();
+  const canCyclePlanets = availableContracts.length > 1;
   const report = progress.lastSortieReport;
   const purchasedCount = upgradeNodes.filter((node) => progress.upgrades[node.id]).length;
   const visibleNodeCount = visibleUpgradeNodeCount();
@@ -3499,15 +3929,27 @@ function syncUi(force = true) {
   ui.hangarBankValue.textContent = formatCredits(progress.credits);
   ui.hangarBankDetail.textContent = `Samples: Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
   ui.hangarPlanetValue.textContent = activePlanet.name;
-  ui.hangarPlanetDetail.textContent = `${planetThreatLabel(activePlanet.id)} • ${planetContractDetail(activePlanet.id)}`;
+  ui.hangarPlanetDetail.textContent = `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
-  ui.hangarSectorDetail.textContent = `${planetSnapshot.currentSector.primaryMaterial} route • target ${formatPercent(planetSnapshot.currentSector.completionTarget)}`;
+  const fieldObjectiveProgress = activePlanet.contractType === "field"
+    ? contractObjectiveProgress(activePlanet, ensureFieldContractProgressRecord(progress, activePlanet.id))
+    : null;
+  ui.hangarSectorDetail.textContent = activePlanet.contractType === "field"
+    ? `${fieldObjectiveProgress?.progressLabel || "No progress yet"} • payout ${formatCredits(activePlanet.payoutCredits || 0)}`
+    : `${planetSnapshot.currentSector.primaryMaterial} route • target ${formatPercent(planetSnapshot.currentSector.completionTarget)}`;
   ui.hangarCompletionValue.textContent = formatPercent(planetSnapshot.terrainClearedPercent || 0);
-  ui.hangarCoreValue.textContent = planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
+  ui.hangarCoreValue.textContent = activePlanet.contractType === "field"
+    ? `Payout ${formatCredits(activePlanet.payoutCredits || 0)}`
+    : planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
   ui.hangarContractName.textContent = activePlanet.name;
-  ui.hangarContractDetail.textContent = planetContractDetail(activePlanet.id);
-  ui.hangarContractYield.textContent = `Yield Bias: ${planetYieldLabel(activePlanet.id)}`;
-  ui.hangarContractPressure.textContent = planetThreatLabel(activePlanet.id);
+  ui.hangarContractDetail.textContent = `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
+  ui.hangarContractObjective.textContent = activePlanet.contractType === "field"
+    ? `Objective: ${contractObjectiveLabel(activePlanet)}`
+    : "Objective: Clear the sectors and destroy the core";
+  ui.hangarContractYield.textContent = activePlanet.contractType === "field"
+    ? `Progress: ${fieldObjectiveProgress?.progressLabel || "No progress yet"}`
+    : `Yield Bias: ${planetYieldLabel(activePlanet)}`;
+  ui.hangarContractPressure.textContent = planetThreatLabel(activePlanet);
   ui.hangarUpgradeGrid.textContent = `${purchasedCount} / ${visibleNodeCount} online`;
   ui.hangarNextUpgrade.textContent = readyUpgrade
     ? `Install ${readyUpgrade.label}`
@@ -3527,6 +3969,8 @@ function syncUi(force = true) {
   ui.sellPlatinumBtn.disabled = !progress.bank.platinum;
   ui.sellCrystalBtn.disabled = !progress.bank.crystal;
   ui.sellAllBtn.disabled = !sumCargo(progress.bank);
+  ui.showCoreContractsBtn.classList.toggle("active", progress.currentContractLane === "core");
+  ui.showFieldContractsBtn.classList.toggle("active", progress.currentContractLane === "field");
   ui.showUpgradesBtn.classList.toggle("active", state.hangarView === "upgrades");
   ui.showResearchBtn.classList.toggle("active", state.hangarView === "research");
   ui.upgradeTree.classList.toggle("hidden", state.hangarView !== "upgrades");
@@ -3692,6 +4136,14 @@ ui.showResearchBtn.addEventListener("click", () => {
   playUiClick();
   setHangarView("research");
 });
+ui.showCoreContractsBtn.addEventListener("click", () => {
+  playUiClick();
+  setContractLane("core");
+});
+ui.showFieldContractsBtn.addEventListener("click", () => {
+  playUiClick();
+  setContractLane("field");
+});
 ui.launchSortieBtn.addEventListener("click", () => {
   playUiClick();
   startSortie();
@@ -3832,6 +4284,14 @@ window.render_game_to_text = () =>
   JSON.stringify({
     coordinateSystem: "world centered on planet core, screen origin top-left",
     mode: state.mode,
+    contract: {
+      lane: state.contractLane,
+      type: state.contract?.contractType || "core",
+      id: state.contract?.id,
+      name: state.contract?.name,
+      objective: state.contract?.contractType === "field" ? contractObjectiveLabel(state.contract) : null,
+      payoutCredits: state.contract?.contractType === "field" ? state.contract?.payoutCredits || 0 : null,
+    },
     planet: {
       id: state.planet.id,
       name: state.planet.definition.name,
