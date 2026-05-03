@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
     <meta name="theme-color" content="#06010d" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Orbit Mine" />
     <link rel="apple-touch-icon" href="./icon.svg" />
@@ -103,9 +103,9 @@
                 <small id="recent-sortie-detail">No debrief yet</small>
               </div>
               <div class="hangar-stat">
-                <span>Available Currency</span>
-                <strong id="hangar-bank-value">0 ore</strong>
-                <small id="hangar-bank-detail">Banked across all unlocked contracts</small>
+                <span>Credits Bank</span>
+                <strong id="hangar-bank-value">0 cr</strong>
+                <small id="hangar-bank-detail">Ore 0 • Platinum 0 • Crystal 0</small>
               </div>
               <div class="hangar-stat">
                 <span>Current Planet</span>
@@ -140,9 +140,25 @@
                 <strong id="hangar-next-upgrade">No upgrade queued</strong>
               </div>
             </div>
+            <div class="hangar-trade">
+              <div class="hangar-trade-buttons">
+                <button id="sell-ore-btn" class="mini-ui-btn">Sell Ore</button>
+                <button id="sell-platinum-btn" class="mini-ui-btn">Sell Plat</button>
+                <button id="sell-crystal-btn" class="mini-ui-btn">Sell Crystal</button>
+                <button id="sell-all-btn" class="mini-ui-btn">Sell All</button>
+              </div>
+              <small id="hangar-trade-detail">Ore 12 cr • Platinum 36 cr • Crystal 84 cr</small>
+            </div>
             <div id="hangar-status" class="hangar-status"></div>
           </div>
-          <div id="upgrade-tree" class="upgrade-tree"></div>
+          <div class="hangar-pane">
+            <div class="hangar-pane-tabs">
+              <button id="show-upgrades-btn" class="mini-ui-btn active">Upgrades</button>
+              <button id="show-research-btn" class="mini-ui-btn">Research</button>
+            </div>
+            <div id="upgrade-tree" class="upgrade-tree"></div>
+            <div id="research-tree" class="research-tree hidden"></div>
+          </div>
         </section>
 
         <section id="results-screen" class="overlay results-screen">
@@ -165,8 +181,8 @@
                   <strong id="results-total-haul">0 ore</strong>
                 </div>
                 <div class="results-total">
-                  <span>Bank after return</span>
-                  <strong id="results-bank-total">0 ore</strong>
+                  <span>Credits Bank</span>
+                  <strong id="results-bank-total">0 cr</strong>
                 </div>
               </div>
               <div class="results-panels">
@@ -201,9 +217,17 @@
         </section>
 
         <div class="hud hud-left">
-          <div class="hud-chip"><span>Bank</span><strong id="bank-value">0</strong></div>
-          <div class="hud-chip"><span>Cargo</span><strong id="cargo-value">0 / 0</strong></div>
-          <div class="hud-chip"><span>Sortie</span><strong id="sortie-value">#1</strong></div>
+          <div class="hud-chip bank-chip">
+            <span>Credits</span>
+            <strong id="bank-value">0 cr</strong>
+            <div class="bank-material-stack">
+              <small id="bank-ore-value">0 ore</small>
+              <small id="bank-platinum-value">0 platinum</small>
+              <small id="bank-crystal-value">0 crystal</small>
+            </div>
+          </div>
+          <div class="hud-chip compact-chip"><span>Cargo</span><strong id="cargo-value">0 / 0</strong></div>
+          <div class="hud-chip compact-chip"><span>Sortie</span><strong id="sortie-value">#1</strong></div>
         </div>
 
         <div class="hud hud-right">

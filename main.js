@@ -62,6 +62,9 @@ const ui = {
   resultsUpgradesBtn: document.getElementById("results-upgrades-btn"),
   resultsContinueBtn: document.getElementById("results-continue-btn"),
   bank: document.getElementById("bank-value"),
+  bankOre: document.getElementById("bank-ore-value"),
+  bankPlatinum: document.getElementById("bank-platinum-value"),
+  bankCrystal: document.getElementById("bank-crystal-value"),
   cargo: document.getElementById("cargo-value"),
   sortie: document.getElementById("sortie-value"),
   fuelBar: document.getElementById("fuel-bar"),
@@ -71,6 +74,14 @@ const ui = {
   fuelAlert: document.getElementById("fuel-alert"),
   fpsCounter: document.getElementById("fps-counter"),
   launchSortieBtn: document.getElementById("launch-sortie-btn"),
+  sellOreBtn: document.getElementById("sell-ore-btn"),
+  sellPlatinumBtn: document.getElementById("sell-platinum-btn"),
+  sellCrystalBtn: document.getElementById("sell-crystal-btn"),
+  sellAllBtn: document.getElementById("sell-all-btn"),
+  hangarTradeDetail: document.getElementById("hangar-trade-detail"),
+  showUpgradesBtn: document.getElementById("show-upgrades-btn"),
+  showResearchBtn: document.getElementById("show-research-btn"),
+  researchTree: document.getElementById("research-tree"),
   moveStick: document.getElementById("move-stick"),
   aimStick: document.getElementById("aim-stick"),
   hudLeft: document.querySelector(".hud-left"),
@@ -143,16 +154,21 @@ const TIPS = [
   {
     title: "Danger",
     bodyA: "Crashing into blocks, sitting in hazards, or running out of fuel costs hull, fuel, and sometimes the whole sortie.",
-    bodyB: "Cargo full? Mining can continue, but extra materials are wasted until you dock and bank what you already collected.",
+    bodyB: "Cargo full? Mining can continue, but extra materials are wasted until you dock and store what you already collected.",
   },
   {
     title: "Extraction",
-    bodyA: "Return to the docking ring above the planet and hold position for 3 seconds to extract safely and transfer cargo into the bank.",
-    bodyB: "Clear sector targets to unlock the core event. Break the exposed core for a bonus payout and the next contract unlock.",
+    bodyA: "Return to the docking ring above the planet and hold position for 3 seconds to extract safely and transfer cargo into the hangar hold.",
+    bodyB: "Sell stored samples for credits, and spend rare samples in Research to unlock new systems and contracts.",
   },
 ];
 
 const MATERIAL_TYPES = ["ore", "platinum", "crystal"];
+const MATERIAL_SALE_VALUES = {
+  ore: 12,
+  platinum: 36,
+  crystal: 84,
+};
 
 const SECTORS = [
   {
@@ -160,7 +176,7 @@ const SECTORS = [
     name: "Surface",
     kind: "mining",
     minDepth: 0,
-    maxDepth: 0.2,
+    maxDepth: 0.228,
     primaryMaterial: "ore",
     completionTarget: 0.5,
     hazardLabel: "defense ring",
@@ -172,7 +188,7 @@ const SECTORS = [
     id: "industrial",
     name: "Industrial Ore Band",
     kind: "mining",
-    minDepth: 0.2,
+    minDepth: 0.228,
     maxDepth: 0.48,
     primaryMaterial: "platinum",
     completionTarget: 0.58,
@@ -191,7 +207,7 @@ const SECTORS = [
     completionTarget: 0.62,
     hazardLabel: "electric discharge",
     hazardType: "zap",
-    hpWeights: [4, 4, 5, 5],
+    hpWeights: [5, 6, 6, 7],
     ringColor: "rgba(166, 120, 255, 0.12)",
   },
   {
@@ -204,7 +220,7 @@ const SECTORS = [
     completionTarget: 0.68,
     hazardLabel: "gravity pulse",
     hazardType: "gravity",
-    hpWeights: [4, 5, 5, 5],
+    hpWeights: [6, 7, 7, 8],
     ringColor: "rgba(255, 96, 96, 0.14)",
   },
   {
@@ -258,6 +274,10 @@ const audio = {
 };
 
 function cost(ore = 0, platinum = 0, crystal = 0) {
+  return ore * MATERIAL_SALE_VALUES.ore + platinum * MATERIAL_SALE_VALUES.platinum + crystal * MATERIAL_SALE_VALUES.crystal;
+}
+
+function researchCost(ore = 0, platinum = 0, crystal = 0) {
   return { ore, platinum, crystal };
 }
 
@@ -283,18 +303,21 @@ const upgradeNodes = [
   { id: "reactive2", x: 80, y: 1590, label: "Reactive Spine", lane: "Survival", symbol: "🛡", cost: cost(166, 44, 18), requires: ["dock2"], effect: { collisionCostMult: 0.9 } },
   { id: "thrust3", x: 80, y: 1740, label: "Afterburn Coils", lane: "Mobility / Docking", symbol: "▲", cost: cost(174, 50, 22), requires: ["reactive2"], effect: { thrust: 22 } },
   { id: "engineEco3", x: 80, y: 1890, label: "Impulse Saver", lane: "Mobility / Docking", symbol: "◌", cost: cost(182, 56, 26), requires: ["thrust3"], effect: { thrustFuelMult: 0.88 } },
+  { id: "hull4", x: 80, y: 2040, label: "Aegis Plating", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(72, 88, 52), requires: ["engineEco3"], effect: { hpMax: 16 } },
+  { id: "reactive3", x: 80, y: 2190, label: "Shock Baffles", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(84, 102, 64), requires: ["hull4"], effect: { collisionCostMult: 0.86 } },
+  { id: "hull5", x: 80, y: 2340, label: "Bastion Hull", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 118, 78), requires: ["reactive3"], effect: { hpMax: 20 } },
 
   { id: "fire1", x: 340, y: 90, label: "Fire Rate", lane: "Combat: Fire Rate", symbol: "»", cost: cost(46), requires: [], effect: { rateMult: 0.94 } },
   { id: "drill1", x: 340, y: 210, label: "Bullet Force", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.56 } },
   { id: "drill2", x: 340, y: 330, label: "Rifled Payloads", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(70), requires: ["drill1"], effect: { bulletDamage: 0.18 } },
   { id: "blasterEco1", x: 340, y: 450, label: "Ammo Economy", lane: "Combat: Fire Rate", symbol: "◌", cost: cost(86), requires: ["drill2"], effect: { blasterFuelMult: 0.88 } },
-  { id: "laser", x: 340, y: 570, label: "Unlock Laser", lane: "Combat: Range", symbol: "⚡", cost: cost(94), requires: ["blasterEco1"], effect: { unlockLaser: true } },
+  { id: "laser", x: 340, y: 570, label: "Unlock Laser", lane: "Combat: Range", symbol: "⚡", researchId: "laserTheory", cost: cost(94), requires: ["blasterEco1"], effect: { unlockLaser: true } },
   { id: "range1", x: 340, y: 690, label: "Range Boost", lane: "Combat: Range", symbol: "⇢", cost: cost(106), requires: ["laser"], effect: { bulletLifeMult: 1.18 } },
   { id: "drill3", x: 340, y: 810, label: "Dense Slugs", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(110, 12, 4), requires: ["range1"], effect: { bulletDamage: 0.22 } },
   { id: "laser2", x: 340, y: 930, label: "Laser Focus", lane: "Combat: AOE / Advanced", symbol: "◎", cost: cost(114, 16, 6), requires: ["drill3"], effect: { laserDamage: 1.32 } },
   { id: "drill4", x: 340, y: 1050, label: "Kinetic Feed", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(118, 20, 8), requires: ["laser2"], effect: { bulletDamage: 0.22 } },
   { id: "fire2", x: 340, y: 1170, label: "Cycler Core", lane: "Combat: Fire Rate", symbol: "»", cost: cost(122, 24, 10), requires: ["drill4"], effect: { rateMult: 0.95 } },
-  { id: "splash2", x: 340, y: 1290, label: "Crystal Array", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(126, 28, 12), requires: ["fire2"], effect: { splashRadius: 20, splashFalloff: 0.3, addLaser: { color: "#73f0ff", damageMult: 0.82 } } },
+  { id: "splash2", x: 340, y: 1290, label: "Crystal Array", lane: "Combat: AOE / Advanced", symbol: "✹", researchId: "arrayTheory", cost: cost(126, 28, 12), requires: ["fire2"], effect: { splashRadius: 20, splashFalloff: 0.3, addLaser: { color: "#73f0ff", damageMult: 0.82 } } },
   { id: "drill5", x: 340, y: 1410, label: "Pressure Rounds", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(132, 32, 12), requires: ["splash2"], effect: { bulletDamage: 0.2 } },
   { id: "blasterEco2", x: 340, y: 1530, label: "Recycled Charges", lane: "Combat: Fire Rate", symbol: "◌", cost: cost(138, 36, 14), requires: ["drill5"], effect: { blasterFuelMult: 0.9 } },
   { id: "range2", x: 340, y: 1650, label: "Long Barrel", lane: "Combat: Range", symbol: "⇢", cost: cost(144, 40, 14), requires: ["blasterEco2"], effect: { bulletLifeMult: 1.12 } },
@@ -308,6 +331,9 @@ const upgradeNodes = [
   { id: "drill9", x: 340, y: 2610, label: "Siege Payloads", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(192, 78, 40), requires: ["splash3"], effect: { bulletDamage: 0.24 } },
   { id: "fire4", x: 340, y: 2730, label: "Burst Cyclers", lane: "Combat: Fire Rate", symbol: "»", cost: cost(198, 84, 46), requires: ["drill9"], effect: { rateMult: 0.96 } },
   { id: "splash4", x: 340, y: 2850, label: "Nova Array", lane: "Combat: AOE / Advanced", symbol: "✹", cost: cost(206, 92, 54), requires: ["fire4"], effect: { splashRadius: 36, splashFalloff: 0.38 } },
+  { id: "fire5", x: 340, y: 2970, label: "Overdrive Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(76, 104, 58), requires: ["splash4"], effect: { rateMult: 0.96 } },
+  { id: "drill10", x: 340, y: 3090, label: "Planetcracker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(88, 118, 72), requires: ["fire5"], effect: { bulletDamage: 0.24 } },
+  { id: "laser3", x: 340, y: 3210, label: "Prism Lance", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 132, 86), requires: ["drill10"], effect: { laserDamage: 1.22 } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
@@ -328,10 +354,25 @@ const upgradeNodes = [
   { id: "fuelEco2", x: 600, y: 2010, label: "Fuel Catalysts", lane: "Cargo / Collection", symbol: "◌", cost: cost(196, 66, 38), requires: ["magnet3"], effect: { collisionFuelMult: 0.88 } },
   { id: "cargo6", x: 600, y: 2130, label: "Vault Compartments", lane: "Cargo / Collection", symbol: "⬒", cost: cost(204, 72, 44), requires: ["fuelEco2"], effect: { cargoCap: 7 } },
   { id: "fuel6", x: 600, y: 2250, label: "Apex Reactor", lane: "Cargo / Collection", symbol: "⛽", cost: cost(212, 80, 52), requires: ["cargo6"], effect: { fuelMax: 16 } },
+  { id: "fuel7", x: 600, y: 2370, label: "Long Haul Cells", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(74, 98, 56), requires: ["fuel6"], effect: { fuelMax: 12 } },
+  { id: "cargo7", x: 600, y: 2490, label: "Deep Vaults", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(86, 112, 68), requires: ["fuel7"], effect: { cargoCap: 5 } },
+  { id: "fuelEco3", x: 600, y: 2610, label: "Catalytic Return", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(94, 126, 82), requires: ["cargo7"], effect: { thrustFuelMult: 0.92, collisionFuelMult: 0.86 } },
+];
+
+const RESEARCH_NODES = [
+  { id: "laserTheory", label: "Laser Theory", description: "Unlock laser-grade emitters in the ship systems tree.", cost: researchCost(18, 8, 4), requires: [] },
+  { id: "arrayTheory", label: "Array Theory", description: "Authorize support beams and wider AOE lattice experiments.", cost: researchCost(26, 16, 10), requires: ["laserTheory"] },
+  { id: "vesper2License", label: "Vesper-2 License", description: "Clear Vesper-1, then spend samples to charter the next contract shell.", cost: researchCost(38, 22, 12), requires: ["arrayTheory"], planetClearRequirement: "vesper-1", unlockPlanet: "vesper-2" },
+  { id: "mk2Blueprints", label: "Mk II Blueprints", description: "Open the next-grade survival, combat, and cargo systems for Vesper-2.", cost: researchCost(24, 30, 18), requires: ["vesper2License"], requiresPlanet: "vesper-2" },
+  { id: "deepCoreOptics", label: "Deep Core Optics", description: "Authorize the final Vesper-2 refinements for late-contract dominance.", cost: researchCost(12, 34, 28), requires: ["mk2Blueprints"], requiresPlanet: "vesper-2" },
 ];
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function length2D(x, y) {
+  return Math.sqrt(x * x + y * y);
 }
 
 function isStandaloneDisplay() {
@@ -489,17 +530,33 @@ function formatMaterials(materials) {
   return parts.length ? parts.join(" • ") : "0 ore";
 }
 
-function canAffordCost(bank, nodeCost) {
+function formatCredits(value) {
+  return `${fmt(value)} cr`;
+}
+
+function canAffordCredits(credits, nodeCost) {
+  return credits >= nodeCost;
+}
+
+function spendCredits(nodeCost) {
+  progress.credits = Math.max(0, progress.credits - nodeCost);
+}
+
+function missingCredits(credits, nodeCost) {
+  return Math.max(0, nodeCost - credits);
+}
+
+function canAffordResearchCost(bank, nodeCost) {
   return MATERIAL_TYPES.every((material) => (bank[material] || 0) >= (nodeCost[material] || 0));
 }
 
-function subtractCost(bank, nodeCost) {
+function subtractResearchCost(bank, nodeCost) {
   for (const material of MATERIAL_TYPES) {
     bank[material] -= nodeCost[material] || 0;
   }
 }
 
-function missingCost(bank, nodeCost) {
+function missingResearchCost(bank, nodeCost) {
   const missing = emptyMaterials();
   for (const material of MATERIAL_TYPES) {
     missing[material] = Math.max(0, (nodeCost[material] || 0) - (bank[material] || 0));
@@ -508,7 +565,7 @@ function missingCost(bank, nodeCost) {
 }
 
 function formatCost(nodeCost) {
-  return formatMaterials(nodeCost);
+  return formatCredits(nodeCost);
 }
 
 function previewTextForNode(node, purchased) {
@@ -666,12 +723,12 @@ function makePlanet(planetId = DEFAULT_PLANET_ID) {
   const destroyed = new Set(ensurePlanetProgressRecord(progress, planetId).destroyedBlocks || []);
   for (let gy = -PLANET_RADIUS_BLOCKS; gy <= PLANET_RADIUS_BLOCKS; gy += 1) {
     for (let gx = -PLANET_RADIUS_BLOCKS; gx <= PLANET_RADIUS_BLOCKS; gx += 1) {
-      const dist = Math.hypot(gx, gy);
+      const dist = length2D(gx, gy);
       if (dist > PLANET_RADIUS_BLOCKS || dist < CORE_RADIUS_BLOCKS) continue;
       const depth = 1 - (dist - CORE_RADIUS_BLOCKS) / (PLANET_RADIUS_BLOCKS - CORE_RADIUS_BLOCKS);
       const sector = sectorForDepth(planetId, depth);
       const key = `${gx},${gy}`;
-      const maxHp = clamp(blockHpAt(sector, gx, gy) + (planetDefinition.blockHpBonus || 0), 2, 7);
+      const maxHp = clamp(blockHpAt(sector, gx, gy) + (planetDefinition.blockHpBonus || 0), 2, 10);
       const material = blockMaterialAt(planetId, sector, depth, gx, gy);
       const block = {
         gx,
@@ -697,6 +754,7 @@ function makePlanet(planetId = DEFAULT_PLANET_ID) {
 function defaultProgress() {
   return {
     saveVersion: SAVE_VERSION,
+    credits: 0,
     bank: emptyMaterials(),
     sortie: 1,
     bestCargo: 0,
@@ -712,6 +770,7 @@ function defaultProgress() {
       qualityProfile: defaultQualityProfileId(),
       showFps: false,
     },
+    research: {},
     upgrades: {},
     lastStatus: "Start your first sortie.",
     hasSeenTip: false,
@@ -731,6 +790,7 @@ function loadProgress() {
       merged.lastDeliveredCargo = { ore: merged.lastDeliveredCargo, platinum: 0, crystal: 0 };
     }
     merged.bank = { ...emptyMaterials(), ...(merged.bank || {}) };
+    merged.credits = Number.isFinite(merged.credits) ? merged.credits : 0;
     merged.lastDeliveredCargo = { ...emptyMaterials(), ...(merged.lastDeliveredCargo || {}) };
     merged.lastSortieReport = merged.lastSortieReport || null;
     merged.settings = {
@@ -739,6 +799,7 @@ function loadProgress() {
     };
     merged.settings.qualityProfile = sanitizeQualityProfile(merged.settings.qualityProfile);
     merged.settings.showFps = !!merged.settings.showFps;
+    merged.research = typeof merged.research === "object" && merged.research ? { ...merged.research } : {};
     merged.currentPlanetId = getPlanetDefinition(merged.currentPlanetId).id;
     merged.unlockedPlanets = Array.isArray(merged.unlockedPlanets) && merged.unlockedPlanets.length
       ? Array.from(new Set(merged.unlockedPlanets.filter((planetId) => PLANET_BY_ID[planetId])))
@@ -751,6 +812,11 @@ function loadProgress() {
       const existing = merged.planetProgress[planetId];
       merged.planetProgress[planetId] = clonePlanetProgress(existing || (planetId === merged.currentPlanetId ? { destroyedBlocks: migratedDestroyedBlocks } : defaultPlanetProgress()));
     }
+    if (merged.upgrades?.laser) merged.research.laserTheory = true;
+    if (merged.upgrades?.splash2) merged.research.arrayTheory = true;
+    if (merged.unlockedPlanets.includes("vesper-2")) merged.research.vesper2License = true;
+    if ((merged.upgrades?.hull4 || merged.upgrades?.fire5 || merged.upgrades?.fuel7) && merged.unlockedPlanets.includes("vesper-2")) merged.research.mk2Blueprints = true;
+    if (merged.upgrades?.hull5 || merged.upgrades?.laser3 || merged.upgrades?.fuelEco3) merged.research.deepCoreOptics = true;
     syncLegacyDestroyedBlocksForLoad(merged);
     merged.saveVersion = SAVE_VERSION;
     return merged;
@@ -1036,7 +1102,8 @@ function makeSortieReport(success, delivered, reportPlanetSnapshot = null, repor
     blocksMined: state.runStats.blocksMined,
     minedPercent: planetSnapshot.terrainClearedPercent ?? 0,
     delivered: { ...emptyMaterials(), ...delivered },
-    bankAfter: { ...progress.bank },
+    samplesAfter: { ...progress.bank },
+    creditsAfter: progress.credits,
     bulletDamage: state.runStats.bulletDamage,
     laserDamage: state.runStats.laserDamage,
     bulletShots: state.runStats.bulletShots,
@@ -1068,12 +1135,12 @@ function makeState() {
       moveX: 0,
       moveY: 0,
       aimX: 1,
-      aimY: 0,
+      aimY: 1,
       firing: false,
       touchMoveX: 0,
       touchMoveY: 0,
       touchAimX: 1,
-      touchAimY: 0,
+      touchAimY: 1,
       touchAimActive: false,
     },
     keys: new Set(),
@@ -1111,7 +1178,7 @@ function makeState() {
       oreMult: 1,
       collisionFuelMult: 1,
       collisionCostMult: 1,
-      facingAngle: 0,
+      facingAngle: Math.PI / 2,
     },
     dock: {
       x: 0,
@@ -1152,6 +1219,7 @@ function makeState() {
       pulseFlash: 0,
     },
     hangarStatusUntil: 0,
+    hangarView: "upgrades",
     treeZoom: 0.72,
     hangarMessage: progress.lastStatus,
     backgroundStars: [],
@@ -1180,8 +1248,9 @@ const revealedTreeNodes = new Set();
 
 function getCameraTarget() {
   const baseTargetX = lerp(state.dock.x, state.ship.x, 0.54);
-  const dist = Math.hypot(state.ship.x - state.dock.x, state.ship.y - state.dock.y);
-  const desiredZoom = clamp(0.82 - dist / 4200, 0.56, 0.88);
+  const dist = length2D(state.ship.x - state.dock.x, state.ship.y - state.dock.y);
+  const zoomBlend = smoothstep(180, 3200, dist);
+  const desiredZoom = lerp(0.88, 0.58, zoomBlend);
   const horizontalSafeBand = (state.width * 0.19) / Math.max(desiredZoom, 0.001);
   const targetX = clamp(baseTargetX, state.ship.x - horizontalSafeBand, state.ship.x + horizontalSafeBand);
   const baseTargetY = lerp(state.dock.y, state.ship.y, 0.72);
@@ -1530,6 +1599,7 @@ function selectPlanet(direction) {
   hideOverlays();
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
+  renderResearchTree();
   showHangarStatus(`Contract routed to ${getPlanetDefinition(nextPlanetId).name}.`);
   syncUi();
   render();
@@ -1549,7 +1619,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
     if (sumCargo(state.runStats.bonusMaterials) > 0) {
       showHangarStatus(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`);
     } else {
-      showHangarStatus(`Dock successful. Delivered ${formatMaterials(delivered)} to the hangar bank.`);
+      showHangarStatus(`Dock successful. Stored ${formatMaterials(delivered)} in the hangar hold.`);
     }
     progress.sortie += 1;
   } else {
@@ -1596,6 +1666,7 @@ function showHangarScreen() {
   hideOverlays();
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
+  renderResearchTree();
   syncUi();
 }
 
@@ -1610,12 +1681,22 @@ function toggleHangar() {
   syncUi();
 }
 
+function nodePlanetUnlocked(node) {
+  return !node.unlockPlanet || progress.unlockedPlanets.includes(node.unlockPlanet);
+}
+
+function nodeResearchUnlocked(node) {
+  return !node.researchId || !!progress.research?.[node.researchId];
+}
+
 function nodeUnlocked(node) {
-  return node.requires.every((id) => progress.upgrades[id]);
+  return nodePlanetUnlocked(node) && nodeResearchUnlocked(node) && node.requires.every((id) => progress.upgrades[id]);
 }
 
 function nodeVisible(node) {
   if (progress.upgrades[node.id]) return true;
+  if (!nodePlanetUnlocked(node)) return false;
+  if (!nodeResearchUnlocked(node)) return false;
   if (node.requires.length === 0) return true;
   return nodeUnlocked(node);
 }
@@ -1624,20 +1705,54 @@ function availableUpgradeNodes() {
   return upgradeNodes.filter((node) => !progress.upgrades[node.id] && nodeUnlocked(node));
 }
 
+function visibleUpgradeNodeCount() {
+  return upgradeNodes.filter((node) => progress.upgrades[node.id] || (nodePlanetUnlocked(node) && nodeResearchUnlocked(node))).length;
+}
+
+function lockedPlanetTierNode() {
+  return upgradeNodes.find((node) => !progress.upgrades[node.id] && (!nodePlanetUnlocked(node) || !nodeResearchUnlocked(node))) || null;
+}
+
 function cheapestReadyUpgrade() {
-  const readyNodes = availableUpgradeNodes().filter((node) => canAffordCost(progress.bank, node.cost));
-  readyNodes.sort((a, b) => sumCargo(a.cost) - sumCargo(b.cost));
+  const readyNodes = availableUpgradeNodes().filter((node) => canAffordCredits(progress.credits, node.cost));
+  readyNodes.sort((a, b) => a.cost - b.cost);
   return readyNodes[0] || null;
 }
 
 function nearestUpgradeGoal() {
-  const locked = availableUpgradeNodes().filter((node) => !canAffordCost(progress.bank, node.cost));
+  const locked = availableUpgradeNodes().filter((node) => !canAffordCredits(progress.credits, node.cost));
   locked.sort((a, b) => {
-    const aMissing = sumCargo(missingCost(progress.bank, a.cost));
-    const bMissing = sumCargo(missingCost(progress.bank, b.cost));
+    const aMissing = missingCredits(progress.credits, a.cost);
+    const bMissing = missingCredits(progress.credits, b.cost);
     return aMissing - bMissing;
   });
   return locked[0] || null;
+}
+
+function planetCoreCleared(planetId) {
+  return !!progress.planetProgress?.[planetId]?.coreCleared;
+}
+
+function researchPlanetRequirementMet(node) {
+  return !node.requiresPlanet || progress.unlockedPlanets.includes(node.requiresPlanet);
+}
+
+function researchClearRequirementMet(node) {
+  return !node.planetClearRequirement || planetCoreCleared(node.planetClearRequirement);
+}
+
+function researchUnlocked(node) {
+  return node.requires.every((id) => progress.research?.[id]) && researchPlanetRequirementMet(node) && researchClearRequirementMet(node);
+}
+
+function visibleResearchNodes() {
+  return RESEARCH_NODES.filter((node) => progress.research?.[node.id] || researchUnlocked(node));
+}
+
+function nextResearchGoal() {
+  const pending = visibleResearchNodes().filter((node) => !progress.research?.[node.id]);
+  pending.sort((a, b) => sumCargo(missingResearchCost(progress.bank, a.cost)) - sumCargo(missingResearchCost(progress.bank, b.cost)));
+  return pending[0] || null;
 }
 
 function showHangarStatus(message, duration = 3.6) {
@@ -1646,22 +1761,75 @@ function showHangarStatus(message, duration = 3.6) {
   state.hangarStatusUntil = state.time + duration;
 }
 
+function setHangarView(view) {
+  state.hangarView = view === "research" ? "research" : "upgrades";
+  syncUi();
+}
+
 function getNodeTier(node) {
-  if (node.cost.crystal) return "crystal";
-  if (node.cost.platinum) return "platinum";
+  if (node.cost >= 7000) return "crystal";
+  if (node.cost >= 2500) return "platinum";
   return "ore";
 }
 
 function buyNode(id) {
   const node = upgradeNodes.find((entry) => entry.id === id);
-  if (!node || progress.upgrades[id] || !nodeUnlocked(node) || !canAffordCost(progress.bank, node.cost)) return;
-  subtractCost(progress.bank, node.cost);
+  if (!node || progress.upgrades[id] || !nodeUnlocked(node) || !canAffordCredits(progress.credits, node.cost)) return;
+  spendCredits(node.cost);
   progress.upgrades[id] = true;
   showHangarStatus(`${node.label} installed.`);
   saveProgress();
   applyUpgrades();
   playUnlock();
   renderUpgradeTree();
+  renderResearchTree();
+  syncUi();
+}
+
+function buyResearchNode(id) {
+  const node = RESEARCH_NODES.find((entry) => entry.id === id);
+  if (!node || progress.research?.[id] || !researchUnlocked(node) || !canAffordResearchCost(progress.bank, node.cost)) return;
+  subtractResearchCost(progress.bank, node.cost);
+  progress.research[id] = true;
+  if (node.unlockPlanet && PLANET_BY_ID[node.unlockPlanet] && !progress.unlockedPlanets.includes(node.unlockPlanet)) {
+    progress.unlockedPlanets.push(node.unlockPlanet);
+    ensurePlanetProgressRecord(progress, node.unlockPlanet);
+  }
+  if (node.unlockPlanet && !progress.currentPlanetId) progress.currentPlanetId = node.unlockPlanet;
+  showHangarStatus(`${node.label} completed.`);
+  saveProgress();
+  playUnlock();
+  renderUpgradeTree();
+  renderResearchTree();
+  syncUi();
+}
+
+function sellMaterial(material, amount = progress.bank[material] || 0) {
+  const available = progress.bank[material] || 0;
+  const sellAmount = clamp(amount, 0, available);
+  if (!sellAmount) return;
+  progress.bank[material] -= sellAmount;
+  progress.credits += sellAmount * MATERIAL_SALE_VALUES[material];
+  showHangarStatus(`Sold ${fmt(sellAmount)} ${material} for ${formatCredits(sellAmount * MATERIAL_SALE_VALUES[material])}.`);
+  saveProgress();
+  renderUpgradeTree();
+  renderResearchTree();
+  syncUi();
+}
+
+function sellAllMaterials() {
+  let totalCredits = 0;
+  for (const material of MATERIAL_TYPES) {
+    const amount = progress.bank[material] || 0;
+    totalCredits += amount * MATERIAL_SALE_VALUES[material];
+    progress.bank[material] = 0;
+  }
+  if (!totalCredits) return;
+  progress.credits += totalCredits;
+  showHangarStatus(`Sold the full hold for ${formatCredits(totalCredits)}.`);
+  saveProgress();
+  renderUpgradeTree();
+  renderResearchTree();
   syncUi();
 }
 
@@ -1690,7 +1858,7 @@ function renderUpgradeTree() {
       if (!dep || !nodeVisible(dep)) continue;
       const dx = node.x - dep.x;
       const dy = node.y - dep.y;
-      const distance = Math.hypot(dx, dy);
+      const distance = length2D(dx, dy);
       const dirX = distance === 0 ? 0 : dx / distance;
       const dirY = distance === 0 ? 0 : dy / distance;
       const nodeInset = nodeHalf;
@@ -1704,7 +1872,7 @@ function renderUpgradeTree() {
       line.className = "tree-line";
       line.style.left = `${startX}px`;
       line.style.top = `${startY}px`;
-      line.style.width = `${Math.max(0, Math.hypot(lineDx, lineDy))}px`;
+      line.style.width = `${Math.max(0, length2D(lineDx, lineDy))}px`;
       line.style.transform = `rotate(${Math.atan2(lineDy, lineDx)}rad)`;
       canvasEl.appendChild(line);
     }
@@ -1718,7 +1886,7 @@ function renderUpgradeTree() {
     button.className = `tree-node tier-${tier}${purchased ? " purchased" : ""}${unlocked ? "" : " locked"}${firstReveal ? " reveal" : ""}`;
     button.style.left = `${node.x * scale}px`;
     button.style.top = `${node.y * scale}px`;
-    button.disabled = purchased || !unlocked || !canAffordCost(progress.bank, node.cost);
+    button.disabled = purchased || !unlocked || !canAffordCredits(progress.credits, node.cost);
     button.innerHTML = `
       <div class="node-inner">
         <span class="name">${node.label}</span>
@@ -1733,6 +1901,25 @@ function renderUpgradeTree() {
   ui.upgradeTree.appendChild(canvasEl);
 }
 
+function renderResearchTree() {
+  ui.researchTree.innerHTML = "";
+  const nodes = visibleResearchNodes();
+  for (const node of nodes) {
+    const purchased = !!progress.research?.[node.id];
+    const unlocked = purchased || researchUnlocked(node);
+    const card = document.createElement("button");
+    card.className = `research-card${purchased ? " purchased" : ""}${unlocked ? "" : " locked"}`;
+    card.disabled = purchased || !unlocked || !canAffordResearchCost(progress.bank, node.cost);
+    card.innerHTML = `
+      <span class="research-label">${node.label}</span>
+      <span class="research-copy">${node.description}</span>
+      <span class="research-cost">${purchased ? "Completed" : formatMaterials(node.cost)}</span>
+    `;
+    card.addEventListener("click", () => buyResearchNode(node.id));
+    ui.researchTree.appendChild(card);
+  }
+}
+
 function setupUpgradeTreeZoom() {
   let pinchDistance = 0;
   let pinchZoom = 0;
@@ -1742,7 +1929,7 @@ function setupUpgradeTreeZoom() {
     (event) => {
       if (event.touches.length !== 2) return;
       const [a, b] = event.touches;
-      pinchDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      pinchDistance = length2D(a.clientX - b.clientX, a.clientY - b.clientY);
       pinchZoom = state.treeZoom;
     },
     { passive: true },
@@ -1753,7 +1940,7 @@ function setupUpgradeTreeZoom() {
     (event) => {
       if (event.touches.length !== 2) return;
       const [a, b] = event.touches;
-      const nextDistance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const nextDistance = length2D(a.clientX - b.clientX, a.clientY - b.clientY);
       if (!pinchDistance) {
         pinchDistance = nextDistance;
         pinchZoom = state.treeZoom;
@@ -1883,11 +2070,11 @@ function distancePointToSegment(px, py, ax, ay, bx, by) {
   const abx = bx - ax;
   const aby = by - ay;
   const lengthSq = abx * abx + aby * aby;
-  if (lengthSq <= 0.0001) return Math.hypot(px - ax, py - ay);
+  if (lengthSq <= 0.0001) return length2D(px - ax, py - ay);
   const t = clamp(((px - ax) * abx + (py - ay) * aby) / lengthSq, 0, 1);
   const cx = ax + abx * t;
   const cy = ay + aby * t;
-  return Math.hypot(px - cx, py - cy);
+  return length2D(px - cx, py - cy);
 }
 
 function distancePointToBlockEdge(px, py, block) {
@@ -2099,7 +2286,7 @@ function getMoveAxis() {
   if (state.keys.has("ArrowRight") || state.keys.has("KeyD")) x += 1;
   if (state.keys.has("ArrowUp") || state.keys.has("KeyW")) y -= 1;
   if (state.keys.has("ArrowDown") || state.keys.has("KeyS")) y += 1;
-  const len = Math.hypot(x, y) || 1;
+  const len = length2D(x, y) || 1;
   return { x: x / len, y: y / len, active: x !== 0 || y !== 0 };
 }
 
@@ -2160,7 +2347,7 @@ function failSortie(message) {
 }
 
 function shipDepth() {
-  const distBlocks = Math.hypot(state.ship.x, state.ship.y) / BLOCK_SIZE;
+  const distBlocks = length2D(state.ship.x, state.ship.y) / BLOCK_SIZE;
   const depth = 1 - (distBlocks - CORE_RADIUS_BLOCKS) / (PLANET_RADIUS_BLOCKS - CORE_RADIUS_BLOCKS);
   return clamp(depth, 0, 1);
 }
@@ -2214,16 +2401,13 @@ function finishCoreMeltdown() {
   const activePlanetProgress = getActivePlanetProgress();
   activePlanetProgress.coreCleared = true;
   activePlanetProgress.cleared = true;
-  if (activePlanet.nextPlanetId && PLANET_BY_ID[activePlanet.nextPlanetId]) {
-    if (!progress.unlockedPlanets.includes(activePlanet.nextPlanetId)) progress.unlockedPlanets.push(activePlanet.nextPlanetId);
-    progress.currentPlanetId = activePlanet.nextPlanetId;
-    ensurePlanetProgressRecord(progress, progress.currentPlanetId);
-  }
   syncLegacyDestroyedBlocks();
   saveProgress();
   state.cinematic.active = false;
   setCorePhase("cleared", 0);
-  state.hangarMessage = "Planet cracked open. Core haul recovered and next contract unlocked.";
+  state.hangarMessage = activePlanet.nextPlanetId && !progress.unlockedPlanets.includes(activePlanet.nextPlanetId)
+    ? "Planet cracked open. Core haul recovered. Research the next contract in the hangar."
+    : "Planet cracked open. Core haul recovered.";
   progress.lastStatus = state.hangarMessage;
   sendToHangar(true, reportSnapshot, reportPlanetDefinition);
 }
@@ -2332,21 +2516,24 @@ function updateShip(dt) {
 
   const hit = shipHitsBlock();
   if (hit) {
+    const impactSpeed = length2D(ship.vx, ship.vy);
     let pushX = ship.x - hit.x;
     let pushY = ship.y - hit.y;
-    let pushLen = Math.hypot(pushX, pushY);
+    let pushLen = length2D(pushX, pushY);
     if (pushLen < 0.001) {
       pushX = ship.vx !== 0 || ship.vy !== 0 ? ship.vx : ship.x;
       pushY = ship.vx !== 0 || ship.vy !== 0 ? ship.vy : ship.y - hit.y - 1;
-      pushLen = Math.hypot(pushX, pushY) || 1;
+      pushLen = length2D(pushX, pushY) || 1;
     }
     pushX /= pushLen;
     pushY /= pushLen;
     const separation = BLOCK_SIZE * 0.5 + SHIP_RADIUS + 4;
     ship.x = hit.x + pushX * separation;
     ship.y = hit.y + pushY * separation;
-    ship.hp = Math.max(0, ship.hp - dt * 68 * ship.collisionCostMult);
-    ship.fuel = Math.max(0, ship.fuel - dt * 24 * lerp(1, ship.collisionCostMult, 0.8) * ship.collisionFuelMult);
+    const impactHullDamage = (82 + impactSpeed * 0.42) * ship.collisionCostMult;
+    const impactFuelDamage = (28 + impactSpeed * 0.12) * lerp(1, ship.collisionCostMult, 0.8) * ship.collisionFuelMult;
+    ship.hp = Math.max(0, ship.hp - dt * impactHullDamage);
+    ship.fuel = Math.max(0, ship.fuel - dt * impactFuelDamage);
     const normalVelocity = ship.vx * pushX + ship.vy * pushY;
     if (normalVelocity < 0) {
       ship.vx -= pushX * normalVelocity;
@@ -2431,7 +2618,7 @@ function updateBullets(dt) {
     const nextY = bullet.y + bullet.vy * dt;
     const dx = nextX - bullet.x;
     const dy = nextY - bullet.y;
-    const travel = Math.hypot(dx, dy);
+    const travel = length2D(dx, dy);
     const steps = Math.max(1, Math.ceil(travel / (BLOCK_SIZE * 0.35)));
     let hit = false;
 
@@ -2606,7 +2793,7 @@ function updateHazards(dt) {
         if (hazard.telegraph === 0) hazard.active = true;
       }
       if (hazard.active) {
-        if (distanceSq(state.ship.x, state.ship.y, hazard.x, hazard.y) < hazard.radius * hazard.radius) damageShip(9, 4, dt);
+        if (distanceSq(state.ship.x, state.ship.y, hazard.x, hazard.y) < hazard.radius * hazard.radius) damageShip(13, 6, dt);
       }
       continue;
     }
@@ -2617,14 +2804,14 @@ function updateHazards(dt) {
     }
 
     if (hazard.type === "vent" && hazard.active) {
-      if (distanceSq(state.ship.x, state.ship.y, hazard.x, hazard.y) < hazard.radius * hazard.radius) damageShip(8, 10, dt);
+      if (distanceSq(state.ship.x, state.ship.y, hazard.x, hazard.y) < hazard.radius * hazard.radius) damageShip(12, 14, dt);
       continue;
     }
 
     if (hazard.type === "zap" && hazard.active && !hazard.fired) {
       hazard.fired = true;
       if (distanceSq(state.ship.x, state.ship.y, hazard.x, hazard.y) < hazard.radius * hazard.radius) {
-        damageShip(14, 8, 1);
+        damageShip(20, 12, 1);
         state.laserBursts.push({
           sx: hazard.x,
           sy: hazard.y,
@@ -2642,14 +2829,14 @@ function updateHazards(dt) {
   state.gravityPulse.timer = Math.max(0, state.gravityPulse.timer - dt);
   if (state.gravityPulse.life > 0) {
     state.gravityPulse.life = Math.max(0, state.gravityPulse.life - dt);
-    const dist = Math.hypot(state.ship.x, state.ship.y);
+    const dist = length2D(state.ship.x, state.ship.y);
     const nx = dist > 0 ? -state.ship.x / dist : 0;
     const ny = dist > 0 ? -state.ship.y / dist : 0;
     state.ship.vx += nx * state.gravityPulse.strength * dt;
     state.ship.vy += ny * state.gravityPulse.strength * dt;
     if (dist < PLANET_RADIUS * 0.46) {
       const pulseMult = state.planetProgressSnapshot?.coreUnlocked ? 1.2 : 1;
-      damageShip(4 * pulseMult, 5 * pulseMult, dt);
+      damageShip(6 * pulseMult, 8 * pulseMult, dt);
     }
   } else if (state.gravityPulse.timer <= 0 && shipSectorDefinition().id === "coreShell" && !state.cinematic.active) {
     state.gravityPulse.timer = 4.8;
@@ -2665,8 +2852,9 @@ function updateCinematic(dt) {
   const progressRatio = clamp(state.cinematic.timer / Math.max(0.001, state.cinematic.duration), 0, 1);
   state.cinematic.blastRadius = lerp(CORE_RADIUS_BLOCKS * BLOCK_SIZE, PLANET_RADIUS * 1.15, progressRatio);
   state.damageShake = Math.max(state.damageShake, 0.75 + progressRatio * 1.25);
-  state.ship.vx += (state.ship.x / Math.max(1, Math.hypot(state.ship.x, state.ship.y))) * 40 * dt;
-  state.ship.vy += (state.ship.y / Math.max(1, Math.hypot(state.ship.x, state.ship.y))) * 40 * dt;
+  const shipDist = Math.max(1, length2D(state.ship.x, state.ship.y));
+  state.ship.vx += (state.ship.x / shipDist) * 40 * dt;
+  state.ship.vy += (state.ship.y / shipDist) * 40 * dt;
   state.ship.x += state.ship.vx * dt;
   state.ship.y += state.ship.vy * dt;
   state.ship.vx *= 0.988;
@@ -2689,7 +2877,7 @@ function updateCinematic(dt) {
   let cacheInvalidated = false;
   for (const block of state.planet.blocks) {
     if (!block.alive) continue;
-    if (Math.hypot(block.x, block.y) <= collapseThreshold && Math.random() < 0.18) {
+    if (block.x * block.x + block.y * block.y <= collapseThreshold * collapseThreshold && Math.random() < 0.18) {
       block.alive = false;
       cacheInvalidated = true;
     }
@@ -2745,13 +2933,27 @@ function updateCamera(dt) {
 
   state.camera.x = lerp(state.camera.x, targetX, 5 * dt);
   state.camera.y = lerp(state.camera.y, targetY, 5 * dt);
-  state.camera.zoom = lerp(state.camera.zoom, desiredZoom, 3 * dt);
+  state.camera.zoom = lerp(state.camera.zoom, desiredZoom, 2.1 * dt);
+}
+
+function currentShipSectorProgress() {
+  const sector = shipSectorDefinition();
+  const snapshot = state.planetProgressSnapshot || computePlanetProgressSnapshot(state.planet, getActivePlanetProgress());
+  const sectorState = snapshot.sectors?.[sector.id];
+  return sectorState || {
+    id: sector.id,
+    name: sector.name,
+    percentCleared: 0,
+    completionTarget: clamp((sector.completionTarget || 1) * 100, 0, 100),
+    completed: false,
+    primaryMaterial: sector.primaryMaterial,
+  };
 }
 
 function updateStatusText() {
   if (state.mode === "sortie") {
     const cargoFull = sumCargo(state.ship.cargo) >= state.ship.cargoCap;
-    const sector = state.planetProgressSnapshot?.currentSector;
+    const sector = currentShipSectorProgress();
     const sectorText = sector ? `${sector.name} ${formatPercent(sector.percentCleared)}` : "";
     if (state.cinematic.active) {
       ui.status.textContent = "Planet core detonating. Hold the line.";
@@ -2900,17 +3102,15 @@ function drawDockIndicator() {
   const lengthSq = dx * dx + dy * dy;
   if (lengthSq < 1) return;
 
-  const length = Math.sqrt(lengthSq);
-  const nx = dx / length;
-  const ny = dy / length;
-  const edgeX = clamp(centerX + nx * (state.width * 0.5 - margin), margin, state.width - margin);
-  const edgeY = clamp(centerY + ny * (state.height * 0.5 - margin), margin, state.height - margin);
+  const anchorX = centerX;
+  const anchorY = margin * 0.62;
+  const angle = Math.atan2(dock.y - anchorY, dock.x - anchorX);
   const arrowLength = 20;
   const arrowWidth = 8;
 
   ctx.save();
-  ctx.translate(edgeX, edgeY);
-  ctx.rotate(Math.atan2(ny, nx));
+  ctx.translate(anchorX, anchorY);
+  ctx.rotate(angle);
   ctx.globalAlpha = 0.42;
   if (dynamicLightsEnabled()) {
     ctx.shadowColor = "rgba(88, 223, 255, 0.4)";
@@ -3255,7 +3455,7 @@ function renderResultsScreen() {
   ui.resultsMinedLabel.textContent = `Mining ${report.minedPercent.toFixed(1)}%`;
   ui.resultsBlocks.textContent = fmt(report.blocksMined);
   ui.resultsTotalHaul.textContent = formatMaterials(report.delivered);
-  ui.resultsBankTotal.textContent = formatMaterials(report.bankAfter);
+  ui.resultsBankTotal.textContent = formatCredits(report.creditsAfter || 0);
   ui.resultsOre.textContent = fmt(report.delivered.ore || 0);
   ui.resultsPlatinum.textContent = fmt(report.delivered.platinum || 0);
   ui.resultsCrystal.textContent = fmt(report.delivered.crystal || 0);
@@ -3276,9 +3476,15 @@ function syncUi(force = true) {
   const canCyclePlanets = unlocked.length > 1;
   const report = progress.lastSortieReport;
   const purchasedCount = upgradeNodes.filter((node) => progress.upgrades[node.id]).length;
+  const visibleNodeCount = visibleUpgradeNodeCount();
   const readyUpgrade = cheapestReadyUpgrade();
   const nextGoal = nearestUpgradeGoal();
-  ui.bank.textContent = formatMaterials(progress.bank);
+  const nextResearch = nextResearchGoal();
+  const nextPlanetTierNode = lockedPlanetTierNode();
+  ui.bank.textContent = formatCredits(progress.credits);
+  ui.bankOre.textContent = `${fmt(progress.bank.ore)} ore`;
+  ui.bankPlatinum.textContent = `${fmt(progress.bank.platinum)} platinum`;
+  ui.bankCrystal.textContent = `${fmt(progress.bank.crystal)} crystal`;
   ui.cargo.textContent = `${fmt(sumCargo(state.ship.cargo))} / ${fmt(state.ship.cargoCap)}`;
   ui.sortie.textContent = `#${progress.sortie}`;
   const fuelRatio = state.ship.fuel / state.ship.fuelMax;
@@ -3290,8 +3496,8 @@ function syncUi(force = true) {
   ui.recentSortieDetail.textContent = report
     ? `${report.success ? "Returned" : "Lost"} • ${report.planetName} • ${fmt(report.blocksMined)} blocks`
     : "No debrief yet";
-  ui.hangarBankValue.textContent = formatMaterials(progress.bank);
-  ui.hangarBankDetail.textContent = `Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
+  ui.hangarBankValue.textContent = formatCredits(progress.credits);
+  ui.hangarBankDetail.textContent = `Samples: Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
   ui.hangarPlanetValue.textContent = activePlanet.name;
   ui.hangarPlanetDetail.textContent = `${planetThreatLabel(activePlanet.id)} • ${planetContractDetail(activePlanet.id)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
@@ -3302,12 +3508,29 @@ function syncUi(force = true) {
   ui.hangarContractDetail.textContent = planetContractDetail(activePlanet.id);
   ui.hangarContractYield.textContent = `Yield Bias: ${planetYieldLabel(activePlanet.id)}`;
   ui.hangarContractPressure.textContent = planetThreatLabel(activePlanet.id);
-  ui.hangarUpgradeGrid.textContent = `${purchasedCount} / ${upgradeNodes.length} online`;
+  ui.hangarUpgradeGrid.textContent = `${purchasedCount} / ${visibleNodeCount} online`;
   ui.hangarNextUpgrade.textContent = readyUpgrade
     ? `Install ${readyUpgrade.label}`
+    : nextResearch
+      ? canAffordResearchCost(progress.bank, nextResearch.cost)
+        ? `Research ${nextResearch.label}`
+        : `Need ${formatMaterials(missingResearchCost(progress.bank, nextResearch.cost))}`
     : nextGoal
-      ? `Need ${formatCost(missingCost(progress.bank, nextGoal.cost))}`
-      : "All systems online";
+      ? `Need ${formatCost(missingCredits(progress.credits, nextGoal.cost))}`
+      : nextPlanetTierNode
+        ? nextPlanetTierNode.researchId && !progress.research?.[nextPlanetTierNode.researchId]
+          ? `Research ${RESEARCH_NODES.find((node) => node.id === nextPlanetTierNode.researchId)?.label || "new systems"}`
+          : `Await ${getPlanetDefinition(nextPlanetTierNode.unlockPlanet).name} systems`
+        : "All systems online";
+  ui.hangarTradeDetail.textContent = `Ore ${MATERIAL_SALE_VALUES.ore} cr • Platinum ${MATERIAL_SALE_VALUES.platinum} cr • Crystal ${MATERIAL_SALE_VALUES.crystal} cr`;
+  ui.sellOreBtn.disabled = !progress.bank.ore;
+  ui.sellPlatinumBtn.disabled = !progress.bank.platinum;
+  ui.sellCrystalBtn.disabled = !progress.bank.crystal;
+  ui.sellAllBtn.disabled = !sumCargo(progress.bank);
+  ui.showUpgradesBtn.classList.toggle("active", state.hangarView === "upgrades");
+  ui.showResearchBtn.classList.toggle("active", state.hangarView === "research");
+  ui.upgradeTree.classList.toggle("hidden", state.hangarView !== "upgrades");
+  ui.researchTree.classList.toggle("hidden", state.hangarView !== "research");
   ui.launchSortieBtn.textContent = `Launch ${activePlanet.name} Sortie`;
   const qualityId = qualityProfileId();
   const qualityProfile = currentQualityProfile();
@@ -3329,7 +3552,7 @@ function syncUi(force = true) {
   ui.tipBodyA.textContent = currentTip.bodyA;
   ui.tipBodyB.textContent = currentTip.bodyB;
   ui.tipCloseBtn.textContent = safeTipIndex >= TIPS.length - 1 ? "Launch Sortie" : "Continue";
-  ui.continueBtn.disabled = progress.sortie === 1 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
+  ui.continueBtn.disabled = progress.sortie === 1 && progress.credits === 0 && sumCargo(progress.bank) === 0 && Object.keys(progress.upgrades).length === 0;
   const inGameplay = state.mode === "sortie";
   const inMenu = !inGameplay && state.mode !== "hangar" && state.mode !== "tip" && state.mode !== "results";
   const inHangar = state.mode === "hangar";
@@ -3445,6 +3668,30 @@ ui.tipCloseBtn.addEventListener("click", () => {
   playUiClick();
   advanceTip();
 });
+ui.sellOreBtn.addEventListener("click", () => {
+  playUiClick();
+  sellMaterial("ore");
+});
+ui.sellPlatinumBtn.addEventListener("click", () => {
+  playUiClick();
+  sellMaterial("platinum");
+});
+ui.sellCrystalBtn.addEventListener("click", () => {
+  playUiClick();
+  sellMaterial("crystal");
+});
+ui.sellAllBtn.addEventListener("click", () => {
+  playUiClick();
+  sellAllMaterials();
+});
+ui.showUpgradesBtn.addEventListener("click", () => {
+  playUiClick();
+  setHangarView("upgrades");
+});
+ui.showResearchBtn.addEventListener("click", () => {
+  playUiClick();
+  setHangarView("research");
+});
 ui.launchSortieBtn.addEventListener("click", () => {
   playUiClick();
   startSortie();
@@ -3481,7 +3728,7 @@ function setupStick(element, { onMove, onStart, onEnd }) {
     const dx = clientX - cx;
     const dy = clientY - cy;
     const maxDist = rect.width * 0.28;
-    const dist = Math.hypot(dx, dy) || 1;
+    const dist = length2D(dx, dy) || 1;
     const clamped = Math.min(dist, maxDist);
     const x = (dx / dist) * (clamped / maxDist);
     const y = (dy / dist) * (clamped / maxDist);
@@ -3617,7 +3864,9 @@ window.render_game_to_text = () =>
       timer: Number(state.dock.timer.toFixed(2)),
     },
     economy: {
-      bank: progress.bank,
+      credits: progress.credits,
+      samples: progress.bank,
+      research: progress.research,
       sortie: progress.sortie,
     },
     hazards: state.hazards.map((hazard) => ({
@@ -3678,6 +3927,7 @@ resize();
 applyUpgrades();
 refreshPlanetProgress({ persist: true });
 renderUpgradeTree();
+renderResearchTree();
 setupUpgradeTreeZoom();
 setupUpgradeTreePan();
 syncUi();
@@ -3687,7 +3937,10 @@ window.addEventListener("resize", () => {
   resize();
   syncUi();
   if (state.mode === "sortie") snapCameraToTarget();
-  if (state.mode === "hangar") renderUpgradeTree();
+  if (state.mode === "hangar") {
+    renderUpgradeTree();
+    renderResearchTree();
+  }
   render();
 });
 window.addEventListener("orientationchange", () => {
@@ -3695,7 +3948,10 @@ window.addEventListener("orientationchange", () => {
     resize();
     syncUi();
     if (state.mode === "sortie") snapCameraToTarget();
-    if (state.mode === "hangar") renderUpgradeTree();
+    if (state.mode === "hangar") {
+      renderUpgradeTree();
+      renderResearchTree();
+    }
     render();
   }, 120);
 });
