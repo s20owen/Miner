@@ -40,21 +40,42 @@
               <p><strong>Mobile:</strong> left stick moves and the right stick aims and fires.</p>
               <p><strong>Install:</strong> add Orbit Mine to your home screen to run it as a landscape PWA on iPhone.</p>
             </div>
+            <div class="settings-panel">
+              <div class="settings-row">
+                <div class="settings-row-copy">
+                  <span>Power Profile</span>
+                  <small id="quality-profile-detail">Balanced battery and visuals.</small>
+                </div>
+                <div class="settings-toggle-group" role="group" aria-label="Power profile">
+                  <button id="quality-battery-btn" class="mini-ui-btn settings-toggle">Battery</button>
+                  <button id="quality-balanced-btn" class="mini-ui-btn settings-toggle">Balanced</button>
+                  <button id="quality-performance-btn" class="mini-ui-btn settings-toggle">Performance</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-copy">
+                  <span>Telemetry</span>
+                  <small>Show a lightweight FPS counter during live sorties only.</small>
+                </div>
+                <div class="settings-toggle-group" role="group" aria-label="FPS counter">
+                  <button id="fps-off-btn" class="mini-ui-btn settings-toggle">FPS Off</button>
+                  <button id="fps-on-btn" class="mini-ui-btn settings-toggle">FPS On</button>
+                </div>
+              </div>
+            </div>
             <button id="settings-close-btn" class="ui-btn primary">Back</button>
           </div>
         </section>
 
         <section id="tip-screen" class="overlay tip-screen">
           <div class="tip-card">
-            <p class="tip-step">3 / 4</p>
-            <h3>Danger</h3>
-            <p>
-              Crashing into blocks or running out of fuel costs resources.
-              Cargo full? Mining continues, but you earn no more materials.
+            <p id="tip-step" class="tip-step">1 / 4</p>
+            <h3 id="tip-title">Flight Controls</h3>
+            <p id="tip-body-a">
+              Use thrusters to orbit the planet, line up your aim, and chew through the outer crust before diving deeper.
             </p>
-            <p>
-              Return to the docking ring above the planet and hold position for
-              3 seconds to extract safely.
+            <p id="tip-body-b">
+              On desktop, move with `WASD` or arrows and aim with the mouse. On mobile, the left stick moves and the right stick aims and fires.
             </p>
             <button id="tip-close-btn" class="ui-btn primary">Continue</button>
           </div>
@@ -99,7 +120,7 @@
             </div>
             <div class="hangar-progress-strip">
               <div class="hangar-progress-card">
-                <span>Planet Completion</span>
+                <span>Planet Mined</span>
                 <strong id="hangar-completion-value">0%</strong>
               </div>
               <div class="hangar-progress-card">
@@ -218,6 +239,8 @@
         </div>
 
         <div id="fuel-alert" class="fuel-alert hidden">Fuel Low</div>
+
+        <div id="fps-counter" class="fps-counter hidden">FPS 0</div>
 
         <div class="status-banner">
           <span id="status-text">Dock, mine, and bring the cargo back alive.</span>

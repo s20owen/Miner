@@ -216,6 +216,73 @@ canvas,
   color: var(--ink);
 }
 
+.settings-panel {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 214, 132, 0.14);
+}
+
+.settings-row {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-row-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.settings-row-copy span {
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 242, 207, 0.9);
+}
+
+.settings-row-copy small {
+  color: rgba(247, 238, 215, 0.66);
+  line-height: 1.4;
+}
+
+.settings-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-toggle {
+  min-width: 92px;
+}
+
+.settings-toggle.active {
+  border-color: rgba(255, 214, 132, 0.38);
+  background: rgba(255, 214, 132, 0.14);
+  color: #fff4cf;
+  box-shadow: 0 0 0 1px rgba(255, 214, 132, 0.18) inset;
+}
+
+.fps-counter {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(88, 223, 255, 0.18);
+  background: rgba(10, 16, 22, 0.66);
+  color: rgba(164, 238, 255, 0.92);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.fps-counter.hidden {
+  display: none;
+}
+
 .tip-step {
   color: rgba(247, 238, 215, 0.66);
   font-size: 1.5rem;
@@ -465,32 +532,21 @@ canvas,
 
 .tree-node .node-inner {
   display: grid;
-  gap: 3px;
+  gap: 5px;
   text-align: center;
-  padding: 8px;
-}
-
-.tree-node .symbol {
-  font-size: 1.2rem;
+  align-content: center;
+  padding: 10px 8px;
 }
 
 .tree-node .name {
-  font-size: 0.7rem;
-  line-height: 1.1;
-}
-
-.tree-node .lane {
-  font-size: 0.54rem;
+  font-size: 0.78rem;
   line-height: 1.15;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(247, 238, 215, 0.52);
 }
 
 .tree-node .preview {
-  font-size: 0.64rem;
+  font-size: 0.66rem;
   color: rgba(247, 238, 215, 0.72);
-  line-height: 1.1;
+  line-height: 1.15;
 }
 
 .tree-node .cost {
@@ -648,16 +704,8 @@ canvas,
   border-radius: 16px;
 }
 
-.tree-canvas.compact .tree-node .symbol {
-  font-size: 1rem;
-}
-
 .tree-canvas.compact .tree-node .name {
-  font-size: 0.62rem;
-}
-
-.tree-canvas.compact .tree-node .lane {
-  font-size: 0.5rem;
+  font-size: 0.64rem;
 }
 
 .tree-canvas.compact .tree-node .preview {
