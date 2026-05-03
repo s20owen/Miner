@@ -363,6 +363,12 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
+function smoothstep(edge0, edge1, value) {
+  if (edge0 === edge1) return value < edge0 ? 0 : 1;
+  const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
+
 function rand(min, max) {
   return Math.random() * (max - min) + min;
 }
@@ -1173,13 +1179,17 @@ const state = makeState();
 const revealedTreeNodes = new Set();
 
 function getCameraTarget() {
-  const targetX = (state.ship.x + state.dock.x) * 0.5;
+  const baseTargetX = lerp(state.dock.x, state.ship.x, 0.54);
   const dist = Math.hypot(state.ship.x - state.dock.x, state.ship.y - state.dock.y);
-  const desiredZoom = clamp(0.78 - dist / 4200, 0.48, 0.84);
-  const baseTargetY = lerp(state.dock.y, state.ship.y, 0.68);
-  const safeLowerScreenRatio = 0.72;
+  const desiredZoom = clamp(0.82 - dist / 4200, 0.56, 0.88);
+  const horizontalSafeBand = (state.width * 0.19) / Math.max(desiredZoom, 0.001);
+  const targetX = clamp(baseTargetX, state.ship.x - horizontalSafeBand, state.ship.x + horizontalSafeBand);
+  const baseTargetY = lerp(state.dock.y, state.ship.y, 0.72);
+  const safeLowerScreenRatio = 0.68;
   const minCameraY = state.ship.y - ((safeLowerScreenRatio - 0.5) * state.height) / Math.max(desiredZoom, 0.001);
-  const targetY = Math.max(baseTargetY, minCameraY);
+  const transitionBand = Math.max(60, state.height / Math.max(desiredZoom, 0.001) * 0.08);
+  const clampBlend = smoothstep(minCameraY - transitionBand, minCameraY + transitionBand, baseTargetY);
+  const targetY = lerp(minCameraY, baseTargetY, clampBlend);
   return { targetX, targetY, desiredZoom };
 }
 
@@ -1204,6 +1214,8 @@ function rebuildBackgroundField() {
   }
 
   for (let i = 0; i < objectCount; i += 1) {
+    const roll = Math.random();
+    const type = roll < 0.3 ? "asteroid" : roll < 0.62 ? "moon" : roll < 0.82 ? "planet" : "comet";
     state.backgroundObjects.push({
       x: rand(0, state.width),
       y: rand(0, state.height),
@@ -1211,7 +1223,7 @@ function rebuildBackgroundField() {
       depth: rand(0.03, 0.12),
       drift: rand(0.08, 0.5),
       rotation: rand(0, Math.PI * 2),
-      type: Math.random() < 0.5 ? "diamond" : "glow",
+      type,
       alpha: rand(0.08, 0.22),
     });
   }
@@ -1242,20 +1254,73 @@ function ensureBackgroundCache() {
     cacheCtx.save();
     cacheCtx.translate(obj.x, obj.y);
     cacheCtx.rotate(obj.rotation);
-    if (!profile.dynamicLights || obj.type === "diamond") {
-      cacheCtx.fillStyle = `rgba(88, 223, 255, ${obj.alpha})`;
+    if (obj.type === "asteroid") {
+      cacheCtx.fillStyle = `rgba(120, 164, 196, ${obj.alpha * 0.7})`;
       cacheCtx.beginPath();
-      cacheCtx.arc(0, 0, obj.size * 0.52, 0, Math.PI * 2);
+      cacheCtx.moveTo(obj.size * 0.58, 0);
+      cacheCtx.lineTo(obj.size * 0.2, -obj.size * 0.46);
+      cacheCtx.lineTo(-obj.size * 0.26, -obj.size * 0.42);
+      cacheCtx.lineTo(-obj.size * 0.54, -obj.size * 0.08);
+      cacheCtx.lineTo(-obj.size * 0.4, obj.size * 0.38);
+      cacheCtx.lineTo(obj.size * 0.14, obj.size * 0.52);
+      cacheCtx.closePath();
+      cacheCtx.fill();
+      cacheCtx.strokeStyle = `rgba(196, 230, 255, ${obj.alpha * 0.4})`;
+      cacheCtx.lineWidth = 1;
+      cacheCtx.stroke();
+    } else if (obj.type === "comet") {
+      const tail = cacheCtx.createLinearGradient(-obj.size * 1.7, 0, obj.size * 0.2, 0);
+      tail.addColorStop(0, "rgba(88, 223, 255, 0)");
+      tail.addColorStop(0.6, `rgba(88, 223, 255, ${obj.alpha * 0.18})`);
+      tail.addColorStop(1, `rgba(255, 246, 193, ${obj.alpha * 0.34})`);
+      cacheCtx.fillStyle = tail;
+      cacheCtx.beginPath();
+      cacheCtx.moveTo(-obj.size * 1.8, 0);
+      cacheCtx.quadraticCurveTo(-obj.size * 0.95, -obj.size * 0.24, obj.size * 0.12, 0);
+      cacheCtx.quadraticCurveTo(-obj.size * 0.95, obj.size * 0.24, -obj.size * 1.8, 0);
+      cacheCtx.fill();
+      const head = cacheCtx.createRadialGradient(0, 0, 0, 0, 0, obj.size * 0.55);
+      head.addColorStop(0, `rgba(255, 247, 213, ${obj.alpha * 1.15})`);
+      head.addColorStop(0.5, `rgba(136, 228, 255, ${obj.alpha * 0.65})`);
+      head.addColorStop(1, "rgba(88, 223, 255, 0)");
+      cacheCtx.fillStyle = head;
+      cacheCtx.beginPath();
+      cacheCtx.arc(0, 0, obj.size * 0.55, 0, Math.PI * 2);
+      cacheCtx.fill();
+    } else if (obj.type === "moon") {
+      const moon = cacheCtx.createRadialGradient(-obj.size * 0.2, -obj.size * 0.24, 0, 0, 0, obj.size * 0.95);
+      moon.addColorStop(0, `rgba(243, 235, 217, ${obj.alpha * 1.05})`);
+      moon.addColorStop(0.7, `rgba(148, 164, 194, ${obj.alpha * 0.8})`);
+      moon.addColorStop(1, `rgba(72, 88, 124, ${obj.alpha * 0.16})`);
+      cacheCtx.fillStyle = moon;
+      cacheCtx.beginPath();
+      cacheCtx.arc(0, 0, obj.size * 0.78, 0, Math.PI * 2);
+      cacheCtx.fill();
+      cacheCtx.fillStyle = `rgba(56, 72, 102, ${obj.alpha * 0.22})`;
+      cacheCtx.beginPath();
+      cacheCtx.arc(obj.size * 0.18, -obj.size * 0.1, obj.size * 0.14, 0, Math.PI * 2);
+      cacheCtx.arc(-obj.size * 0.22, obj.size * 0.2, obj.size * 0.1, 0, Math.PI * 2);
+      cacheCtx.fill();
+    } else if (!profile.dynamicLights) {
+      cacheCtx.fillStyle = `rgba(88, 223, 255, ${obj.alpha * 0.9})`;
+      cacheCtx.beginPath();
+      cacheCtx.arc(0, 0, obj.size * 0.56, 0, Math.PI * 2);
       cacheCtx.fill();
     } else {
       const orb = cacheCtx.createRadialGradient(0, 0, 0, 0, 0, obj.size);
-      orb.addColorStop(0, `rgba(255, 214, 132, ${obj.alpha})`);
-      orb.addColorStop(0.45, `rgba(255, 130, 88, ${obj.alpha * 0.55})`);
+      orb.addColorStop(0, `rgba(255, 224, 164, ${obj.alpha * 1.05})`);
+      orb.addColorStop(0.4, `rgba(255, 133, 97, ${obj.alpha * 0.62})`);
+      orb.addColorStop(0.78, `rgba(103, 86, 172, ${obj.alpha * 0.28})`);
       orb.addColorStop(1, "rgba(255, 90, 70, 0)");
       cacheCtx.fillStyle = orb;
       cacheCtx.beginPath();
-      cacheCtx.arc(0, 0, obj.size, 0, Math.PI * 2);
+      cacheCtx.arc(0, 0, obj.size * 0.86, 0, Math.PI * 2);
       cacheCtx.fill();
+      cacheCtx.strokeStyle = `rgba(255, 244, 210, ${obj.alpha * 0.24})`;
+      cacheCtx.lineWidth = 1;
+      cacheCtx.beginPath();
+      cacheCtx.arc(0, 0, obj.size * 0.92, -Math.PI * 0.2, Math.PI * 0.9);
+      cacheCtx.stroke();
     }
     cacheCtx.restore();
   }
@@ -2818,6 +2883,57 @@ function drawDock() {
   ctx.fillRect(dock.x - 4, dock.y - 4, 8, 8);
 }
 
+function drawDockIndicator() {
+  const dock = worldToScreen(state.dock.x, state.dock.y);
+  const margin = 72;
+  const isDockComfortablyVisible =
+    dock.x >= margin &&
+    dock.x <= state.width - margin &&
+    dock.y >= margin &&
+    dock.y <= state.height - margin;
+  if (isDockComfortablyVisible) return;
+
+  const centerX = state.width * 0.5;
+  const centerY = state.height * 0.5;
+  const dx = dock.x - centerX;
+  const dy = dock.y - centerY;
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq < 1) return;
+
+  const length = Math.sqrt(lengthSq);
+  const nx = dx / length;
+  const ny = dy / length;
+  const edgeX = clamp(centerX + nx * (state.width * 0.5 - margin), margin, state.width - margin);
+  const edgeY = clamp(centerY + ny * (state.height * 0.5 - margin), margin, state.height - margin);
+  const arrowLength = 20;
+  const arrowWidth = 8;
+
+  ctx.save();
+  ctx.translate(edgeX, edgeY);
+  ctx.rotate(Math.atan2(ny, nx));
+  ctx.globalAlpha = 0.42;
+  if (dynamicLightsEnabled()) {
+    ctx.shadowColor = "rgba(88, 223, 255, 0.4)";
+    ctx.shadowBlur = 8;
+  }
+  ctx.fillStyle = "#8ff0ff";
+  ctx.beginPath();
+  ctx.moveTo(arrowLength * 0.5, 0);
+  ctx.lineTo(-arrowLength * 0.45, -arrowWidth);
+  ctx.lineTo(-arrowLength * 0.1, 0);
+  ctx.lineTo(-arrowLength * 0.45, arrowWidth);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(143, 240, 255, 0.45)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-arrowLength * 0.9, 0);
+  ctx.lineTo(-arrowLength * 0.2, 0);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawPlanetBlocks() {
   ensurePlanetLayerCache();
   const bounds = visibleWorldBounds();
@@ -3047,6 +3163,7 @@ function render() {
   drawPlanetBlocks();
   drawHazards();
   drawDock();
+  drawDockIndicator();
   drawPickups();
   drawBullets();
   drawLaser();
