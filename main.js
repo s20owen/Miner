@@ -84,7 +84,9 @@ const ui = {
   hangarTradeDetail: document.getElementById("hangar-trade-detail"),
   showUpgradesBtn: document.getElementById("show-upgrades-btn"),
   showResearchBtn: document.getElementById("show-research-btn"),
+  showSkinsBtn: document.getElementById("show-skins-btn"),
   researchTree: document.getElementById("research-tree"),
+  skinsTree: document.getElementById("skins-tree"),
   moveStick: document.getElementById("move-stick"),
   aimStick: document.getElementById("aim-stick"),
   hudLeft: document.querySelector(".hud-left"),
@@ -358,11 +360,15 @@ const audio = {
 
 function cost(ore = 0, platinum = 0, crystal = 0) {
   const base = ore * MATERIAL_SALE_VALUES.ore + platinum * MATERIAL_SALE_VALUES.platinum + crystal * MATERIAL_SALE_VALUES.crystal;
-  return Math.round((base * 1.45) / 5) * 5;
+  return Math.round((base * 1.8) / 5) * 5;
 }
 
 function researchCost(ore = 0, platinum = 0, crystal = 0) {
-  return { ore, platinum, crystal };
+  return {
+    ore: Math.round(ore * 1.45),
+    platinum: Math.round(platinum * 1.45),
+    crystal: Math.round(crystal * 1.45),
+  };
 }
 
 function defaultQualityProfileId() {
@@ -390,11 +396,11 @@ const upgradeNodes = [
   { id: "hull4", x: 80, y: 2040, label: "Aegis Plating", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(72, 88, 52), requires: ["engineEco3"], effect: { hpMax: 16 } },
   { id: "reactive3", x: 80, y: 2190, label: "Shock Baffles", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(84, 102, 64), requires: ["hull4"], effect: { collisionCostMult: 0.86 } },
   { id: "hull5", x: 80, y: 2340, label: "Bastion Hull", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 118, 78), requires: ["reactive3"], effect: { hpMax: 20 } },
-  { id: "shield1", x: 80, y: 2490, label: "Shield Matrix", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(102, 126, 82), requires: ["hull5"], effect: { shieldMult: 0.92 } },
-  { id: "hull6", x: 80, y: 2640, label: "Bulwark Frame", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(112, 138, 94), requires: ["shield1"], effect: { hpMax: 18 } },
-  { id: "reactive4", x: 80, y: 2790, label: "Gravitic Bracing", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(122, 148, 104), requires: ["hull6"], effect: { collisionCostMult: 0.82 } },
-  { id: "shield2", x: 80, y: 2940, label: "Barrier Lattice", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(132, 160, 116), requires: ["reactive4"], effect: { shieldMult: 0.9 } },
-  { id: "hull7", x: 80, y: 3090, label: "Citadel Shell", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(142, 174, 128), requires: ["shield2"], effect: { hpMax: 24 } },
+  { id: "shield1", x: 80, y: 2490, label: "Shield Matrix", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "shieldTheory", cost: cost(102, 126, 82), requires: ["hull5"], effect: { shieldMult: 0.92 } },
+  { id: "hull6", x: 80, y: 2640, label: "Bulwark Frame", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "shieldTheory", cost: cost(112, 138, 94), requires: ["shield1"], effect: { hpMax: 18 } },
+  { id: "reactive4", x: 80, y: 2790, label: "Gravitic Bracing", lane: "Survival Mk II", symbol: "⛨", unlockPlanet: "vesper-2", researchId: "shieldTheory", cost: cost(122, 148, 104), requires: ["hull6"], effect: { collisionCostMult: 0.82 } },
+  { id: "shield2", x: 80, y: 2940, label: "Barrier Lattice", lane: "Survival Mk II", symbol: "⬡", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(132, 160, 116), requires: ["reactive4"], effect: { shieldMult: 0.9 } },
+  { id: "hull7", x: 80, y: 3090, label: "Citadel Shell", lane: "Survival Mk II", symbol: "🛡", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(142, 174, 128), requires: ["shield2"], effect: { hpMax: 24 } },
 
   { id: "fire1", x: 340, y: 90, label: "Fire Rate", lane: "Combat: Fire Rate", symbol: "»", cost: cost(46), requires: [], effect: { rateMult: 0.94 } },
   { id: "drill1", x: 340, y: 210, label: "Bullet Force", lane: "Combat: AOE / Advanced", symbol: "✦", cost: cost(62), requires: ["fire1"], effect: { bulletDamage: 0.56 } },
@@ -423,14 +429,14 @@ const upgradeNodes = [
   { id: "fire5", x: 340, y: 2970, label: "Overdrive Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(76, 104, 58), requires: ["splash4"], effect: { rateMult: 0.96 } },
   { id: "drill10", x: 340, y: 3090, label: "Planetcracker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(88, 118, 72), requires: ["fire5"], effect: { bulletDamage: 0.24 } },
   { id: "laser3", x: 340, y: 3210, label: "Prism Lance", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(96, 132, 86), requires: ["drill10"], effect: { laserDamage: 1.22 } },
-  { id: "fire6", x: 340, y: 3330, label: "Hyper Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(106, 144, 98), requires: ["laser3"], effect: { rateMult: 0.95 } },
-  { id: "drill11", x: 340, y: 3450, label: "Sharddriver", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(116, 156, 108), requires: ["fire6"], effect: { bulletDamage: 0.26 } },
-  { id: "laser4", x: 340, y: 3570, label: "Tri-Beam Bus", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(126, 168, 120), requires: ["drill11"], effect: { addLaser: { color: "#ff8be8", damageMult: 0.9 } } },
-  { id: "laserFuel3", x: 340, y: 3690, label: "Emitter Recycler", lane: "Combat Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(136, 180, 132), requires: ["laser4"], effect: { laserFuelMult: 0.88 } },
-  { id: "drill12", x: 340, y: 3810, label: "Siegebreaker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(148, 194, 146), requires: ["laserFuel3"], effect: { bulletDamage: 0.28 } },
-  { id: "splash5", x: 340, y: 3930, label: "Cataclysm Array", lane: "Combat Mk II", symbol: "✹", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(160, 208, 160), requires: ["drill12"], effect: { splashRadius: 44, splashFalloff: 0.42 } },
-  { id: "fire7", x: 340, y: 4050, label: "Redline Cyclers", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(172, 222, 174), requires: ["splash5"], effect: { rateMult: 0.95 } },
-  { id: "laser5", x: 340, y: 4170, label: "Escort Emitter", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(184, 236, 188), requires: ["fire7"], effect: { addLaser: { color: "#8dffb7", damageMult: 0.72 } } },
+  { id: "fire6", x: 340, y: 3330, label: "Hyper Feed", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(106, 144, 98), requires: ["laser3"], effect: { rateMult: 0.95 } },
+  { id: "drill11", x: 340, y: 3450, label: "Sharddriver", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(116, 156, 108), requires: ["fire6"], effect: { bulletDamage: 0.26 } },
+  { id: "laser4", x: 340, y: 3570, label: "Tri-Beam Bus", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "triBeamTheory", cost: cost(126, 168, 120), requires: ["drill11"], effect: { addLaser: { color: "#ff8be8", damageMult: 0.9 } } },
+  { id: "laserFuel3", x: 340, y: 3690, label: "Emitter Recycler", lane: "Combat Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "triBeamTheory", cost: cost(136, 180, 132), requires: ["laser4"], effect: { laserFuelMult: 0.88 } },
+  { id: "drill12", x: 340, y: 3810, label: "Siegebreaker", lane: "Combat Mk II", symbol: "✦", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(148, 194, 146), requires: ["laserFuel3"], effect: { bulletDamage: 0.28 } },
+  { id: "splash5", x: 340, y: 3930, label: "Cataclysm Array", lane: "Combat Mk II", symbol: "✹", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(160, 208, 160), requires: ["drill12"], effect: { splashRadius: 44, splashFalloff: 0.42 } },
+  { id: "fire7", x: 340, y: 4050, label: "Redline Cyclers", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(172, 222, 174), requires: ["splash5"], effect: { rateMult: 0.95 } },
+  { id: "laser5", x: 340, y: 4170, label: "Escort Emitter", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "triBeamTheory", cost: cost(184, 236, 188), requires: ["fire7"], effect: { addLaser: { color: "#8dffb7", damageMult: 0.72 } } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
@@ -454,15 +460,15 @@ const upgradeNodes = [
   { id: "fuel7", x: 600, y: 2370, label: "Long Haul Cells", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(74, 98, 56), requires: ["fuel6"], effect: { fuelMax: 12 } },
   { id: "cargo7", x: 600, y: 2490, label: "Deep Vaults", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "mk2Blueprints", cost: cost(86, 112, 68), requires: ["fuel7"], effect: { cargoCap: 5 } },
   { id: "fuelEco3", x: 600, y: 2610, label: "Catalytic Return", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(94, 126, 82), requires: ["cargo7"], effect: { thrustFuelMult: 0.92, collisionFuelMult: 0.86 } },
-  { id: "cargo8", x: 600, y: 2730, label: "Freighter Spine", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(104, 138, 92), requires: ["fuelEco3"], effect: { cargoCap: 6 } },
-  { id: "fuel8", x: 600, y: 2850, label: "Reserve Manifold", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(114, 150, 102), requires: ["cargo8"], effect: { fuelMax: 14 } },
-  { id: "fuelEco4", x: 600, y: 2970, label: "Burn Recovery", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(124, 162, 114), requires: ["fuel8"], effect: { thrustFuelMult: 0.9, collisionFuelMult: 0.9 } },
-  { id: "cargo9", x: 600, y: 3090, label: "Vault Grid", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(136, 176, 126), requires: ["fuelEco4"], effect: { cargoCap: 7 } },
-  { id: "fuel9", x: 600, y: 3210, label: "Longburn Stack", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(148, 190, 138), requires: ["cargo9"], effect: { fuelMax: 16 } },
+  { id: "cargo8", x: 600, y: 2730, label: "Freighter Spine", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "expeditionRigs", cost: cost(104, 138, 92), requires: ["fuelEco3"], effect: { cargoCap: 6 } },
+  { id: "fuel8", x: 600, y: 2850, label: "Reserve Manifold", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "expeditionRigs", cost: cost(114, 150, 102), requires: ["cargo8"], effect: { fuelMax: 14 } },
+  { id: "fuelEco4", x: 600, y: 2970, label: "Burn Recovery", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "expeditionRigs", cost: cost(124, 162, 114), requires: ["fuel8"], effect: { thrustFuelMult: 0.9, collisionFuelMult: 0.9 } },
+  { id: "cargo9", x: 600, y: 3090, label: "Vault Grid", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "expeditionRigs", cost: cost(136, 176, 126), requires: ["fuelEco4"], effect: { cargoCap: 7 } },
+  { id: "fuel9", x: 600, y: 3210, label: "Longburn Stack", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "expeditionRigs", cost: cost(148, 190, 138), requires: ["cargo9"], effect: { fuelMax: 16 } },
   { id: "fuelEco5", x: 600, y: 3330, label: "Closed-Loop Routing", lane: "Cargo Mk II", symbol: "◌", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(160, 204, 152), requires: ["fuel9"], effect: { thrustFuelMult: 0.88, collisionFuelMult: 0.88 } },
-  { id: "cargo10", x: 600, y: 3450, label: "Grand Holds", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(172, 218, 166), requires: ["fuelEco5"], effect: { cargoCap: 8 } },
-  { id: "fuel10", x: 600, y: 3570, label: "Expedition Core", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(186, 234, 182), requires: ["cargo10"], effect: { fuelMax: 20 } },
-  { id: "magnet4", x: 600, y: 3690, label: "Void Scoop", lane: "Cargo Mk II", symbol: "🧲", unlockPlanet: "vesper-2", researchId: "deepCoreOptics", cost: cost(198, 248, 196), requires: ["fuel10"], effect: { magnet: 14 } },
+  { id: "cargo10", x: 600, y: 3450, label: "Grand Holds", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(172, 218, 166), requires: ["fuelEco5"], effect: { cargoCap: 8 } },
+  { id: "fuel10", x: 600, y: 3570, label: "Expedition Core", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(186, 234, 182), requires: ["cargo10"], effect: { fuelMax: 20 } },
+  { id: "magnet4", x: 600, y: 3690, label: "Void Scoop", lane: "Cargo Mk II", symbol: "🧲", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(198, 248, 196), requires: ["fuel10"], effect: { magnet: 14 } },
 ];
 
 const RESEARCH_NODES = [
@@ -470,8 +476,56 @@ const RESEARCH_NODES = [
   { id: "arrayTheory", label: "Array Theory", description: "Authorize support beams and wider AOE lattice experiments.", cost: researchCost(26, 16, 10), requires: ["laserTheory"] },
   { id: "vesper2License", label: "Vesper-2 License", description: "Clear Vesper-1, then spend samples to charter the next contract shell.", cost: researchCost(38, 22, 12), requires: ["arrayTheory"], planetClearRequirement: "vesper-1", unlockPlanet: "vesper-2" },
   { id: "mk2Blueprints", label: "Mk II Blueprints", description: "Open the next-grade survival, combat, and cargo systems for Vesper-2.", cost: researchCost(24, 30, 18), requires: ["vesper2License"], requiresPlanet: "vesper-2" },
-  { id: "deepCoreOptics", label: "Deep Core Optics", description: "Authorize the final Vesper-2 refinements for late-contract dominance.", cost: researchCost(12, 34, 28), requires: ["mk2Blueprints"], requiresPlanet: "vesper-2" },
+  { id: "deepCoreOptics", label: "Deep Core Optics", description: "Authorize the first late-contract Vesper-2 refinements for deeper shell pressure.", cost: researchCost(12, 34, 28), requires: ["mk2Blueprints"], requiresPlanet: "vesper-2" },
+  { id: "shieldTheory", label: "Shield Theory", description: "Open the first barrier and mitigation upgrades for deep-contract survivability.", cost: researchCost(18, 42, 26), requires: ["deepCoreOptics"], requiresPlanet: "vesper-2" },
+  { id: "expeditionRigs", label: "Expedition Rigs", description: "Authorize heavier cargo frames, reserve manifolds, and longer-burn field systems.", cost: researchCost(22, 46, 30), requires: ["deepCoreOptics"], requiresPlanet: "vesper-2" },
+  { id: "triBeamTheory", label: "Tri-Beam Theory", description: "Authorize the third and escort beam emitters for sustained core extraction.", cost: researchCost(20, 48, 36), requires: ["deepCoreOptics"], requiresPlanet: "vesper-2" },
+  { id: "siegeProtocols", label: "Siege Protocols", description: "Unlock the heaviest projectile and AOE refinements for hardened breach work.", cost: researchCost(26, 54, 42), requires: ["triBeamTheory"], requiresPlanet: "vesper-2" },
+  { id: "fortressDoctrine", label: "Fortress Doctrine", description: "Authorize the final cargo and shield package for maximum-endurance contracts.", cost: researchCost(24, 58, 48), requires: ["shieldTheory", "expeditionRigs", "siegeProtocols"], requiresPlanet: "vesper-2" },
 ];
+
+const SHIP_SKINS = [
+  { id: "standard", label: "Standard Hull", rewardAchievementId: null, bonus: {} },
+  { id: "prospector", label: "Prospector Skin", rewardAchievementId: "ore_10000", bonus: { cargoCap: 4, fuelMax: 8 } },
+  { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_10000", bonus: { hpMax: 12, bulletDamage: 0.18 } },
+  { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "perfect_contract_1", bonus: { magnet: 10, thrustFuelMult: 0.94 } },
+  { id: "archon", label: "Archon Skin", rewardAchievementId: "fortress_doctrine", bonus: { hpMax: 16, shieldMult: 0.92, fuelMax: 10, bulletDamage: 0.14 } },
+];
+
+const SHIP_SKIN_BY_ID = Object.fromEntries(SHIP_SKINS.map((skin) => [skin.id, skin]));
+
+const HIDDEN_ACHIEVEMENTS = [
+  { id: "blocks_100", label: "First Breach", type: "blocksMined", threshold: 100 },
+  { id: "blocks_1000", label: "Tunnel Worker", type: "blocksMined", threshold: 1000 },
+  { id: "blocks_10000", label: "Planetbreaker", type: "blocksMined", threshold: 10000, rewardSkinId: "breaker" },
+  { id: "blocks_100000", label: "Orbital Excavator", type: "blocksMined", threshold: 100000 },
+  { id: "blocks_1000000", label: "Mythic Quarry", type: "blocksMined", threshold: 1000000 },
+  { id: "ore_100", label: "Ore Dust", type: "oreMined", threshold: 100 },
+  { id: "ore_1000", label: "Ore Hauler", type: "oreMined", threshold: 1000 },
+  { id: "ore_10000", label: "Deep Prospector", type: "oreMined", threshold: 10000, rewardSkinId: "prospector" },
+  { id: "ore_100000", label: "Ore Baron", type: "oreMined", threshold: 100000 },
+  { id: "ore_1000000", label: "Ore Dynasty", type: "oreMined", threshold: 1000000 },
+  { id: "platinum_100", label: "Platinum Spark", type: "platinumMined", threshold: 100 },
+  { id: "platinum_1000", label: "Platinum Vein", type: "platinumMined", threshold: 1000 },
+  { id: "platinum_10000", label: "Platinum Vault", type: "platinumMined", threshold: 10000 },
+  { id: "crystal_50", label: "Crystal Static", type: "crystalMined", threshold: 50 },
+  { id: "crystal_500", label: "Crystal Choir", type: "crystalMined", threshold: 500 },
+  { id: "crystal_5000", label: "Crystal Cathedral", type: "crystalMined", threshold: 5000 },
+  { id: "contracts_1", label: "First Charter", type: "fieldContractsCompleted", threshold: 1 },
+  { id: "contracts_5", label: "Freelancer", type: "fieldContractsCompleted", threshold: 5 },
+  { id: "contracts_20", label: "Contract Fleet", type: "fieldContractsCompleted", threshold: 20 },
+  { id: "core_planets_1", label: "Corebreaker", type: "corePlanetsCleared", threshold: 1 },
+  { id: "research_3", label: "Theory Stack", type: "researchUnlocked", threshold: 3 },
+  { id: "research_8", label: "Black Archive", type: "researchUnlocked", threshold: 8 },
+  { id: "upgrades_10", label: "Systems Online", type: "upgradesUnlocked", threshold: 10 },
+  { id: "upgrades_30", label: "Refit Complete", type: "upgradesUnlocked", threshold: 30 },
+  { id: "upgrades_60", label: "Full Arsenal", type: "upgradesUnlocked", threshold: 60 },
+  { id: "perfect_contract_1", label: "Perfect Survey", type: "perfectFieldContracts", threshold: 1, rewardSkinId: "surveyor" },
+  { id: "perfect_planet_1", label: "World Hollowed", type: "perfectPlanets", threshold: 1 },
+  { id: "fortress_doctrine", label: "Fortress Doctrine", type: "researchNodeUnlocked", threshold: "fortressDoctrine", rewardSkinId: "archon" },
+];
+
+const HIDDEN_ACHIEVEMENT_BY_ID = Object.fromEntries(HIDDEN_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement]));
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -528,6 +582,27 @@ function fmt(num) {
 
 function emptyMaterials() {
   return { ore: 0, platinum: 0, crystal: 0 };
+}
+
+function defaultLifetimeStats() {
+  return {
+    blocksMined: 0,
+    oreMined: 0,
+    platinumMined: 0,
+    crystalMined: 0,
+    coreSamplesRecovered: 0,
+    fieldContractsCompleted: 0,
+    corePlanetsCleared: 0,
+    perfectFieldContracts: 0,
+    perfectPlanets: 0,
+  };
+}
+
+function normalizeLifetimeStats(stats = {}) {
+  return {
+    ...defaultLifetimeStats(),
+    ...(stats || {}),
+  };
 }
 
 function defaultPlanetProgress() {
@@ -756,6 +831,86 @@ function formatMaterials(materials) {
 
 function formatCredits(value) {
   return `${fmt(value)} cr`;
+}
+
+function currentSkin() {
+  return SHIP_SKIN_BY_ID[progress.activeSkinId] || SHIP_SKIN_BY_ID.standard;
+}
+
+function researchCount() {
+  return Object.keys(progress.research || {}).length;
+}
+
+function upgradeCount() {
+  return Object.keys(progress.upgrades || {}).length;
+}
+
+function hiddenAchievementUnlocked(id) {
+  return !!progress.achievements?.[id];
+}
+
+function unlockSkin(skinId, unlocked = []) {
+  if (!skinId || !SHIP_SKIN_BY_ID[skinId]) return false;
+  if (!progress.unlockedSkins.includes(skinId)) progress.unlockedSkins.push(skinId);
+  progress.activeSkinId = skinId;
+  unlocked.push(`Skin unlocked: ${SHIP_SKIN_BY_ID[skinId].label}`);
+  return true;
+}
+
+function achievementProgressValue(achievement) {
+  const stats = progress.lifetimeStats || defaultLifetimeStats();
+  switch (achievement.type) {
+    case "blocksMined":
+    case "oreMined":
+    case "platinumMined":
+    case "crystalMined":
+    case "fieldContractsCompleted":
+    case "corePlanetsCleared":
+    case "perfectFieldContracts":
+    case "perfectPlanets":
+      return stats[achievement.type] || 0;
+    case "researchUnlocked":
+      return researchCount();
+    case "upgradesUnlocked":
+      return upgradeCount();
+    case "researchNodeUnlocked":
+      return progress.research?.[achievement.threshold] ? 1 : 0;
+    default:
+      return 0;
+  }
+}
+
+function evaluateHiddenAchievements() {
+  const unlocked = [];
+  for (const achievement of HIDDEN_ACHIEVEMENTS) {
+    if (hiddenAchievementUnlocked(achievement.id)) continue;
+    const value = achievementProgressValue(achievement);
+    const met = achievement.type === "researchNodeUnlocked"
+      ? value >= 1
+      : value >= achievement.threshold;
+    if (!met) continue;
+    progress.achievements[achievement.id] = true;
+    unlocked.push(`Achievement logged: ${achievement.label}`);
+    if (achievement.rewardSkinId) unlockSkin(achievement.rewardSkinId, unlocked);
+  }
+  return unlocked;
+}
+
+function mergeAchievementMessages(baseMessage = "", unlocked = []) {
+  if (!unlocked.length) return baseMessage;
+  return [baseMessage, ...unlocked].filter(Boolean).join(" ");
+}
+
+function formatSkinBonus(bonus = {}) {
+  const parts = [];
+  if (bonus.hpMax) parts.push(`+${bonus.hpMax} hull`);
+  if (bonus.cargoCap) parts.push(`+${bonus.cargoCap} cargo`);
+  if (bonus.fuelMax) parts.push(`+${bonus.fuelMax} fuel`);
+  if (bonus.magnet) parts.push(`+${bonus.magnet} magnet`);
+  if (bonus.bulletDamage) parts.push(`+${bonus.bulletDamage.toFixed(2)} dmg`);
+  if (bonus.shieldMult) parts.push(`${Math.round((1 - bonus.shieldMult) * 100)}% shield`);
+  if (bonus.thrustFuelMult) parts.push(`${Math.round((1 - bonus.thrustFuelMult) * 100)}% thrust fuel`);
+  return parts.join(" • ") || "No bonus";
 }
 
 function canAffordCredits(credits, nodeCost) {
@@ -1055,6 +1210,10 @@ function defaultProgress() {
       qualityProfile: defaultQualityProfileId(),
       showFps: false,
     },
+    achievements: {},
+    unlockedSkins: ["standard"],
+    activeSkinId: "standard",
+    lifetimeStats: defaultLifetimeStats(),
     research: {},
     upgrades: {},
     lastStatus: "Start your first sortie.",
@@ -1084,6 +1243,14 @@ function loadProgress() {
     };
     merged.settings.qualityProfile = sanitizeQualityProfile(merged.settings.qualityProfile);
     merged.settings.showFps = !!merged.settings.showFps;
+    merged.achievements = typeof merged.achievements === "object" && merged.achievements ? { ...merged.achievements } : {};
+    merged.unlockedSkins = Array.isArray(merged.unlockedSkins) && merged.unlockedSkins.length
+      ? Array.from(new Set(merged.unlockedSkins.filter((skinId) => SHIP_SKIN_BY_ID[skinId])))
+      : ["standard"];
+    if (!merged.unlockedSkins.includes("standard")) merged.unlockedSkins.unshift("standard");
+    merged.activeSkinId = SHIP_SKIN_BY_ID[merged.activeSkinId] ? merged.activeSkinId : merged.unlockedSkins[merged.unlockedSkins.length - 1] || "standard";
+    if (!merged.unlockedSkins.includes(merged.activeSkinId)) merged.unlockedSkins.push(merged.activeSkinId);
+    merged.lifetimeStats = normalizeLifetimeStats(merged.lifetimeStats);
     merged.research = typeof merged.research === "object" && merged.research ? { ...merged.research } : {};
     merged.currentPlanetId = getPlanetDefinition(merged.currentPlanetId).id;
     merged.currentContractLane = merged.currentContractLane === "field" ? "field" : "core";
@@ -1108,6 +1275,8 @@ function loadProgress() {
     if (merged.unlockedPlanets.includes("vesper-2")) merged.research.vesper2License = true;
     if ((merged.upgrades?.hull4 || merged.upgrades?.fire5 || merged.upgrades?.fuel7) && merged.unlockedPlanets.includes("vesper-2")) merged.research.mk2Blueprints = true;
     if (merged.upgrades?.hull5 || merged.upgrades?.laser3 || merged.upgrades?.fuelEco3) merged.research.deepCoreOptics = true;
+    merged.lifetimeStats.upgradesUnlocked = Object.keys(merged.upgrades || {}).length;
+    merged.lifetimeStats.researchUnlocked = Object.keys(merged.research || {}).length;
     syncLegacyDestroyedBlocksForLoad(merged);
     merged.saveVersion = SAVE_VERSION;
     return merged;
@@ -1221,7 +1390,12 @@ function computePlanetProgressSnapshot(planet, planetProgressState) {
   }
 
   const hasCoreEvent = contractHasCoreEvent(planet.definition);
-  const coreUnlocked = hasCoreEvent && miningSectors.every((sector) => sectorStates[sector.id]?.completed);
+  const coreShellState = sectorStates.coreShell;
+  const fieldCoreBreach = planet.definition.contractType === "field"
+    && !!planet.definition.coreSampleYield
+    && !!coreShellState
+    && coreShellState.clearedBlocks >= 8;
+  const coreUnlocked = hasCoreEvent && (miningSectors.every((sector) => sectorStates[sector.id]?.completed) || fieldCoreBreach);
   const coreCleared = !!planetProgressState.coreCleared;
   const coreState = {
     id: "coreEvent",
@@ -1385,6 +1559,26 @@ function saveProgress() {
   progress.saveVersion = SAVE_VERSION;
   syncLegacyDestroyedBlocks();
   localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
+}
+
+function updateLifetimeProgressFromSortie(report, contract, objectiveComplete = false) {
+  const stats = progress.lifetimeStats;
+  stats.blocksMined += state.runStats.blocksMined;
+  stats.oreMined += state.runStats.materials.ore || 0;
+  stats.platinumMined += state.runStats.materials.platinum || 0;
+  stats.crystalMined += state.runStats.materials.crystal || 0;
+  stats.coreSamplesRecovered += state.ship.coreSamples || 0;
+  stats.upgradesUnlocked = upgradeCount();
+  stats.researchUnlocked = researchCount();
+  if (contract.contractType === "field" && objectiveComplete) {
+    stats.fieldContractsCompleted += 1;
+    if ((report?.minedPercent || 0) >= 99.9) stats.perfectFieldContracts += 1;
+  }
+  if (contract.contractType !== "field" && report?.coreCleared) {
+    const clearedCount = PLANETS.filter((planet) => progress.planetProgress?.[planet.id]?.coreCleared).length;
+    stats.corePlanetsCleared = Math.max(stats.corePlanetsCleared, clearedCount);
+    if ((report?.minedPercent || 0) >= 99.9) stats.perfectPlanets += 1;
+  }
 }
 
 function makeSortieReport(success, delivered, reportPlanetSnapshot = null, reportPlanetDefinition = null) {
@@ -1794,6 +1988,7 @@ function snapCameraToTarget() {
 
 function applyUpgrades() {
   const ship = state.ship;
+  const skinBonus = currentSkin().bonus || {};
   ship.fuelMax = 120;
   ship.hpMax = 80;
   ship.cargoCap = 28;
@@ -1816,6 +2011,16 @@ function applyUpgrades() {
   ship.shieldMult = 1;
   ship.collisionFuelMult = 1;
   ship.collisionCostMult = 1;
+
+  if (skinBonus.fuelMax) ship.fuelMax += skinBonus.fuelMax;
+  if (skinBonus.hpMax) ship.hpMax += skinBonus.hpMax;
+  if (skinBonus.cargoCap) ship.cargoCap += skinBonus.cargoCap;
+  if (skinBonus.magnet) ship.magnet += skinBonus.magnet;
+  if (skinBonus.thrust) ship.thrust += skinBonus.thrust;
+  if (skinBonus.thrustFuelMult) ship.thrustFuelMult *= skinBonus.thrustFuelMult;
+  if (skinBonus.bulletDamage) ship.bulletDamage += skinBonus.bulletDamage;
+  if (skinBonus.rateMult) ship.rateMult *= skinBonus.rateMult;
+  if (skinBonus.shieldMult) ship.shieldMult *= skinBonus.shieldMult;
 
   for (const node of upgradeNodes) {
     if (!progress.upgrades[node.id]) continue;
@@ -1946,6 +2151,7 @@ function selectPlanet(direction) {
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   showHangarStatus(`Contract routed to ${getActiveContractDefinition().name}.`);
   syncUi();
   render();
@@ -1956,6 +2162,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
   hideOverlays();
   const delivered = success ? addMaterials(state.ship.cargo, state.runStats.bonusMaterials) : emptyMaterials();
   const contract = state.contract;
+  let achievementUnlocks = [];
   if (success) {
     for (const material of MATERIAL_TYPES) {
       progress.bank[material] += delivered[material] || 0;
@@ -1975,7 +2182,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
     }
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
     progress.lastDeliveredCargo = { ...emptyMaterials(), ...delivered };
-    progress.lastSortieReport = {
+    const sortieReport = {
       ...makeSortieReport(true, delivered, reportPlanetSnapshot, reportPlanetDefinition),
       contractType: contract.contractType || "core",
       objectiveLabel: contractObjectiveLabel(contract),
@@ -1984,19 +2191,22 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
       objectiveComplete: objectiveProgress?.complete ?? true,
       contractPayoutCredits,
     };
+    progress.lastSortieReport = sortieReport;
+    updateLifetimeProgressFromSortie(sortieReport, contract, objectiveProgress?.complete ?? true);
+    achievementUnlocks = evaluateHiddenAchievements();
     if (contract.contractType === "field") {
-      showHangarStatus(objectiveProgress.complete
+      showHangarStatus(mergeAchievementMessages(objectiveProgress.complete
         ? `Field contract complete. Stored ${formatMaterials(delivered)} and paid out ${formatCredits(contractPayoutCredits)}.`
-        : `Contract progress updated. Still need ${objectiveProgress.missingLabel}.`);
+        : `Contract progress updated. Still need ${objectiveProgress.missingLabel}.`, achievementUnlocks));
     } else if (sumCargo(state.runStats.bonusMaterials) > 0) {
-      showHangarStatus(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`);
+      showHangarStatus(mergeAchievementMessages(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`, achievementUnlocks));
     } else {
-      showHangarStatus(`Dock successful. Stored ${formatMaterials(delivered)} in the hangar hold.`);
+      showHangarStatus(mergeAchievementMessages(`Dock successful. Stored ${formatMaterials(delivered)} in the hangar hold.`, achievementUnlocks));
     }
     progress.sortie += 1;
   } else {
     progress.lastDeliveredCargo = emptyMaterials();
-    progress.lastSortieReport = {
+    const sortieReport = {
       ...makeSortieReport(false, emptyMaterials(), reportPlanetSnapshot, reportPlanetDefinition),
       contractType: contract.contractType || "core",
       objectiveLabel: contractObjectiveLabel(contract),
@@ -2005,10 +2215,15 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
       objectiveComplete: false,
       contractPayoutCredits: 0,
     };
-    showHangarStatus("Sortie failed. Cargo was lost before docking.");
+    progress.lastSortieReport = sortieReport;
+    updateLifetimeProgressFromSortie(sortieReport, contract, false);
+    achievementUnlocks = evaluateHiddenAchievements();
+    showHangarStatus(mergeAchievementMessages("Sortie failed. Cargo was lost before docking.", achievementUnlocks));
   }
   progress.hasSeenTip = true;
   saveProgress();
+  applyUpgrades();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2047,6 +2262,7 @@ function showHangarScreen() {
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2142,7 +2358,7 @@ function showHangarStatus(message, duration = 3.6) {
 }
 
 function setHangarView(view) {
-  state.hangarView = view === "research" ? "research" : "upgrades";
+  state.hangarView = view === "research" ? "research" : view === "skins" ? "skins" : "upgrades";
   syncUi();
 }
 
@@ -2157,12 +2373,15 @@ function buyNode(id) {
   if (!node || progress.upgrades[id] || !nodeUnlocked(node) || !canAffordCredits(progress.credits, node.cost)) return;
   spendCredits(node.cost);
   progress.upgrades[id] = true;
-  showHangarStatus(`${node.label} installed.`);
+  progress.lifetimeStats.upgradesUnlocked = upgradeCount();
+  const unlocked = evaluateHiddenAchievements();
+  showHangarStatus(mergeAchievementMessages(`${node.label} installed.`, unlocked));
   saveProgress();
   applyUpgrades();
   playUnlock();
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2176,11 +2395,14 @@ function buyResearchNode(id) {
     ensurePlanetProgressRecord(progress, node.unlockPlanet);
   }
   if (node.unlockPlanet && !progress.currentPlanetId) progress.currentPlanetId = node.unlockPlanet;
-  showHangarStatus(`${node.label} completed.`);
+  progress.lifetimeStats.researchUnlocked = researchCount();
+  const unlocked = evaluateHiddenAchievements();
+  showHangarStatus(mergeAchievementMessages(`${node.label} completed.`, unlocked));
   saveProgress();
   playUnlock();
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2194,6 +2416,7 @@ function sellMaterial(material, amount = progress.bank[material] || 0) {
   saveProgress();
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2210,6 +2433,7 @@ function sellAllMaterials() {
   saveProgress();
   renderUpgradeTree();
   renderResearchTree();
+  renderSkinsTree();
   syncUi();
 }
 
@@ -2297,6 +2521,34 @@ function renderResearchTree() {
     `;
     card.addEventListener("click", () => buyResearchNode(node.id));
     ui.researchTree.appendChild(card);
+  }
+}
+
+function equipSkin(skinId) {
+  if (!progress.unlockedSkins.includes(skinId) || progress.activeSkinId === skinId) return;
+  progress.activeSkinId = skinId;
+  applyUpgrades();
+  showHangarStatus(`${SHIP_SKIN_BY_ID[skinId].label} equipped.`);
+  saveProgress();
+  renderSkinsTree();
+  syncUi();
+}
+
+function renderSkinsTree() {
+  ui.skinsTree.innerHTML = "";
+  for (const skin of SHIP_SKINS) {
+    const unlocked = progress.unlockedSkins.includes(skin.id);
+    const active = progress.activeSkinId === skin.id;
+    const card = document.createElement("button");
+    card.className = `research-card${unlocked ? "" : " locked"}${active ? " purchased" : ""}`;
+    card.disabled = !unlocked || active;
+    card.innerHTML = `
+      <span class="research-label">${unlocked ? skin.label : "Unknown Hull"}</span>
+      <span class="research-copy">${unlocked ? formatSkinBonus(skin.bonus) : "Recovery data incomplete. Unlock condition unknown."}</span>
+      <span class="research-cost">${active ? "Equipped" : unlocked ? "Equip" : "Locked"}</span>
+    `;
+    card.addEventListener("click", () => equipSkin(skin.id));
+    ui.skinsTree.appendChild(card);
   }
 }
 
@@ -3973,8 +4225,10 @@ function syncUi(force = true) {
   ui.showFieldContractsBtn.classList.toggle("active", progress.currentContractLane === "field");
   ui.showUpgradesBtn.classList.toggle("active", state.hangarView === "upgrades");
   ui.showResearchBtn.classList.toggle("active", state.hangarView === "research");
+  ui.showSkinsBtn.classList.toggle("active", state.hangarView === "skins");
   ui.upgradeTree.classList.toggle("hidden", state.hangarView !== "upgrades");
   ui.researchTree.classList.toggle("hidden", state.hangarView !== "research");
+  ui.skinsTree.classList.toggle("hidden", state.hangarView !== "skins");
   ui.launchSortieBtn.textContent = `Launch ${activePlanet.name} Sortie`;
   const qualityId = qualityProfileId();
   const qualityProfile = currentQualityProfile();
@@ -4135,6 +4389,10 @@ ui.showUpgradesBtn.addEventListener("click", () => {
 ui.showResearchBtn.addEventListener("click", () => {
   playUiClick();
   setHangarView("research");
+});
+ui.showSkinsBtn.addEventListener("click", () => {
+  playUiClick();
+  setHangarView("skins");
 });
 ui.showCoreContractsBtn.addEventListener("click", () => {
   playUiClick();
@@ -4384,10 +4642,12 @@ function frame(now) {
 }
 
 resize();
+if (evaluateHiddenAchievements().length) saveProgress();
 applyUpgrades();
 refreshPlanetProgress({ persist: true });
 renderUpgradeTree();
 renderResearchTree();
+renderSkinsTree();
 setupUpgradeTreeZoom();
 setupUpgradeTreePan();
 syncUi();
@@ -4400,6 +4660,7 @@ window.addEventListener("resize", () => {
   if (state.mode === "hangar") {
     renderUpgradeTree();
     renderResearchTree();
+    renderSkinsTree();
   }
   render();
 });
@@ -4411,6 +4672,7 @@ window.addEventListener("orientationchange", () => {
     if (state.mode === "hangar") {
       renderUpgradeTree();
       renderResearchTree();
+      renderSkinsTree();
     }
     render();
   }, 120);
