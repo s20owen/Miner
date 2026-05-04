@@ -344,6 +344,178 @@ const FIELD_CONTRACTS = [
     sectorCompletionMult: 1.05,
     hasCoreEvent: true,
   },
+  {
+    id: "ore-haul-1",
+    name: "Ore Haul",
+    contractType: "field",
+    threatLabel: "Standard I",
+    contractDetail: "Tiny asteroid • fast ore pull",
+    objective: { requirements: { ore: 800 } },
+    payoutCredits: 3600,
+    radiusBlocks: 44,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial"],
+    materialBias: { ore: 1.65, platinum: 0.62, crystal: 0.36 },
+    blockHpBonus: -1,
+    hazardRateMult: 1.08,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "platinum-vein-1",
+    name: "Platinum Vein",
+    contractType: "field",
+    threatLabel: "Standard II",
+    contractDetail: "Moon shard • rich industrial seams",
+    objective: { requirements: { platinum: 250 } },
+    payoutCredits: 9800,
+    radiusBlocks: 54,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial", "crystalFault"],
+    materialBias: { ore: 0.8, platinum: 1.62, crystal: 0.58 },
+    blockHpBonus: 0,
+    hazardRateMult: 0.92,
+    sectorCompletionMult: 1.02,
+    hasCoreEvent: false,
+  },
+  {
+    id: "crystal-skim-1",
+    name: "Crystal Skim",
+    contractType: "field",
+    threatLabel: "Standard III",
+    contractDetail: "Tiny crystal body • unstable and bright",
+    objective: { requirements: { crystal: 120 } },
+    payoutCredits: 14200,
+    radiusBlocks: 50,
+    coreRadiusBlocks: 4,
+    sectors: ["industrial", "crystalFault", "coreShell"],
+    materialBias: { ore: 0.44, platinum: 0.92, crystal: 1.82 },
+    blockHpBonus: 1,
+    hazardRateMult: 0.82,
+    sectorCompletionMult: 1.04,
+    hasCoreEvent: false,
+  },
+  {
+    id: "core-sample-recovery-1",
+    name: "Core Sample Recovery",
+    contractType: "field",
+    threatLabel: "Special I",
+    contractDetail: "Broken core body • breach and recover samples",
+    objective: { requirements: { coreSamples: 8 } },
+    payoutCredits: 12600,
+    radiusBlocks: 52,
+    coreRadiusBlocks: 5,
+    sectors: ["industrial", "crystalFault", "coreShell", "coreEvent"],
+    materialBias: { ore: 0.48, platinum: 1.1, crystal: 1.42 },
+    blockHpBonus: 1,
+    coreSampleYield: 8,
+    hazardRateMult: 0.88,
+    sectorCompletionMult: 1.05,
+    hasCoreEvent: true,
+  },
+  {
+    id: "strip-contract-1",
+    name: "Strip Contract",
+    contractType: "field",
+    threatLabel: "Standard IV",
+    contractDetail: "Small moon • quota plus extraction sweep",
+    objective: { requirements: { ore: 1200, minedPercent: 35 } },
+    payoutCredits: 11800,
+    radiusBlocks: 58,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial", "crystalFault"],
+    materialBias: { ore: 1.22, platinum: 1.06, crystal: 0.68 },
+    blockHpBonus: 0,
+    hazardRateMult: 0.94,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "low-fuel-charter-1",
+    name: "Low Fuel Charter",
+    contractType: "field",
+    threatLabel: "Special II",
+    contractDetail: "Lean reserve asteroid • tight fuel window",
+    objective: { requirements: { ore: 900, platinum: 80 } },
+    payoutCredits: 9300,
+    radiusBlocks: 48,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial"],
+    materialBias: { ore: 1.28, platinum: 1.08, crystal: 0.42 },
+    blockHpBonus: 0,
+    startingFuelMult: 0.58,
+    hazardRateMult: 1.04,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "hazard-surge-1",
+    name: "Hazard Surge",
+    contractType: "field",
+    threatLabel: "Special III",
+    contractDetail: "Defense-heavy moon • hazard cadence accelerated",
+    objective: { requirements: { ore: 1100, platinum: 140, minedPercent: 28 } },
+    payoutCredits: 15400,
+    radiusBlocks: 60,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial", "crystalFault", "coreShell"],
+    materialBias: { ore: 1, platinum: 1.18, crystal: 0.92 },
+    blockHpBonus: 1,
+    hazardRateMult: 0.62,
+    sectorCompletionMult: 1.06,
+    hasCoreEvent: false,
+  },
+  {
+    id: "clean-sweep-1",
+    name: "Clean Sweep",
+    contractType: "field",
+    threatLabel: "Fun I",
+    contractDetail: "Pocket asteroid • clear it to the bone",
+    objective: { requirements: { minedPercent: 100 } },
+    payoutCredits: 7600,
+    radiusBlocks: 34,
+    coreRadiusBlocks: 3,
+    sectors: ["surface", "industrial"],
+    materialBias: { ore: 1.3, platinum: 0.82, crystal: 0.32 },
+    blockHpBonus: -1,
+    hazardRateMult: 1.12,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "courier-extraction-1",
+    name: "Courier Extraction",
+    contractType: "field",
+    threatLabel: "Fun II",
+    contractDetail: "Split-haul charter • complete two successful docks",
+    objective: { requirements: { ore: 700, docksRequired: 2 } },
+    payoutCredits: 8900,
+    radiusBlocks: 46,
+    coreRadiusBlocks: 4,
+    sectors: ["surface", "industrial"],
+    materialBias: { ore: 1.18, platinum: 0.94, crystal: 0.42 },
+    blockHpBonus: 0,
+    hazardRateMult: 1,
+    sectorCompletionMult: 1,
+    hasCoreEvent: false,
+  },
+  {
+    id: "volatile-pocket-1",
+    name: "Volatile Pocket",
+    contractType: "field",
+    threatLabel: "Fun III",
+    contractDetail: "Crystal-rich fragment • instability rises near the center",
+    objective: { requirements: { crystal: 90, minedPercent: 22 } },
+    payoutCredits: 13200,
+    radiusBlocks: 52,
+    coreRadiusBlocks: 4,
+    sectors: ["industrial", "crystalFault", "coreShell"],
+    materialBias: { ore: 0.4, platinum: 0.98, crystal: 1.9 },
+    blockHpBonus: 1,
+    hazardRateMult: 0.76,
+    sectorCompletionMult: 1.08,
+    hasCoreEvent: false,
+  },
 ];
 
 const SECTOR_BY_ID = Object.fromEntries(SECTORS.map((sector) => [sector.id, sector]));
@@ -443,6 +615,7 @@ const upgradeNodes = [
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
   { id: "magnet1", x: 600, y: 330, label: "Magnet", lane: "Cargo / Collection", symbol: "🧲", cost: cost(66), requires: ["cargo1"], effect: { magnet: 8 } },
+  { id: "trade1", x: 760, y: 450, label: "Trade Licenses", lane: "Cargo / Collection", symbol: "¤", cost: cost(84, 8, 2), requires: ["magnet1"], effect: { sellValueMult: { ore: 1.1, platinum: 1.08, crystal: 1.06 } } },
   { id: "dock1", x: 600, y: 450, label: "Dock Clamp", lane: "Mobility / Docking", symbol: "⌂", cost: cost(80), requires: ["magnet1"], effect: { dockRate: 1.18 } },
   { id: "cargo2", x: 600, y: 570, label: "Platinum Bins", lane: "Cargo / Collection", symbol: "⬒", cost: cost(98, 12, 2), requires: ["dock1"], effect: { cargoCap: 9 } },
   { id: "fuel2", x: 600, y: 690, label: "Crystal Reservoir", lane: "Cargo / Collection", symbol: "⛽", cost: cost(108, 18, 8), requires: ["cargo2"], effect: { fuelMax: 24 } },
@@ -454,6 +627,7 @@ const upgradeNodes = [
   { id: "fuel4", x: 600, y: 1410, label: "Aux Tanks", lane: "Cargo / Collection", symbol: "⛽", cost: cost(156, 42, 20), requires: ["cargo4"], effect: { fuelMax: 10 } },
   { id: "dock3", x: 600, y: 1530, label: "Auto Dock Grid", lane: "Mobility / Docking", symbol: "⌂", cost: cost(164, 46, 22), requires: ["fuel4"], effect: { dockRate: 1.14 } },
   { id: "cargo5", x: 600, y: 1650, label: "Bulk Holds", lane: "Cargo / Collection", symbol: "◫", cost: cost(172, 50, 26), requires: ["dock3"], effect: { cargoCap: 5 } },
+  { id: "trade2", x: 760, y: 1710, label: "Broker Network", lane: "Cargo / Collection", symbol: "¤", cost: cost(188, 60, 28), requires: ["cargo5"], effect: { sellValueMult: { ore: 1.12, platinum: 1.14, crystal: 1.16 } } },
   { id: "fuel5", x: 600, y: 1770, label: "Deep Core Fuel", lane: "Cargo / Collection", symbol: "⛽", cost: cost(180, 54, 30), requires: ["cargo5"], effect: { fuelMax: 12 } },
   { id: "magnet3", x: 600, y: 1890, label: "Grav Scoop", lane: "Cargo / Collection", symbol: "🧲", cost: cost(188, 60, 34), requires: ["fuel5"], effect: { magnet: 12 } },
   { id: "fuelEco2", x: 600, y: 2010, label: "Fuel Catalysts", lane: "Cargo / Collection", symbol: "◌", cost: cost(196, 66, 38), requires: ["magnet3"], effect: { collisionFuelMult: 0.88 } },
@@ -471,6 +645,7 @@ const upgradeNodes = [
   { id: "cargo10", x: 600, y: 3450, label: "Grand Holds", lane: "Cargo Mk II", symbol: "◫", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(172, 218, 166), requires: ["fuelEco5"], effect: { cargoCap: 8 } },
   { id: "fuel10", x: 600, y: 3570, label: "Expedition Core", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(186, 234, 182), requires: ["cargo10"], effect: { fuelMax: 20 } },
   { id: "magnet4", x: 600, y: 3690, label: "Void Scoop", lane: "Cargo Mk II", symbol: "🧲", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(198, 248, 196), requires: ["fuel10"], effect: { magnet: 14 } },
+  { id: "trade3", x: 760, y: 3810, label: "Black Market Routes", lane: "Cargo Mk II", symbol: "¤", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(214, 268, 212), requires: ["magnet4"], effect: { sellValueMult: { ore: 1.16, platinum: 1.2, crystal: 1.24 } } },
 ];
 
 const RESEARCH_NODES = [
@@ -623,6 +798,8 @@ function defaultPlanetProgress() {
     contractDelivered: emptyMaterials(),
     contractCoreSamples: 0,
     contractCoreClaimed: false,
+    contractDocks: 0,
+    terrainClearedPercent: 0,
   };
 }
 
@@ -635,6 +812,8 @@ function clonePlanetProgress(progressState = defaultPlanetProgress()) {
     contractDelivered: { ...emptyMaterials(), ...(progressState.contractDelivered || {}) },
     contractCoreSamples: progressState.contractCoreSamples || 0,
     contractCoreClaimed: !!progressState.contractCoreClaimed,
+    contractDocks: progressState.contractDocks || 0,
+    terrainClearedPercent: progressState.terrainClearedPercent || 0,
   };
 }
 
@@ -674,7 +853,7 @@ function coreHpForPlanet(contractRef = DEFAULT_PLANET_ID) {
   const contract = typeof contractRef === "string"
     ? PLANET_BY_ID[contractRef] || FIELD_CONTRACT_BY_ID[contractRef] || getPlanetDefinition(contractRef)
     : contractRef;
-  return contract.coreHp || 92;
+  return Math.round((contract.coreHp || 92) * 1.45);
 }
 
 function planetYieldLabel(contractRef = DEFAULT_PLANET_ID) {
@@ -721,6 +900,7 @@ function contractObjectiveLabel(contract) {
   if (requirements.crystal) parts.push(`${fmt(requirements.crystal)} crystal`);
   if (requirements.coreSamples) parts.push(`${fmt(requirements.coreSamples)} core samples`);
   if (requirements.minedPercent) parts.push(`${fmt(requirements.minedPercent)}% mined`);
+  if (requirements.docksRequired) parts.push(`${fmt(requirements.docksRequired)} successful docks`);
   return parts.length ? parts.join(" • ") : contractYieldLabel(contract);
 }
 
@@ -737,6 +917,7 @@ function contractObjectiveRequirements(contract) {
     crystal: 0,
     coreSamples: 0,
     minedPercent: 0,
+    docksRequired: 0,
     ...(contract?.objective?.requirements || {}),
   };
 }
@@ -750,6 +931,7 @@ function contractObjectiveProgress(contract, contractProgressState = defaultPlan
     crystal: delivered.crystal || 0,
     coreSamples: contractProgressState.contractCoreSamples || 0,
     minedPercent: contractProgressState.terrainClearedPercent || 0,
+    docksRequired: contractProgressState.contractDocks || 0,
   };
   const parts = [];
   const missingParts = [];
@@ -761,6 +943,8 @@ function contractObjectiveProgress(contract, contractProgressState = defaultPlan
       ? "core"
       : key === "minedPercent"
         ? "mined"
+        : key === "docksRequired"
+          ? "docks"
         : key;
     if (key === "minedPercent") {
       parts.push(`${label} ${fmt(current)}% / ${fmt(target)}%`);
@@ -837,6 +1021,15 @@ function formatMaterials(materials) {
 
 function formatCredits(value) {
   return `${fmt(value)} cr`;
+}
+
+function currentMaterialSaleValues() {
+  const mult = state?.ship?.sellValueMult || { ore: 1, platinum: 1, crystal: 1 };
+  return {
+    ore: Math.round(MATERIAL_SALE_VALUES.ore * (mult.ore || 1)),
+    platinum: Math.round(MATERIAL_SALE_VALUES.platinum * (mult.platinum || 1)),
+    crystal: Math.round(MATERIAL_SALE_VALUES.crystal * (mult.crystal || 1)),
+  };
 }
 
 function currentSkin() {
@@ -1048,6 +1241,12 @@ function previewTextForNode(node, purchased) {
     const before = purchased ? current / effect.collisionFuelMult : current;
     const after = purchased ? current : current * effect.collisionFuelMult;
     return `${before.toFixed(2)}x -> ${after.toFixed(2)}x impact fuel`;
+  }
+  if (effect.sellValueMult) {
+    const values = currentMaterialSaleValues();
+    const oreBefore = purchased ? Math.round(values.ore / (effect.sellValueMult.ore || 1)) : values.ore;
+    const oreAfter = purchased ? values.ore : Math.round(values.ore * (effect.sellValueMult.ore || 1));
+    return `${oreBefore} -> ${oreAfter} ore sell`;
   }
   if (effect.splashRadius) {
     const before = purchased ? effect.splashRadius : state.ship.bulletSplashRadius;
@@ -1460,6 +1659,7 @@ function savePlanetProgressSnapshot(snapshot, persist = true) {
   active.coreUnlocked = snapshot.coreUnlocked;
   active.coreCleared = snapshot.coreCleared;
   active.cleared = snapshot.cleared;
+  active.terrainClearedPercent = snapshot.terrainClearedPercent || 0;
   active.sectors = {};
   for (const [sectorId, sectorState] of Object.entries(snapshot.sectors)) {
     active.sectors[sectorId] = {
@@ -1691,6 +1891,7 @@ function makeState() {
       laserCooldown: 0,
       lasers: [],
       oreMult: 1,
+      sellValueMult: { ore: 1, platinum: 1, crystal: 1 },
       shieldMult: 1,
       collisionFuelMult: 1,
       collisionCostMult: 1,
@@ -2024,6 +2225,7 @@ function applyUpgrades() {
   ship.laserCooldown = 0;
   ship.lasers = [];
   ship.oreMult = 1;
+  ship.sellValueMult = { ore: 1, platinum: 1, crystal: 1 };
   ship.shieldMult = 1;
   ship.collisionFuelMult = 1;
   ship.collisionCostMult = 1;
@@ -2070,6 +2272,11 @@ function applyUpgrades() {
       });
     }
     if (effect.oreMult) ship.oreMult *= effect.oreMult;
+    if (effect.sellValueMult) {
+      for (const material of MATERIAL_TYPES) {
+        ship.sellValueMult[material] *= effect.sellValueMult[material] || 1;
+      }
+    }
     if (effect.shieldMult) ship.shieldMult *= effect.shieldMult;
     if (effect.collisionFuelMult) ship.collisionFuelMult *= effect.collisionFuelMult;
     if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
@@ -2083,7 +2290,8 @@ function resetSortie() {
   invalidatePlanetLayerCache();
   invalidateResultsMapCache();
   applyUpgrades();
-  state.ship.fuel = state.ship.fuelMax;
+  const startingFuelMult = state.contract?.startingFuelMult || 1;
+  state.ship.fuel = state.ship.fuelMax * startingFuelMult;
   state.ship.hp = state.ship.hpMax;
   refreshPlanetProgress({ persist: state.contractLane === "core" });
   snapCameraToTarget();
@@ -2189,6 +2397,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
       const fieldProgress = ensureFieldContractProgressRecord(progress, contract.id);
       fieldProgress.contractDelivered = addMaterials(fieldProgress.contractDelivered, delivered);
       fieldProgress.contractCoreSamples += state.ship.coreSamples || 0;
+      fieldProgress.contractDocks += 1;
       objectiveProgress = contractObjectiveProgress(contract, fieldProgress);
       if (objectiveProgress.complete) {
         contractPayoutCredits = contract.payoutCredits || 0;
@@ -2427,9 +2636,11 @@ function sellMaterial(material, amount = progress.bank[material] || 0) {
   const available = progress.bank[material] || 0;
   const sellAmount = clamp(amount, 0, available);
   if (!sellAmount) return;
+  const values = currentMaterialSaleValues();
+  const unitValue = values[material];
   progress.bank[material] -= sellAmount;
-  progress.credits += sellAmount * MATERIAL_SALE_VALUES[material];
-  showHangarStatus(`Sold ${fmt(sellAmount)} ${material} for ${formatCredits(sellAmount * MATERIAL_SALE_VALUES[material])}.`);
+  progress.credits += sellAmount * unitValue;
+  showHangarStatus(`Sold ${fmt(sellAmount)} ${material} for ${formatCredits(sellAmount * unitValue)}.`);
   saveProgress();
   renderUpgradeTree();
   renderResearchTree();
@@ -2439,9 +2650,10 @@ function sellMaterial(material, amount = progress.bank[material] || 0) {
 
 function sellAllMaterials() {
   let totalCredits = 0;
+  const values = currentMaterialSaleValues();
   for (const material of MATERIAL_TYPES) {
     const amount = progress.bank[material] || 0;
-    totalCredits += amount * MATERIAL_SALE_VALUES[material];
+    totalCredits += amount * values[material];
     progress.bank[material] = 0;
   }
   if (!totalCredits) return;
@@ -3037,7 +3249,21 @@ function completeFieldCoreEvent() {
   }
   invalidateResultsMapCache();
   state.hazards = [];
+  state.damageShake = Math.max(state.damageShake, 1.05);
+  state.hazardFlash = 0.28;
+  for (let i = 0; i < 24; i += 1) {
+    pushParticle({
+      x: rand(-18, 18),
+      y: rand(-18, 18),
+      vx: rand(-220, 220),
+      vy: rand(-220, 220),
+      life: rand(0.3, 0.9),
+      color: i % 3 === 0 ? "#fff7c5" : i % 2 === 0 ? "#ff9d4d" : "#ff6fb5",
+    });
+  }
   state.gravityPulse.life = 0;
+  state.gravityPulse.timer = 999;
+  state.gravityPulse.strength = 0;
   setCorePhase("cleared", 0);
   state.planetProgressDirty = true;
   state.planetProgressPersistNeeded = true;
@@ -3059,9 +3285,10 @@ function startCoreMeltdown() {
   state.cinematic.duration = 3.8;
   state.cinematic.blastRadius = 0;
   state.hazards = [];
-  state.gravityPulse.life = 1.25;
-  state.gravityPulse.radius = contractCoreRadius(state.contract) * 0.8;
-  state.gravityPulse.strength = 320;
+  state.gravityPulse.life = 0;
+  state.gravityPulse.timer = 999;
+  state.gravityPulse.radius = 0;
+  state.gravityPulse.strength = 0;
   state.runStats.bonusMaterials = addMaterials(state.runStats.bonusMaterials, planetCoreReward(state.contract));
   showGameplayBanner("Ancient core destabilized. Planet failure imminent.", 4);
   const activePlanetProgress = getActivePlanetProgress();
@@ -3087,6 +3314,10 @@ function finishCoreMeltdown() {
   syncLegacyDestroyedBlocks();
   saveProgress();
   state.cinematic.active = false;
+  state.gravityPulse.life = 0;
+  state.gravityPulse.timer = 999;
+  state.gravityPulse.radius = 0;
+  state.gravityPulse.strength = 0;
   setCorePhase("cleared", 0);
   state.hangarMessage = activePlanet.nextPlanetId && !progress.unlockedPlanets.includes(activePlanet.nextPlanetId)
     ? "Planet cracked open. Core haul recovered. Research the next contract in the hangar."
@@ -3528,7 +3759,7 @@ function updateHazards(dt) {
       const pulseMult = state.planetProgressSnapshot?.coreUnlocked ? 1.2 : 1;
       damageShip(6 * pulseMult, 8 * pulseMult, dt);
     }
-  } else if (state.gravityPulse.timer <= 0 && shipSectorDefinition().id === "coreShell" && !state.cinematic.active) {
+  } else if (state.gravityPulse.timer <= 0 && state.core.phase !== "cleared" && shipSectorDefinition().id === "coreShell" && !state.cinematic.active) {
     state.gravityPulse.timer = 4.8;
     state.gravityPulse.life = 0.85;
     state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.26;
@@ -4199,8 +4430,9 @@ function syncUi(force = true) {
   ui.hangarBankDetail.textContent = `Samples: Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
   ui.hangarPlanetValue.textContent = activePlanet.name;
   const contractCompletions = activePlanet.contractType === "field" ? fieldContractCompletionCount(activePlanet.id) : 0;
+  const lowFuelTag = activePlanet.startingFuelMult ? ` • ${Math.round(activePlanet.startingFuelMult * 100)}% fuel start` : "";
   ui.hangarPlanetDetail.textContent = activePlanet.contractType === "field"
-    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "Unfinished charter"}`
+    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "Unfinished charter"}${lowFuelTag}`
     : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
   const fieldObjectiveProgress = activePlanet.contractType === "field"
@@ -4238,7 +4470,8 @@ function syncUi(force = true) {
           ? `Research ${RESEARCH_NODES.find((node) => node.id === nextPlanetTierNode.researchId)?.label || "new systems"}`
           : `Await ${getPlanetDefinition(nextPlanetTierNode.unlockPlanet).name} systems`
         : "All systems online";
-  ui.hangarTradeDetail.textContent = `Ore ${MATERIAL_SALE_VALUES.ore} cr • Platinum ${MATERIAL_SALE_VALUES.platinum} cr • Crystal ${MATERIAL_SALE_VALUES.crystal} cr`;
+  const saleValues = currentMaterialSaleValues();
+  ui.hangarTradeDetail.textContent = `Ore ${saleValues.ore} cr • Platinum ${saleValues.platinum} cr • Crystal ${saleValues.crystal} cr`;
   ui.sellOreBtn.disabled = !progress.bank.ore;
   ui.sellPlatinumBtn.disabled = !progress.bank.platinum;
   ui.sellCrystalBtn.disabled = !progress.bank.crystal;
