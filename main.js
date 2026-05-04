@@ -297,6 +297,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Starter I",
     contractDetail: "Small asteroid • bulk ore quota",
+    visual: {
+      badge: "Starter Charter",
+      bodyLabel: "Small asteroid",
+      bodyProfile: "asteroid",
+      accent: "rgba(255, 187, 92, 0.9)",
+      glow: "rgba(255, 132, 68, 0.34)",
+      panel: "rgba(52, 23, 14, 0.9)",
+      paddingBlock: "12px",
+      radius: "20px",
+      titleSize: "1.16rem",
+      palette: {
+        surfaceHot: "#e98f59",
+        surfaceWarm: "#ffd35b",
+        industrialHot: "#d47042",
+        industrialCool: "#f2bc72",
+        crystalHot: "#78d6e8",
+        crystalCool: "#c5eff4",
+        coreHot: "#8ea8ff",
+        coreCool: "#d9e4ff",
+      },
+    },
     objective: { requirements: { ore: 1000 } },
     payoutCredits: 4200,
     radiusBlocks: 56,
@@ -314,6 +335,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Starter II",
     contractDetail: "Moon fragment • richer shell with recoverable core",
+    visual: {
+      badge: "Starter Charter",
+      bodyLabel: "Moon fragment",
+      bodyProfile: "moon",
+      accent: "rgba(113, 242, 196, 0.9)",
+      glow: "rgba(62, 187, 165, 0.28)",
+      panel: "rgba(10, 43, 40, 0.92)",
+      paddingBlock: "15px",
+      radius: "24px",
+      titleSize: "1.22rem",
+      palette: {
+        surfaceHot: "#94c8be",
+        surfaceWarm: "#d8efe4",
+        industrialHot: "#68dcc9",
+        industrialCool: "#9cf0ff",
+        crystalHot: "#80bfff",
+        crystalCool: "#c6ebff",
+        coreHot: "#ff9fc7",
+        coreCool: "#ffe1f2",
+      },
+    },
     objective: { requirements: { ore: 1000, platinum: 150, coreSamples: 5 } },
     payoutCredits: 9200,
     radiusBlocks: 62,
@@ -322,6 +364,7 @@ const FIELD_CONTRACTS = [
     materialBias: { ore: 0.92, platinum: 1.42, crystal: 0.7 },
     blockHpBonus: 0,
     coreSampleYield: 5,
+    coreSampleNodeCount: 2,
     hazardRateMult: 0.94,
     sectorCompletionMult: 1,
     hasCoreEvent: true,
@@ -332,6 +375,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Starter III",
     contractDetail: "Micro-planet • deep shell contract with core extraction",
+    visual: {
+      badge: "Starter Charter",
+      bodyLabel: "Micro-planet",
+      bodyProfile: "micro",
+      accent: "rgba(140, 226, 255, 0.92)",
+      glow: "rgba(180, 96, 255, 0.32)",
+      panel: "rgba(18, 24, 58, 0.92)",
+      paddingBlock: "17px",
+      radius: "26px",
+      titleSize: "1.26rem",
+      palette: {
+        surfaceHot: "#7cb0ff",
+        surfaceWarm: "#bfd8ff",
+        industrialHot: "#a4d5ff",
+        industrialCool: "#e0f6ff",
+        crystalHot: "#df7fff",
+        crystalCool: "#ffc4ff",
+        coreHot: "#ff82c4",
+        coreCool: "#ffe0ff",
+      },
+    },
     objective: { requirements: { ore: 2000, platinum: 200, crystal: 100, coreSamples: 15 } },
     payoutCredits: 16800,
     radiusBlocks: 68,
@@ -340,6 +404,7 @@ const FIELD_CONTRACTS = [
     materialBias: { ore: 0.64, platinum: 1.08, crystal: 1.58 },
     blockHpBonus: 1,
     coreSampleYield: 15,
+    coreSampleNodeCount: 4,
     hazardRateMult: 0.88,
     sectorCompletionMult: 1.05,
     hasCoreEvent: true,
@@ -350,6 +415,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Standard I",
     contractDetail: "Tiny asteroid • fast ore pull",
+    visual: {
+      badge: "Standard Charter",
+      bodyLabel: "Tiny asteroid",
+      bodyProfile: "asteroid",
+      accent: "rgba(255, 213, 107, 0.92)",
+      glow: "rgba(255, 160, 74, 0.28)",
+      panel: "rgba(58, 31, 17, 0.9)",
+      paddingBlock: "11px",
+      radius: "18px",
+      titleSize: "1.12rem",
+      palette: {
+        surfaceHot: "#df9254",
+        surfaceWarm: "#ffd368",
+        industrialHot: "#ce6b3f",
+        industrialCool: "#f5bd71",
+        crystalHot: "#6bcfdb",
+        crystalCool: "#beeaf1",
+        coreHot: "#93a6f7",
+        coreCool: "#dce4ff",
+      },
+    },
     objective: { requirements: { ore: 800 } },
     payoutCredits: 3600,
     radiusBlocks: 44,
@@ -367,6 +453,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Standard II",
     contractDetail: "Moon shard • rich industrial seams",
+    visual: {
+      badge: "Standard Charter",
+      bodyLabel: "Moon shard",
+      bodyProfile: "moon",
+      accent: "rgba(104, 255, 170, 0.88)",
+      glow: "rgba(57, 178, 122, 0.28)",
+      panel: "rgba(13, 46, 29, 0.92)",
+      paddingBlock: "13px",
+      radius: "21px",
+      titleSize: "1.18rem",
+      palette: {
+        surfaceHot: "#89b48c",
+        surfaceWarm: "#d7efca",
+        industrialHot: "#77ffe4",
+        industrialCool: "#bcf6ff",
+        crystalHot: "#8fb6ff",
+        crystalCool: "#d7ebff",
+        coreHot: "#c28eff",
+        coreCool: "#f0d2ff",
+      },
+    },
     objective: { requirements: { platinum: 250 } },
     payoutCredits: 9800,
     radiusBlocks: 54,
@@ -384,6 +491,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Standard III",
     contractDetail: "Tiny crystal body • unstable and bright",
+    visual: {
+      badge: "Standard Charter",
+      bodyLabel: "Crystal shard",
+      bodyProfile: "shard",
+      accent: "rgba(164, 214, 255, 0.92)",
+      glow: "rgba(198, 92, 255, 0.3)",
+      panel: "rgba(20, 25, 62, 0.92)",
+      paddingBlock: "13px",
+      radius: "20px",
+      titleSize: "1.17rem",
+      palette: {
+        surfaceHot: "#78b9ff",
+        surfaceWarm: "#bfe7ff",
+        industrialHot: "#8ddcff",
+        industrialCool: "#dff8ff",
+        crystalHot: "#ef8cff",
+        crystalCool: "#ffd4ff",
+        coreHot: "#ff91e2",
+        coreCool: "#ffe1fb",
+      },
+    },
     objective: { requirements: { crystal: 120 } },
     payoutCredits: 14200,
     radiusBlocks: 50,
@@ -401,6 +529,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Special I",
     contractDetail: "Broken core body • breach and recover samples",
+    visual: {
+      badge: "Special Charter",
+      bodyLabel: "Broken core body",
+      bodyProfile: "brokenCore",
+      accent: "rgba(255, 126, 126, 0.92)",
+      glow: "rgba(255, 88, 125, 0.34)",
+      panel: "rgba(63, 19, 32, 0.92)",
+      paddingBlock: "16px",
+      radius: "25px",
+      titleSize: "1.22rem",
+      palette: {
+        surfaceHot: "#9b687a",
+        surfaceWarm: "#f1adb8",
+        industrialHot: "#ff8b9f",
+        industrialCool: "#ffd8dd",
+        crystalHot: "#ff8fdf",
+        crystalCool: "#ffd7f5",
+        coreHot: "#fff1ac",
+        coreCool: "#ffe08c",
+      },
+    },
     objective: { requirements: { coreSamples: 8 } },
     payoutCredits: 12600,
     radiusBlocks: 52,
@@ -409,6 +558,7 @@ const FIELD_CONTRACTS = [
     materialBias: { ore: 0.48, platinum: 1.1, crystal: 1.42 },
     blockHpBonus: 1,
     coreSampleYield: 8,
+    coreSampleNodeCount: 3,
     hazardRateMult: 0.88,
     sectorCompletionMult: 1.05,
     hasCoreEvent: true,
@@ -419,6 +569,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Standard IV",
     contractDetail: "Small moon • quota plus extraction sweep",
+    visual: {
+      badge: "Standard Charter",
+      bodyLabel: "Strip-mining moon",
+      bodyProfile: "terraced",
+      accent: "rgba(255, 205, 110, 0.88)",
+      glow: "rgba(255, 150, 74, 0.28)",
+      panel: "rgba(52, 29, 19, 0.92)",
+      paddingBlock: "14px",
+      radius: "22px",
+      titleSize: "1.19rem",
+      palette: {
+        surfaceHot: "#c98a56",
+        surfaceWarm: "#f1d17a",
+        industrialHot: "#ed9c62",
+        industrialCool: "#ffe39a",
+        crystalHot: "#98c5ff",
+        crystalCool: "#dcedff",
+        coreHot: "#b5a0ff",
+        coreCool: "#efe3ff",
+      },
+    },
     objective: { requirements: { ore: 1200, minedPercent: 35 } },
     payoutCredits: 11800,
     radiusBlocks: 58,
@@ -436,6 +607,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Special II",
     contractDetail: "Lean reserve asteroid • tight fuel window",
+    visual: {
+      badge: "Special Charter",
+      bodyLabel: "Lean reserve asteroid",
+      bodyProfile: "lean",
+      accent: "rgba(255, 164, 106, 0.9)",
+      glow: "rgba(255, 110, 76, 0.3)",
+      panel: "rgba(63, 28, 18, 0.92)",
+      paddingBlock: "12px",
+      radius: "18px",
+      titleSize: "1.14rem",
+      palette: {
+        surfaceHot: "#d77f4d",
+        surfaceWarm: "#ffc165",
+        industrialHot: "#c96843",
+        industrialCool: "#f2b86c",
+        crystalHot: "#88c5ff",
+        crystalCool: "#d7f2ff",
+        coreHot: "#b3a6ff",
+        coreCool: "#e8e1ff",
+      },
+    },
     objective: { requirements: { ore: 900, platinum: 80 } },
     payoutCredits: 9300,
     radiusBlocks: 48,
@@ -454,6 +646,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Special III",
     contractDetail: "Defense-heavy moon • hazard cadence accelerated",
+    visual: {
+      badge: "Surge Contract",
+      bodyLabel: "Defense-heavy moon",
+      bodyProfile: "fortified",
+      accent: "rgba(255, 138, 112, 0.92)",
+      glow: "rgba(255, 74, 90, 0.34)",
+      panel: "rgba(58, 17, 22, 0.92)",
+      paddingBlock: "16px",
+      radius: "24px",
+      titleSize: "1.22rem",
+      palette: {
+        surfaceHot: "#d46a57",
+        surfaceWarm: "#ffb18a",
+        industrialHot: "#f38b67",
+        industrialCool: "#ffd59d",
+        crystalHot: "#ac9dff",
+        crystalCool: "#e9dfff",
+        coreHot: "#ff88aa",
+        coreCool: "#ffdce7",
+      },
+    },
     objective: { requirements: { ore: 1100, platinum: 140, minedPercent: 28 } },
     payoutCredits: 15400,
     radiusBlocks: 60,
@@ -471,6 +684,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Fun I",
     contractDetail: "Pocket asteroid • clear it to the bone",
+    visual: {
+      badge: "Cleanroom Job",
+      bodyLabel: "Pocket asteroid",
+      bodyProfile: "pocket",
+      accent: "rgba(185, 255, 118, 0.92)",
+      glow: "rgba(104, 255, 140, 0.26)",
+      panel: "rgba(20, 48, 18, 0.92)",
+      paddingBlock: "11px",
+      radius: "17px",
+      titleSize: "1.12rem",
+      palette: {
+        surfaceHot: "#7db65f",
+        surfaceWarm: "#d2ff85",
+        industrialHot: "#9fe06f",
+        industrialCool: "#f1ffb5",
+        crystalHot: "#8fe0ff",
+        crystalCool: "#ddf8ff",
+        coreHot: "#ffbf88",
+        coreCool: "#fff0cf",
+      },
+    },
     objective: { requirements: { minedPercent: 100 } },
     payoutCredits: 7600,
     radiusBlocks: 34,
@@ -488,6 +722,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Fun II",
     contractDetail: "Split-haul charter • complete two successful docks",
+    visual: {
+      badge: "Courier Job",
+      bodyLabel: "Split-haul body",
+      bodyProfile: "split",
+      accent: "rgba(111, 184, 255, 0.92)",
+      glow: "rgba(78, 118, 255, 0.28)",
+      panel: "rgba(19, 29, 63, 0.92)",
+      paddingBlock: "13px",
+      radius: "19px",
+      titleSize: "1.15rem",
+      palette: {
+        surfaceHot: "#6f8dcb",
+        surfaceWarm: "#bad0ff",
+        industrialHot: "#7ec3ff",
+        industrialCool: "#d9f1ff",
+        crystalHot: "#9db8ff",
+        crystalCool: "#edf5ff",
+        coreHot: "#ffb7b0",
+        coreCool: "#ffe6e3",
+      },
+    },
     objective: { requirements: { ore: 700, docksRequired: 2 } },
     payoutCredits: 8900,
     radiusBlocks: 46,
@@ -505,6 +760,27 @@ const FIELD_CONTRACTS = [
     contractType: "field",
     threatLabel: "Fun III",
     contractDetail: "Crystal-rich fragment • instability rises near the center",
+    visual: {
+      badge: "Volatile Job",
+      bodyLabel: "Crystal-rich fragment",
+      bodyProfile: "volatile",
+      accent: "rgba(204, 144, 255, 0.92)",
+      glow: "rgba(155, 98, 255, 0.32)",
+      panel: "rgba(37, 20, 62, 0.92)",
+      paddingBlock: "15px",
+      radius: "23px",
+      titleSize: "1.2rem",
+      palette: {
+        surfaceHot: "#8d7cd7",
+        surfaceWarm: "#d5b9ff",
+        industrialHot: "#a892ff",
+        industrialCool: "#ece0ff",
+        crystalHot: "#ff7fee",
+        crystalCool: "#ffd4ff",
+        coreHot: "#ff9ed4",
+        coreCool: "#ffe2f7",
+      },
+    },
     objective: { requirements: { crystal: 90, minedPercent: 22 } },
     payoutCredits: 13200,
     radiusBlocks: 52,
@@ -708,6 +984,10 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function colorWithAlpha(color, alphaHex = "ff") {
+  return typeof color === "string" && color.startsWith("#") && color.length === 7 ? `${color}${alphaHex}` : color;
+}
+
 function length2D(x, y) {
   return Math.sqrt(x * x + y * y);
 }
@@ -892,13 +1172,85 @@ function contractHasCoreEvent(contract) {
   return contract?.hasCoreEvent !== false;
 }
 
+function contractPalette(contract) {
+  return contract?.visual?.palette || null;
+}
+
+function contractBodyProfile(contract) {
+  return contract?.visual?.bodyProfile || (contract?.contractType === "field" ? "asteroid" : "planet");
+}
+
+function contractCellAllowed(contract, gx, gy, dist, radiusBlocks, coreRadiusBlocks) {
+  if (dist > radiusBlocks || dist < coreRadiusBlocks) return false;
+  if (contract?.contractType !== "field") return true;
+  const profile = contractBodyProfile(contract);
+  const angle = Math.atan2(gy, gx);
+  const edgeNoise = Math.sin(angle * 3 + radiusBlocks * 0.05) * 1.8 + Math.cos(angle * 5 - radiusBlocks * 0.09) * 1.1;
+  const profileRadius = radiusBlocks + edgeNoise;
+  if (dist > profileRadius) return false;
+  if (profile === "moon") {
+    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * 1.08)
+      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.94);
+    return ellipse <= 1.03 && dist >= coreRadiusBlocks;
+  }
+  if (profile === "micro") {
+    const ridge = Math.sin(angle * 4.2) * 1.5 + Math.cos(angle * 7.3) * 0.8;
+    return dist <= radiusBlocks - 1 + ridge;
+  }
+  if (profile === "asteroid") {
+    const jag = Math.sin(angle * 6.4 + dist * 0.08) * 2.6 + Math.cos(angle * 2.7 - dist * 0.04) * 1.3;
+    return dist <= radiusBlocks - 1 + jag;
+  }
+  if (profile === "shard") {
+    const diamond = Math.abs(gx) * 0.86 + Math.abs(gy) * 1.12;
+    const twist = Math.sin(angle * 4.8) * 2.1;
+    return diamond <= radiusBlocks * 1.08 + twist;
+  }
+  if (profile === "brokenCore") {
+    const craterX = radiusBlocks * 0.14;
+    const craterY = radiusBlocks * 0.12;
+    const craterDx = gx - craterX;
+    const craterDy = gy - craterY;
+    const craterRadius = coreRadiusBlocks + 5;
+    if (craterDx * craterDx + craterDy * craterDy < craterRadius * craterRadius) return false;
+    return true;
+  }
+  if (profile === "terraced") {
+    const terrace = Math.floor((gy + radiusBlocks) / 6) % 2 === 0 ? 0 : 2.4;
+    return dist <= radiusBlocks - terrace + Math.sin(angle * 2.5) * 0.8;
+  }
+  if (profile === "lean") {
+    const stretch = gx > 0 ? 0.92 : 1.06;
+    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * stretch * stretch)
+      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.96);
+    return ellipse <= 1.01;
+  }
+  if (profile === "fortified") {
+    const shell = Math.abs(Math.sin(angle * 8)) * 1.6;
+    return dist <= radiusBlocks - 0.5 + shell;
+  }
+  if (profile === "pocket") {
+    if (Math.abs(gx) < radiusBlocks * 0.2 && gy < -radiusBlocks * 0.18) return false;
+    return dist <= radiusBlocks + Math.sin(angle * 5.5) * 1.2;
+  }
+  if (profile === "split") {
+    if (Math.abs(gx) < 2 && Math.abs(gy) < radiusBlocks * 0.55) return false;
+    return dist <= radiusBlocks + Math.cos(angle * 3.5) * 0.9;
+  }
+  if (profile === "volatile") {
+    const ripple = Math.sin(angle * 9 + dist * 0.12) * 2.3;
+    return dist <= radiusBlocks - 0.8 + ripple;
+  }
+  return true;
+}
+
 function contractObjectiveLabel(contract) {
   const requirements = contract?.objective?.requirements || {};
   const parts = [];
   if (requirements.ore) parts.push(`${fmt(requirements.ore)} ore`);
   if (requirements.platinum) parts.push(`${fmt(requirements.platinum)} platinum`);
   if (requirements.crystal) parts.push(`${fmt(requirements.crystal)} crystal`);
-  if (requirements.coreSamples) parts.push(`${fmt(requirements.coreSamples)} core samples`);
+  if (requirements.coreSamples) parts.push(`${fmt(requirements.coreSamples)} core salvage`);
   if (requirements.minedPercent) parts.push(`${fmt(requirements.minedPercent)}% mined`);
   if (requirements.docksRequired) parts.push(`${fmt(requirements.docksRequired)} successful docks`);
   return parts.length ? parts.join(" • ") : contractYieldLabel(contract);
@@ -940,7 +1292,7 @@ function contractObjectiveProgress(contract, contractProgressState = defaultPlan
     if (!target) continue;
     const current = Math.min(progressState[key] || 0, target);
     const label = key === "coreSamples"
-      ? "core"
+      ? "salvage"
       : key === "minedPercent"
         ? "mined"
         : key === "docksRequired"
@@ -1336,7 +1688,7 @@ function makePlanet(contract = getPlanetDefinition(DEFAULT_PLANET_ID), persistPr
   for (let gy = -radiusBlocks; gy <= radiusBlocks; gy += 1) {
     for (let gx = -radiusBlocks; gx <= radiusBlocks; gx += 1) {
       const dist = length2D(gx, gy);
-      if (dist > radiusBlocks || dist < coreRadiusBlocks) continue;
+      if (!contractCellAllowed(contract, gx, gy, dist, radiusBlocks, coreRadiusBlocks)) continue;
       const depth = 1 - (dist - coreRadiusBlocks) / Math.max(1, radiusBlocks - coreRadiusBlocks);
       const sector = sectorForDepth(contract, depth);
       const key = `${gx},${gy}`;
@@ -1366,12 +1718,16 @@ function makePlanet(contract = getPlanetDefinition(DEFAULT_PLANET_ID), persistPr
 
 function addCoreSampleBlocksToPlanet(planet, contract, contractProgressState) {
   if (!contract?.coreSampleYield || !contractProgressState?.coreCleared) return;
-  const sampleCount = contract.coreSampleYield;
+  const sampleCount = Math.max(1, contract.coreSampleNodeCount || Math.min(contract.coreSampleYield, 5));
   const sampleSector = getSectorDefinition("coreEvent");
+  const sampleValueBase = Math.floor((contract.coreSampleYield || sampleCount) / sampleCount);
+  let sampleRemainder = (contract.coreSampleYield || sampleCount) - sampleValueBase * sampleCount;
   for (const [gx, gy] of CORE_SAMPLE_LAYOUT.slice(0, sampleCount)) {
     const key = `${gx},${gy}`;
     if (planet.map.has(key)) continue;
     const alive = !contractProgressState.destroyedBlocks.includes(key);
+    const pickupValue = sampleValueBase + (sampleRemainder > 0 ? 1 : 0);
+    sampleRemainder = Math.max(0, sampleRemainder - 1);
     const block = {
       gx,
       gy,
@@ -1386,7 +1742,12 @@ function addCoreSampleBlocksToPlanet(planet, contract, contractProgressState) {
       alive,
       isCoreSample: true,
       pickupMaterial: "coreSample",
-      pickupValue: 1,
+      pickupValue,
+      bonusMaterials: {
+        ore: 0,
+        platinum: 10 + Math.max(0, contract.blockHpBonus || 0) * 3,
+        crystal: 5 + Math.max(0, contract.blockHpBonus || 0) * 2,
+      },
     };
     planet.blocks.push(block);
     planet.map.set(key, block);
@@ -2173,10 +2534,11 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
   targetCtx.strokeStyle = "rgba(255, 245, 215, 0.28)";
   targetCtx.lineWidth = 1;
   targetCtx.strokeRect(left + 0.5, top + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+  const palette = contractPalette(state?.contract);
   targetCtx.fillStyle = "rgba(255, 255, 255, 0.12)";
   targetCtx.fillRect(left + 2, top + 2, BLOCK_SIZE - 6, 3);
   if (block.material === "platinum") {
-    targetCtx.strokeStyle = "rgba(149, 239, 255, 0.86)";
+    targetCtx.strokeStyle = palette?.industrialCool ? colorWithAlpha(palette.industrialCool, "dd") : "rgba(149, 239, 255, 0.86)";
     targetCtx.beginPath();
     targetCtx.moveTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.22);
     targetCtx.lineTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.78);
@@ -2184,7 +2546,7 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
     targetCtx.lineTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.78);
     targetCtx.stroke();
   } else if (block.material === "crystal") {
-    targetCtx.strokeStyle = "rgba(255, 186, 255, 0.92)";
+    targetCtx.strokeStyle = palette?.crystalHot ? colorWithAlpha(palette.crystalHot, "ee") : "rgba(255, 186, 255, 0.92)";
     targetCtx.beginPath();
     targetCtx.moveTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.12);
     targetCtx.lineTo(left + BLOCK_SIZE * 0.86, top + BLOCK_SIZE * 0.5);
@@ -2423,7 +2785,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
     if (contract.contractType === "field") {
       showHangarStatus(mergeAchievementMessages(objectiveProgress.complete
         ? `Field contract complete. Stored ${formatMaterials(delivered)} and paid out ${formatCredits(contractPayoutCredits)}.`
-        : `Contract progress updated. Still need ${objectiveProgress.missingLabel}.`, achievementUnlocks));
+        : `Contract progress updated. Stored ${formatMaterials(delivered)}. Still need ${objectiveProgress.missingLabel}.`, achievementUnlocks));
     } else if (sumCargo(state.runStats.bonusMaterials) > 0) {
       showHangarStatus(mergeAchievementMessages(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`, achievementUnlocks));
     } else {
@@ -2857,26 +3219,27 @@ function setupUpgradeTreePan() {
 }
 
 function blockColor(block) {
+  const palette = contractPalette(state?.contract);
   const visualHp = blockVisualHp(block);
   if (block.isCoreSample || block.material === "coreSample") {
     return visualHp >= 12 ? "#fff5b8" : visualHp >= 9 ? "#ffd86b" : visualHp >= 6 ? "#ffae5d" : visualHp >= 3 ? "#ff7b47" : "#8cffba";
   }
   if (block.sectorId === "surface") {
-    return visualHp >= 3 ? "#ff8c63" : visualHp === 2 ? "#ffd24f" : "#79ff9e";
+    return visualHp >= 3 ? (palette?.surfaceHot || "#ff8c63") : visualHp === 2 ? (palette?.surfaceWarm || "#ffd24f") : "#79ff9e";
   }
   if (block.sectorId === "industrial") {
     return block.material === "platinum"
-      ? visualHp >= 4 ? "#89efff" : visualHp === 3 ? "#b9f5ff" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? "#ff7c52" : visualHp === 3 ? "#ffaf70" : visualHp === 2 ? "#ffe07d" : "#8cffba";
+      ? visualHp >= 4 ? (palette?.industrialCool || "#89efff") : visualHp === 3 ? "#b9f5ff" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+      : visualHp >= 4 ? (palette?.industrialHot || "#ff7c52") : visualHp === 3 ? "#ffaf70" : visualHp === 2 ? "#ffe07d" : "#8cffba";
   }
   if (block.sectorId === "crystalFault") {
     return block.material === "crystal"
-      ? visualHp >= 5 ? "#f889ff" : visualHp === 4 ? "#d582ff" : visualHp === 3 ? "#ffacf7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? "#7ddcff" : visualHp === 3 ? "#c3f4ff" : visualHp === 2 ? "#ffe07d" : "#8cffba";
+      ? visualHp >= 5 ? (palette?.crystalHot || "#f889ff") : visualHp === 4 ? "#d582ff" : visualHp === 3 ? "#ffacf7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+      : visualHp >= 4 ? (palette?.crystalCool || "#7ddcff") : visualHp === 3 ? "#c3f4ff" : visualHp === 2 ? "#ffe07d" : "#8cffba";
   }
   return block.material === "crystal"
-    ? visualHp >= 5 ? "#ff74ba" : visualHp === 4 ? "#ff9ae0" : visualHp === 3 ? "#ffd1f7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-    : visualHp >= 5 ? "#93b0ff" : visualHp === 4 ? "#badaff" : visualHp === 3 ? "#ffe3a3" : visualHp === 2 ? "#ffb96d" : "#8cffba";
+    ? visualHp >= 5 ? (palette?.coreHot || "#ff74ba") : visualHp === 4 ? "#ff9ae0" : visualHp === 3 ? "#ffd1f7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+    : visualHp >= 5 ? (palette?.coreCool || "#93b0ff") : visualHp === 4 ? "#badaff" : visualHp === 3 ? "#ffe3a3" : visualHp === 2 ? "#ffb96d" : "#8cffba";
 }
 
 function blockVisualHp(block) {
@@ -3030,6 +3393,9 @@ function pickupBlockDamage(block, damage) {
     state.runStats.blocksMined += 1;
     if (block.isCoreSample || block.material === "coreSample") {
       state.runStats.coreSamples += block.pickupValue || 1;
+      if (block.bonusMaterials) {
+        state.runStats.bonusMaterials = addMaterials(state.runStats.bonusMaterials, block.bonusMaterials);
+      }
     } else {
       state.runStats.materials[block.material] += 1;
     }
@@ -3268,7 +3634,7 @@ function completeFieldCoreEvent() {
   state.planetProgressDirty = true;
   state.planetProgressPersistNeeded = true;
   refreshPlanetProgress({ persist: true });
-  showGameplayBanner(`Core event beaten. ${fmt(state.contract.coreSampleYield || 0)} core samples exposed in the breach.`, 3.2);
+  showGameplayBanner(`Core event beaten. ${fmt(state.contract.coreSampleYield || 0)} core salvage exposed in the breach.`, 3.2);
 }
 
 function startCoreMeltdown() {
@@ -4427,7 +4793,7 @@ function syncUi(force = true) {
     ? `${report.success ? "Returned" : "Lost"} • ${report.planetName} • ${fmt(report.blocksMined)} blocks`
     : "No debrief yet";
   ui.hangarBankValue.textContent = formatCredits(progress.credits);
-  ui.hangarBankDetail.textContent = `Samples: Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
+  ui.hangarBankDetail.textContent = `Stored ore ${fmt(progress.bank.ore)} • platinum ${fmt(progress.bank.platinum)} • crystal ${fmt(progress.bank.crystal)}`;
   ui.hangarPlanetValue.textContent = activePlanet.name;
   const contractCompletions = activePlanet.contractType === "field" ? fieldContractCompletionCount(activePlanet.id) : 0;
   const lowFuelTag = activePlanet.startingFuelMult ? ` • ${Math.round(activePlanet.startingFuelMult * 100)}% fuel start` : "";
@@ -4471,7 +4837,7 @@ function syncUi(force = true) {
           : `Await ${getPlanetDefinition(nextPlanetTierNode.unlockPlanet).name} systems`
         : "All systems online";
   const saleValues = currentMaterialSaleValues();
-  ui.hangarTradeDetail.textContent = `Ore ${saleValues.ore} cr • Platinum ${saleValues.platinum} cr • Crystal ${saleValues.crystal} cr`;
+  ui.hangarTradeDetail.textContent = `Market rates • ore ${saleValues.ore} cr • platinum ${saleValues.platinum} cr • crystal ${saleValues.crystal} cr`;
   ui.sellOreBtn.disabled = !progress.bank.ore;
   ui.sellPlatinumBtn.disabled = !progress.bank.platinum;
   ui.sellCrystalBtn.disabled = !progress.bank.crystal;
