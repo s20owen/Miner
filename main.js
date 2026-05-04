@@ -364,10 +364,12 @@ function cost(ore = 0, platinum = 0, crystal = 0) {
 }
 
 function researchCost(ore = 0, platinum = 0, crystal = 0) {
+  const intensity = ore + platinum * 1.4 + crystal * 2.2;
+  const scale = 1.8 + Math.min(0.95, intensity / 140);
   return {
-    ore: Math.round(ore * 1.45),
-    platinum: Math.round(platinum * 1.45),
-    crystal: Math.round(crystal * 1.45),
+    ore: Math.max(ore ? 1 : 0, Math.round(ore * scale)),
+    platinum: Math.max(platinum ? 1 : 0, Math.round(platinum * (scale + 0.12))),
+    crystal: Math.max(crystal ? 1 : 0, Math.round(crystal * (scale + 0.24))),
   };
 }
 
@@ -486,9 +488,9 @@ const RESEARCH_NODES = [
 
 const SHIP_SKINS = [
   { id: "standard", label: "Standard Hull", rewardAchievementId: null, bonus: {} },
-  { id: "prospector", label: "Prospector Skin", rewardAchievementId: "ore_10000", bonus: { cargoCap: 4, fuelMax: 8 } },
-  { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_10000", bonus: { hpMax: 12, bulletDamage: 0.18 } },
-  { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "perfect_contract_1", bonus: { magnet: 10, thrustFuelMult: 0.94 } },
+  { id: "prospector", label: "Prospector Skin", rewardAchievementId: "ore_1000", bonus: { cargoCap: 4, fuelMax: 8 } },
+  { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_1000", bonus: { hpMax: 12, bulletDamage: 0.18 } },
+  { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "contracts_1", bonus: { magnet: 10, thrustFuelMult: 0.94 } },
   { id: "archon", label: "Archon Skin", rewardAchievementId: "fortress_doctrine", bonus: { hpMax: 16, shieldMult: 0.92, fuelMax: 10, bulletDamage: 0.14 } },
 ];
 
@@ -603,6 +605,10 @@ function normalizeLifetimeStats(stats = {}) {
     ...defaultLifetimeStats(),
     ...(stats || {}),
   };
+}
+
+function defaultFieldContractCompletions() {
+  return Object.fromEntries(FIELD_CONTRACTS.map((contract) => [contract.id, 0]));
 }
 
 function defaultPlanetProgress() {
@@ -899,6 +905,10 @@ function evaluateHiddenAchievements() {
 function mergeAchievementMessages(baseMessage = "", unlocked = []) {
   if (!unlocked.length) return baseMessage;
   return [baseMessage, ...unlocked].filter(Boolean).join(" ");
+}
+
+function fieldContractCompletionCount(contractId) {
+  return progress.fieldContractCompletions?.[contractId] || 0;
 }
 
 function formatSkinBonus(bonus = {}) {
@@ -1206,6 +1216,7 @@ function defaultProgress() {
     fieldContractProgress: {
       [DEFAULT_FIELD_CONTRACT_ID]: defaultPlanetProgress(),
     },
+    fieldContractCompletions: defaultFieldContractCompletions(),
     settings: {
       qualityProfile: defaultQualityProfileId(),
       showFps: false,
@@ -1262,6 +1273,10 @@ function loadProgress() {
     if (!merged.unlockedPlanets.includes(merged.currentPlanetId)) merged.unlockedPlanets.push(merged.currentPlanetId);
     if (!merged.planetProgress || typeof merged.planetProgress !== "object") merged.planetProgress = {};
     if (!merged.fieldContractProgress || typeof merged.fieldContractProgress !== "object") merged.fieldContractProgress = {};
+    merged.fieldContractCompletions = {
+      ...defaultFieldContractCompletions(),
+      ...(typeof merged.fieldContractCompletions === "object" && merged.fieldContractCompletions ? merged.fieldContractCompletions : {}),
+    };
     const migratedDestroyedBlocks = Array.isArray(merged.destroyedBlocks) ? merged.destroyedBlocks : [];
     for (const planetId of merged.unlockedPlanets) {
       const existing = merged.planetProgress[planetId];
@@ -1269,6 +1284,7 @@ function loadProgress() {
     }
     for (const contract of FIELD_CONTRACTS) {
       merged.fieldContractProgress[contract.id] = clonePlanetProgress(merged.fieldContractProgress[contract.id] || defaultPlanetProgress());
+      merged.fieldContractCompletions[contract.id] = Math.max(0, Number(merged.fieldContractCompletions[contract.id] || 0));
     }
     if (merged.upgrades?.laser) merged.research.laserTheory = true;
     if (merged.upgrades?.splash2) merged.research.arrayTheory = true;
@@ -2177,6 +2193,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
       if (objectiveProgress.complete) {
         contractPayoutCredits = contract.payoutCredits || 0;
         progress.credits += contractPayoutCredits;
+        progress.fieldContractCompletions[contract.id] = fieldContractCompletionCount(contract.id) + 1;
         progress.fieldContractProgress[contract.id] = defaultPlanetProgress();
       }
     }
@@ -4181,7 +4198,10 @@ function syncUi(force = true) {
   ui.hangarBankValue.textContent = formatCredits(progress.credits);
   ui.hangarBankDetail.textContent = `Samples: Ore ${fmt(progress.bank.ore)} • Platinum ${fmt(progress.bank.platinum)} • Crystal ${fmt(progress.bank.crystal)}`;
   ui.hangarPlanetValue.textContent = activePlanet.name;
-  ui.hangarPlanetDetail.textContent = `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
+  const contractCompletions = activePlanet.contractType === "field" ? fieldContractCompletionCount(activePlanet.id) : 0;
+  ui.hangarPlanetDetail.textContent = activePlanet.contractType === "field"
+    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "Unfinished charter"}`
+    : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
   const fieldObjectiveProgress = activePlanet.contractType === "field"
     ? contractObjectiveProgress(activePlanet, ensureFieldContractProgressRecord(progress, activePlanet.id))
@@ -4194,7 +4214,9 @@ function syncUi(force = true) {
     ? `Payout ${formatCredits(activePlanet.payoutCredits || 0)}`
     : planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
   ui.hangarContractName.textContent = activePlanet.name;
-  ui.hangarContractDetail.textContent = `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
+  ui.hangarContractDetail.textContent = activePlanet.contractType === "field"
+    ? `${planetContractDetail(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "First completion pending"}`
+    : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarContractObjective.textContent = activePlanet.contractType === "field"
     ? `Objective: ${contractObjectiveLabel(activePlanet)}`
     : "Objective: Clear the sectors and destroy the core";
@@ -4229,7 +4251,9 @@ function syncUi(force = true) {
   ui.upgradeTree.classList.toggle("hidden", state.hangarView !== "upgrades");
   ui.researchTree.classList.toggle("hidden", state.hangarView !== "research");
   ui.skinsTree.classList.toggle("hidden", state.hangarView !== "skins");
-  ui.launchSortieBtn.textContent = `Launch ${activePlanet.name} Sortie`;
+  ui.launchSortieBtn.textContent = activePlanet.contractType === "field" && contractCompletions > 0
+    ? `Replay ${activePlanet.name}`
+    : `Launch ${activePlanet.name} Sortie`;
   const qualityId = qualityProfileId();
   const qualityProfile = currentQualityProfile();
   ui.qualityProfileDetail.textContent = `${qualityProfile.description} ${qualityProfile.fps} FPS • DPR ${qualityProfile.dprCap} cap.`;
