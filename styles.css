@@ -551,6 +551,61 @@ canvas,
   font-size: 0.76rem;
 }
 
+.logbook-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 210, 79, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.logbook-section h4 {
+  margin: 0;
+  font-size: 0.86rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 236, 196, 0.92);
+}
+
+.logbook-section p {
+  margin: 0;
+  color: rgba(247, 238, 215, 0.72);
+  line-height: 1.4;
+}
+
+.logbook-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.logbook-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.84rem;
+  color: rgba(247, 238, 215, 0.78);
+}
+
+.logbook-row strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.logbook-list {
+  display: grid;
+  gap: 6px;
+}
+
+.logbook-chip {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(247, 238, 215, 0.84);
+  font-size: 0.8rem;
+}
+
 .tree-canvas {
   position: relative;
   min-width: 1040px;
@@ -664,7 +719,7 @@ canvas,
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 18px;
-  padding: 34px 36px;
+  padding: 34px 36px 42px;
   overflow: auto;
 }
 
@@ -692,6 +747,7 @@ canvas,
   grid-template-columns: 240px minmax(0, 1fr) minmax(240px, 0.78fr);
   gap: 18px;
   min-height: 0;
+  align-items: start;
 }
 
 .results-tally-card,
@@ -744,10 +800,15 @@ canvas,
 .results-panels {
   display: grid;
   gap: 16px;
+  align-content: start;
 }
 
 .results-panel {
   padding: 20px 24px;
+}
+
+.results-panels .results-panel:last-child {
+  padding-bottom: 78px;
 }
 
 .results-panel-grid {
@@ -784,6 +845,9 @@ canvas,
   display: flex;
   justify-content: center;
   gap: 18px;
+  margin-top: 8px;
+  padding-bottom: 4px;
+  flex-wrap: wrap;
 }
 
 .results-actions .ui-btn {
@@ -1261,7 +1325,7 @@ canvas,
 
   .results-shell {
     gap: 6px;
-    padding: 10px 14px 12px;
+    padding: 10px 14px 18px;
   }
 
   .results-header h3 {
@@ -1326,6 +1390,7 @@ canvas,
 
   .results-actions {
     gap: 8px;
+    margin-top: 6px;
   }
 
   .results-actions .ui-btn {

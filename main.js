@@ -84,8 +84,10 @@ const ui = {
   hangarTradeDetail: document.getElementById("hangar-trade-detail"),
   showUpgradesBtn: document.getElementById("show-upgrades-btn"),
   showResearchBtn: document.getElementById("show-research-btn"),
+  showLogbookBtn: document.getElementById("show-logbook-btn"),
   showSkinsBtn: document.getElementById("show-skins-btn"),
   researchTree: document.getElementById("research-tree"),
+  logbookTree: document.getElementById("logbook-tree"),
   skinsTree: document.getElementById("skins-tree"),
   moveStick: document.getElementById("move-stick"),
   aimStick: document.getElementById("aim-stick"),
@@ -196,6 +198,11 @@ const MATERIAL_SALE_VALUES = {
   platinum: 36,
   crystal: 84,
 };
+const MATERIAL_TINT_COLORS = {
+  ore: "#ffd24f",
+  platinum: "#79d7ff",
+  crystal: "#f89fff",
+};
 
 const SECTORS = [
   {
@@ -278,7 +285,7 @@ const PLANETS = [
     id: "vesper-2",
     name: "Vesper-2",
     sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
-    placeholder: true,
+    nextPlanetId: "vesper-3",
     threatLabel: "Threat II",
     contractDetail: "Dense shell • faster hazards",
     materialBias: { ore: 0.82, platinum: 1.22, crystal: 1.35 },
@@ -288,511 +295,724 @@ const PLANETS = [
     hazardRateMult: 0.84,
     sectorCompletionMult: 1.12,
   },
+  {
+    id: "vesper-3",
+    name: "Vesper-3",
+    sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
+    finalPlanet: true,
+    threatLabel: "Threat III",
+    contractDetail: "Fortress shell • brutal core pulses",
+    materialBias: { ore: 0.58, platinum: 1.34, crystal: 1.58 },
+    coreReward: { ore: 0, platinum: 18, crystal: 34 },
+    blockHpBonus: 2,
+    coreHp: 156,
+    hazardRateMult: 0.7,
+    sectorCompletionMult: 1.18,
+  },
 ];
 
-const FIELD_CONTRACTS = [
+const CELESTIAL_FAMILIES = [
+  {
+    id: "asteroid",
+    label: "Asteroid",
+    sizeClass: "small",
+    radiusBlocks: 48,
+    coreRadiusBlocks: 4,
+    shapeProfile: "asteroid",
+    palette: {
+      surfaceHot: "#df9254",
+      surfaceWarm: "#ffd368",
+      industrialHot: "#ce6b3f",
+      industrialCool: "#f5bd71",
+      crystalHot: "#6bcfdb",
+      crystalCool: "#beeaf1",
+      coreHot: "#93a6f7",
+      coreCool: "#dce4ff",
+    },
+    materialTintBias: { ore: 0.08, platinum: 0.1, crystal: 0.06 },
+    contractTendencies: {
+      commonObjectives: ["ore", "mixed"],
+      hazardWeight: "low",
+      payoutMultiplier: 0.92,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial"],
+      materialBias: { ore: 1.48, platinum: 0.7, crystal: 0.4 },
+      blockHpBonus: -1,
+      hazardRateMult: 1.04,
+      sectorCompletionMult: 1,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "moon",
+    label: "Moon",
+    sizeClass: "medium",
+    radiusBlocks: 58,
+    coreRadiusBlocks: 4,
+    shapeProfile: "moon",
+    palette: {
+      surfaceHot: "#89b48c",
+      surfaceWarm: "#d7efca",
+      industrialHot: "#77ffe4",
+      industrialCool: "#bcf6ff",
+      crystalHot: "#8fb6ff",
+      crystalCool: "#d7ebff",
+      coreHot: "#c28eff",
+      coreCool: "#f0d2ff",
+    },
+    materialTintBias: { ore: 0.05, platinum: 0.14, crystal: 0.08 },
+    contractTendencies: {
+      commonObjectives: ["platinum", "mixed"],
+      hazardWeight: "medium",
+      payoutMultiplier: 1.08,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial", "crystalFault"],
+      materialBias: { ore: 0.88, platinum: 1.34, crystal: 0.62 },
+      blockHpBonus: 0,
+      hazardRateMult: 0.94,
+      sectorCompletionMult: 1.02,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "microPlanet",
+    label: "Micro-planet",
+    sizeClass: "large",
+    radiusBlocks: 68,
+    coreRadiusBlocks: 5,
+    shapeProfile: "micro",
+    palette: {
+      surfaceHot: "#7cb0ff",
+      surfaceWarm: "#bfd8ff",
+      industrialHot: "#a4d5ff",
+      industrialCool: "#e0f6ff",
+      crystalHot: "#df7fff",
+      crystalCool: "#ffc4ff",
+      coreHot: "#ff82c4",
+      coreCool: "#ffe0ff",
+    },
+    materialTintBias: { ore: 0.04, platinum: 0.08, crystal: 0.16 },
+    contractTendencies: {
+      commonObjectives: ["mixed", "core"],
+      hazardWeight: "medium-high",
+      payoutMultiplier: 1.36,
+      coresCommon: true,
+    },
+    defaults: {
+      sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
+      materialBias: { ore: 0.66, platinum: 1.04, crystal: 1.46 },
+      blockHpBonus: 1,
+      hazardRateMult: 0.88,
+      sectorCompletionMult: 1.05,
+      hasCoreEvent: true,
+    },
+  },
+  {
+    id: "crystalShard",
+    label: "Crystal Shard",
+    sizeClass: "small-medium",
+    radiusBlocks: 50,
+    coreRadiusBlocks: 4,
+    shapeProfile: "shard",
+    palette: {
+      surfaceHot: "#78b9ff",
+      surfaceWarm: "#bfe7ff",
+      industrialHot: "#8ddcff",
+      industrialCool: "#dff8ff",
+      crystalHot: "#ef8cff",
+      crystalCool: "#ffd4ff",
+      coreHot: "#ff91e2",
+      coreCool: "#ffe1fb",
+    },
+    materialTintBias: { ore: 0.03, platinum: 0.1, crystal: 0.18 },
+    contractTendencies: {
+      commonObjectives: ["crystal", "mixed"],
+      hazardWeight: "medium",
+      payoutMultiplier: 1.2,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["industrial", "crystalFault", "coreShell"],
+      materialBias: { ore: 0.42, platinum: 0.94, crystal: 1.78 },
+      blockHpBonus: 1,
+      hazardRateMult: 0.82,
+      sectorCompletionMult: 1.04,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "brokenCore",
+    label: "Broken Core Body",
+    sizeClass: "small-medium",
+    radiusBlocks: 52,
+    coreRadiusBlocks: 5,
+    shapeProfile: "brokenCore",
+    palette: {
+      surfaceHot: "#9b687a",
+      surfaceWarm: "#f1adb8",
+      industrialHot: "#ff8b9f",
+      industrialCool: "#ffd8dd",
+      crystalHot: "#ff8fdf",
+      crystalCool: "#ffd7f5",
+      coreHot: "#fff1ac",
+      coreCool: "#ffe08c",
+    },
+    materialTintBias: { ore: 0.03, platinum: 0.08, crystal: 0.16 },
+    contractTendencies: {
+      commonObjectives: ["core", "mixed"],
+      hazardWeight: "high",
+      payoutMultiplier: 1.18,
+      coresCommon: true,
+    },
+    defaults: {
+      sectors: ["industrial", "crystalFault", "coreShell", "coreEvent"],
+      materialBias: { ore: 0.5, platinum: 1.1, crystal: 1.42 },
+      blockHpBonus: 1,
+      hazardRateMult: 0.88,
+      sectorCompletionMult: 1.05,
+      hasCoreEvent: true,
+    },
+  },
+  {
+    id: "terracedMoon",
+    label: "Terraced Moon",
+    sizeClass: "medium",
+    radiusBlocks: 58,
+    coreRadiusBlocks: 4,
+    shapeProfile: "terraced",
+    palette: {
+      surfaceHot: "#c98a56",
+      surfaceWarm: "#f1d17a",
+      industrialHot: "#ed9c62",
+      industrialCool: "#ffe39a",
+      crystalHot: "#98c5ff",
+      crystalCool: "#dcedff",
+      coreHot: "#b5a0ff",
+      coreCool: "#efe3ff",
+    },
+    materialTintBias: { ore: 0.08, platinum: 0.08, crystal: 0.08 },
+    contractTendencies: {
+      commonObjectives: ["ore", "minedPercent", "mixed"],
+      hazardWeight: "medium",
+      payoutMultiplier: 1.12,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial", "crystalFault"],
+      materialBias: { ore: 1.22, platinum: 1.04, crystal: 0.68 },
+      blockHpBonus: 0,
+      hazardRateMult: 0.94,
+      sectorCompletionMult: 1,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "leanAsteroid",
+    label: "Lean Asteroid",
+    sizeClass: "small",
+    radiusBlocks: 48,
+    coreRadiusBlocks: 4,
+    shapeProfile: "lean",
+    palette: {
+      surfaceHot: "#d77f4d",
+      surfaceWarm: "#ffc165",
+      industrialHot: "#c96843",
+      industrialCool: "#f2b86c",
+      crystalHot: "#88c5ff",
+      crystalCool: "#d7f2ff",
+      coreHot: "#b3a6ff",
+      coreCool: "#e8e1ff",
+    },
+    materialTintBias: { ore: 0.07, platinum: 0.09, crystal: 0.06 },
+    contractTendencies: {
+      commonObjectives: ["ore", "mixed"],
+      hazardWeight: "medium",
+      payoutMultiplier: 1,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial"],
+      materialBias: { ore: 1.24, platinum: 1.06, crystal: 0.42 },
+      blockHpBonus: 0,
+      hazardRateMult: 1.02,
+      sectorCompletionMult: 1,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "fortifiedMoon",
+    label: "Fortified Moon",
+    sizeClass: "medium",
+    radiusBlocks: 60,
+    coreRadiusBlocks: 4,
+    shapeProfile: "fortified",
+    palette: {
+      surfaceHot: "#d46a57",
+      surfaceWarm: "#ffb18a",
+      industrialHot: "#f38b67",
+      industrialCool: "#ffd59d",
+      crystalHot: "#ac9dff",
+      crystalCool: "#e9dfff",
+      coreHot: "#ff88aa",
+      coreCool: "#ffdce7",
+    },
+    materialTintBias: { ore: 0.06, platinum: 0.1, crystal: 0.1 },
+    contractTendencies: {
+      commonObjectives: ["mixed", "minedPercent"],
+      hazardWeight: "high",
+      payoutMultiplier: 1.28,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial", "crystalFault", "coreShell"],
+      materialBias: { ore: 1, platinum: 1.16, crystal: 0.92 },
+      blockHpBonus: 1,
+      hazardRateMult: 0.62,
+      sectorCompletionMult: 1.06,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "pocketAsteroid",
+    label: "Pocket Asteroid",
+    sizeClass: "small",
+    radiusBlocks: 34,
+    coreRadiusBlocks: 3,
+    shapeProfile: "pocket",
+    palette: {
+      surfaceHot: "#7db65f",
+      surfaceWarm: "#d2ff85",
+      industrialHot: "#9fe06f",
+      industrialCool: "#f1ffb5",
+      crystalHot: "#8fe0ff",
+      crystalCool: "#ddf8ff",
+      coreHot: "#ffbf88",
+      coreCool: "#fff0cf",
+    },
+    materialTintBias: { ore: 0.1, platinum: 0.08, crystal: 0.04 },
+    contractTendencies: {
+      commonObjectives: ["minedPercent", "ore"],
+      hazardWeight: "low",
+      payoutMultiplier: 0.9,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial"],
+      materialBias: { ore: 1.28, platinum: 0.82, crystal: 0.32 },
+      blockHpBonus: -1,
+      hazardRateMult: 1.1,
+      sectorCompletionMult: 1,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "splitBody",
+    label: "Split Body",
+    sizeClass: "small-medium",
+    radiusBlocks: 46,
+    coreRadiusBlocks: 4,
+    shapeProfile: "split",
+    palette: {
+      surfaceHot: "#6f8dcb",
+      surfaceWarm: "#bad0ff",
+      industrialHot: "#7ec3ff",
+      industrialCool: "#d9f1ff",
+      crystalHot: "#9db8ff",
+      crystalCool: "#edf5ff",
+      coreHot: "#ffb7b0",
+      coreCool: "#ffe6e3",
+    },
+    materialTintBias: { ore: 0.05, platinum: 0.1, crystal: 0.06 },
+    contractTendencies: {
+      commonObjectives: ["ore", "docksRequired"],
+      hazardWeight: "medium",
+      payoutMultiplier: 1.02,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["surface", "industrial"],
+      materialBias: { ore: 1.16, platinum: 0.94, crystal: 0.42 },
+      blockHpBonus: 0,
+      hazardRateMult: 1,
+      sectorCompletionMult: 1,
+      hasCoreEvent: false,
+    },
+  },
+  {
+    id: "volatileFragment",
+    label: "Volatile Fragment",
+    sizeClass: "small-medium",
+    radiusBlocks: 52,
+    coreRadiusBlocks: 4,
+    shapeProfile: "volatile",
+    palette: {
+      surfaceHot: "#8d7cd7",
+      surfaceWarm: "#d5b9ff",
+      industrialHot: "#a892ff",
+      industrialCool: "#ece0ff",
+      crystalHot: "#ff7fee",
+      crystalCool: "#ffd4ff",
+      coreHot: "#ff9ed4",
+      coreCool: "#ffe2f7",
+    },
+    materialTintBias: { ore: 0.02, platinum: 0.08, crystal: 0.2 },
+    contractTendencies: {
+      commonObjectives: ["crystal", "minedPercent"],
+      hazardWeight: "high",
+      payoutMultiplier: 1.16,
+      coresCommon: false,
+    },
+    defaults: {
+      sectors: ["industrial", "crystalFault", "coreShell"],
+      materialBias: { ore: 0.4, platinum: 0.98, crystal: 1.88 },
+      blockHpBonus: 1,
+      hazardRateMult: 0.76,
+      sectorCompletionMult: 1.08,
+      hasCoreEvent: false,
+    },
+  },
+];
+
+const CELESTIAL_FAMILY_BY_ID = Object.fromEntries(CELESTIAL_FAMILIES.map((family) => [family.id, family]));
+
+const FIELD_CONTRACT_TEMPLATES = [
   {
     id: "ore-sweep-1",
+    familyId: "asteroid",
     name: "Ore Sweep",
-    contractType: "field",
     threatLabel: "Starter I",
     contractDetail: "Small asteroid • bulk ore quota",
+    objective: { requirements: { ore: 1000 } },
+    payoutCredits: 4200,
+    radiusBlocks: 56,
+    hazardRateMult: 1,
+    materialBias: { ore: 1.55, platinum: 0.7, crystal: 0.45 },
     visual: {
       badge: "Starter Charter",
       bodyLabel: "Small asteroid",
-      bodyProfile: "asteroid",
       accent: "rgba(255, 187, 92, 0.9)",
       glow: "rgba(255, 132, 68, 0.34)",
       panel: "rgba(52, 23, 14, 0.9)",
       paddingBlock: "12px",
       radius: "20px",
       titleSize: "1.16rem",
-      palette: {
-        surfaceHot: "#e98f59",
-        surfaceWarm: "#ffd35b",
-        industrialHot: "#d47042",
-        industrialCool: "#f2bc72",
-        crystalHot: "#78d6e8",
-        crystalCool: "#c5eff4",
-        coreHot: "#8ea8ff",
-        coreCool: "#d9e4ff",
-      },
     },
-    objective: { requirements: { ore: 1000 } },
-    payoutCredits: 4200,
-    radiusBlocks: 56,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial"],
-    materialBias: { ore: 1.55, platinum: 0.7, crystal: 0.45 },
-    blockHpBonus: -1,
-    hazardRateMult: 1,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
   },
   {
     id: "platinum-recovery-1",
+    familyId: "moon",
     name: "Platinum Recovery",
-    contractType: "field",
     threatLabel: "Starter II",
     contractDetail: "Moon fragment • richer shell with recoverable core",
-    visual: {
-      badge: "Starter Charter",
-      bodyLabel: "Moon fragment",
-      bodyProfile: "moon",
-      accent: "rgba(113, 242, 196, 0.9)",
-      glow: "rgba(62, 187, 165, 0.28)",
-      panel: "rgba(10, 43, 40, 0.92)",
-      paddingBlock: "15px",
-      radius: "24px",
-      titleSize: "1.22rem",
-      palette: {
-        surfaceHot: "#94c8be",
-        surfaceWarm: "#d8efe4",
-        industrialHot: "#68dcc9",
-        industrialCool: "#9cf0ff",
-        crystalHot: "#80bfff",
-        crystalCool: "#c6ebff",
-        coreHot: "#ff9fc7",
-        coreCool: "#ffe1f2",
-      },
-    },
     objective: { requirements: { ore: 1000, platinum: 150, coreSamples: 5 } },
     payoutCredits: 9200,
     radiusBlocks: 62,
     coreRadiusBlocks: 5,
     sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
     materialBias: { ore: 0.92, platinum: 1.42, crystal: 0.7 },
-    blockHpBonus: 0,
     coreSampleYield: 5,
     coreSampleNodeCount: 2,
-    hazardRateMult: 0.94,
-    sectorCompletionMult: 1,
     hasCoreEvent: true,
+    sectorCompletionMult: 1,
+    visual: {
+      badge: "Starter Charter",
+      bodyLabel: "Moon fragment",
+      accent: "rgba(113, 242, 196, 0.9)",
+      glow: "rgba(62, 187, 165, 0.28)",
+      panel: "rgba(10, 43, 40, 0.92)",
+      paddingBlock: "15px",
+      radius: "24px",
+      titleSize: "1.22rem",
+    },
+    paletteShift: 0.05,
   },
   {
     id: "crystal-probe-1",
+    familyId: "microPlanet",
     name: "Crystal Probe",
-    contractType: "field",
     threatLabel: "Starter III",
     contractDetail: "Micro-planet • deep shell contract with core extraction",
+    objective: { requirements: { ore: 2000, platinum: 200, crystal: 100, coreSamples: 15 } },
+    payoutCredits: 16800,
+    materialBias: { ore: 0.64, platinum: 1.08, crystal: 1.58 },
+    coreSampleYield: 15,
+    coreSampleNodeCount: 4,
     visual: {
       badge: "Starter Charter",
       bodyLabel: "Micro-planet",
-      bodyProfile: "micro",
       accent: "rgba(140, 226, 255, 0.92)",
       glow: "rgba(180, 96, 255, 0.32)",
       panel: "rgba(18, 24, 58, 0.92)",
       paddingBlock: "17px",
       radius: "26px",
       titleSize: "1.26rem",
-      palette: {
-        surfaceHot: "#7cb0ff",
-        surfaceWarm: "#bfd8ff",
-        industrialHot: "#a4d5ff",
-        industrialCool: "#e0f6ff",
-        crystalHot: "#df7fff",
-        crystalCool: "#ffc4ff",
-        coreHot: "#ff82c4",
-        coreCool: "#ffe0ff",
-      },
     },
-    objective: { requirements: { ore: 2000, platinum: 200, crystal: 100, coreSamples: 15 } },
-    payoutCredits: 16800,
-    radiusBlocks: 68,
-    coreRadiusBlocks: 5,
-    sectors: ["surface", "industrial", "crystalFault", "coreShell", "coreEvent"],
-    materialBias: { ore: 0.64, platinum: 1.08, crystal: 1.58 },
-    blockHpBonus: 1,
-    coreSampleYield: 15,
-    coreSampleNodeCount: 4,
-    hazardRateMult: 0.88,
-    sectorCompletionMult: 1.05,
-    hasCoreEvent: true,
   },
   {
     id: "ore-haul-1",
+    familyId: "asteroid",
     name: "Ore Haul",
-    contractType: "field",
     threatLabel: "Standard I",
     contractDetail: "Tiny asteroid • fast ore pull",
+    objective: { requirements: { ore: 800 } },
+    payoutCredits: 3600,
+    radiusBlocks: 44,
+    materialBias: { ore: 1.65, platinum: 0.62, crystal: 0.36 },
+    hazardRateMult: 1.08,
     visual: {
       badge: "Standard Charter",
       bodyLabel: "Tiny asteroid",
-      bodyProfile: "asteroid",
       accent: "rgba(255, 213, 107, 0.92)",
       glow: "rgba(255, 160, 74, 0.28)",
       panel: "rgba(58, 31, 17, 0.9)",
       paddingBlock: "11px",
       radius: "18px",
       titleSize: "1.12rem",
-      palette: {
-        surfaceHot: "#df9254",
-        surfaceWarm: "#ffd368",
-        industrialHot: "#ce6b3f",
-        industrialCool: "#f5bd71",
-        crystalHot: "#6bcfdb",
-        crystalCool: "#beeaf1",
-        coreHot: "#93a6f7",
-        coreCool: "#dce4ff",
-      },
     },
-    objective: { requirements: { ore: 800 } },
-    payoutCredits: 3600,
-    radiusBlocks: 44,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial"],
-    materialBias: { ore: 1.65, platinum: 0.62, crystal: 0.36 },
-    blockHpBonus: -1,
-    hazardRateMult: 1.08,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
+    paletteShift: 0.02,
   },
   {
     id: "platinum-vein-1",
+    familyId: "moon",
     name: "Platinum Vein",
-    contractType: "field",
     threatLabel: "Standard II",
     contractDetail: "Moon shard • rich industrial seams",
+    objective: { requirements: { platinum: 250 } },
+    payoutCredits: 9800,
+    radiusBlocks: 54,
     visual: {
       badge: "Standard Charter",
       bodyLabel: "Moon shard",
-      bodyProfile: "moon",
       accent: "rgba(104, 255, 170, 0.88)",
       glow: "rgba(57, 178, 122, 0.28)",
       panel: "rgba(13, 46, 29, 0.92)",
       paddingBlock: "13px",
       radius: "21px",
       titleSize: "1.18rem",
-      palette: {
-        surfaceHot: "#89b48c",
-        surfaceWarm: "#d7efca",
-        industrialHot: "#77ffe4",
-        industrialCool: "#bcf6ff",
-        crystalHot: "#8fb6ff",
-        crystalCool: "#d7ebff",
-        coreHot: "#c28eff",
-        coreCool: "#f0d2ff",
-      },
     },
-    objective: { requirements: { platinum: 250 } },
-    payoutCredits: 9800,
-    radiusBlocks: 54,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial", "crystalFault"],
-    materialBias: { ore: 0.8, platinum: 1.62, crystal: 0.58 },
-    blockHpBonus: 0,
-    hazardRateMult: 0.92,
-    sectorCompletionMult: 1.02,
-    hasCoreEvent: false,
   },
   {
     id: "crystal-skim-1",
+    familyId: "crystalShard",
     name: "Crystal Skim",
-    contractType: "field",
     threatLabel: "Standard III",
     contractDetail: "Tiny crystal body • unstable and bright",
+    objective: { requirements: { crystal: 120 } },
+    payoutCredits: 14200,
     visual: {
       badge: "Standard Charter",
       bodyLabel: "Crystal shard",
-      bodyProfile: "shard",
       accent: "rgba(164, 214, 255, 0.92)",
       glow: "rgba(198, 92, 255, 0.3)",
       panel: "rgba(20, 25, 62, 0.92)",
       paddingBlock: "13px",
       radius: "20px",
       titleSize: "1.17rem",
-      palette: {
-        surfaceHot: "#78b9ff",
-        surfaceWarm: "#bfe7ff",
-        industrialHot: "#8ddcff",
-        industrialCool: "#dff8ff",
-        crystalHot: "#ef8cff",
-        crystalCool: "#ffd4ff",
-        coreHot: "#ff91e2",
-        coreCool: "#ffe1fb",
-      },
     },
-    objective: { requirements: { crystal: 120 } },
-    payoutCredits: 14200,
-    radiusBlocks: 50,
-    coreRadiusBlocks: 4,
-    sectors: ["industrial", "crystalFault", "coreShell"],
-    materialBias: { ore: 0.44, platinum: 0.92, crystal: 1.82 },
-    blockHpBonus: 1,
-    hazardRateMult: 0.82,
-    sectorCompletionMult: 1.04,
-    hasCoreEvent: false,
   },
   {
     id: "core-sample-recovery-1",
+    familyId: "brokenCore",
     name: "Core Sample Recovery",
-    contractType: "field",
     threatLabel: "Special I",
     contractDetail: "Broken core body • breach and recover samples",
+    objective: { requirements: { coreSamples: 8 } },
+    payoutCredits: 12600,
+    coreSampleYield: 8,
+    coreSampleNodeCount: 3,
     visual: {
       badge: "Special Charter",
       bodyLabel: "Broken core body",
-      bodyProfile: "brokenCore",
       accent: "rgba(255, 126, 126, 0.92)",
       glow: "rgba(255, 88, 125, 0.34)",
       panel: "rgba(63, 19, 32, 0.92)",
       paddingBlock: "16px",
       radius: "25px",
       titleSize: "1.22rem",
-      palette: {
-        surfaceHot: "#9b687a",
-        surfaceWarm: "#f1adb8",
-        industrialHot: "#ff8b9f",
-        industrialCool: "#ffd8dd",
-        crystalHot: "#ff8fdf",
-        crystalCool: "#ffd7f5",
-        coreHot: "#fff1ac",
-        coreCool: "#ffe08c",
-      },
     },
-    objective: { requirements: { coreSamples: 8 } },
-    payoutCredits: 12600,
-    radiusBlocks: 52,
-    coreRadiusBlocks: 5,
-    sectors: ["industrial", "crystalFault", "coreShell", "coreEvent"],
-    materialBias: { ore: 0.48, platinum: 1.1, crystal: 1.42 },
-    blockHpBonus: 1,
-    coreSampleYield: 8,
-    coreSampleNodeCount: 3,
-    hazardRateMult: 0.88,
-    sectorCompletionMult: 1.05,
-    hasCoreEvent: true,
   },
   {
     id: "strip-contract-1",
+    familyId: "terracedMoon",
     name: "Strip Contract",
-    contractType: "field",
     threatLabel: "Standard IV",
     contractDetail: "Small moon • quota plus extraction sweep",
+    objective: { requirements: { ore: 1200, minedPercent: 35 } },
+    payoutCredits: 11800,
     visual: {
       badge: "Standard Charter",
       bodyLabel: "Strip-mining moon",
-      bodyProfile: "terraced",
       accent: "rgba(255, 205, 110, 0.88)",
       glow: "rgba(255, 150, 74, 0.28)",
       panel: "rgba(52, 29, 19, 0.92)",
       paddingBlock: "14px",
       radius: "22px",
       titleSize: "1.19rem",
-      palette: {
-        surfaceHot: "#c98a56",
-        surfaceWarm: "#f1d17a",
-        industrialHot: "#ed9c62",
-        industrialCool: "#ffe39a",
-        crystalHot: "#98c5ff",
-        crystalCool: "#dcedff",
-        coreHot: "#b5a0ff",
-        coreCool: "#efe3ff",
-      },
     },
-    objective: { requirements: { ore: 1200, minedPercent: 35 } },
-    payoutCredits: 11800,
-    radiusBlocks: 58,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial", "crystalFault"],
-    materialBias: { ore: 1.22, platinum: 1.06, crystal: 0.68 },
-    blockHpBonus: 0,
-    hazardRateMult: 0.94,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
   },
   {
     id: "low-fuel-charter-1",
+    familyId: "leanAsteroid",
     name: "Low Fuel Charter",
-    contractType: "field",
     threatLabel: "Special II",
     contractDetail: "Lean reserve asteroid • tight fuel window",
+    objective: { requirements: { ore: 900, platinum: 80 } },
+    payoutCredits: 9300,
+    startingFuelMult: 0.58,
     visual: {
       badge: "Special Charter",
       bodyLabel: "Lean reserve asteroid",
-      bodyProfile: "lean",
       accent: "rgba(255, 164, 106, 0.9)",
       glow: "rgba(255, 110, 76, 0.3)",
       panel: "rgba(63, 28, 18, 0.92)",
       paddingBlock: "12px",
       radius: "18px",
       titleSize: "1.14rem",
-      palette: {
-        surfaceHot: "#d77f4d",
-        surfaceWarm: "#ffc165",
-        industrialHot: "#c96843",
-        industrialCool: "#f2b86c",
-        crystalHot: "#88c5ff",
-        crystalCool: "#d7f2ff",
-        coreHot: "#b3a6ff",
-        coreCool: "#e8e1ff",
-      },
     },
-    objective: { requirements: { ore: 900, platinum: 80 } },
-    payoutCredits: 9300,
-    radiusBlocks: 48,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial"],
-    materialBias: { ore: 1.28, platinum: 1.08, crystal: 0.42 },
-    blockHpBonus: 0,
-    startingFuelMult: 0.58,
-    hazardRateMult: 1.04,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
   },
   {
     id: "hazard-surge-1",
+    familyId: "fortifiedMoon",
     name: "Hazard Surge",
-    contractType: "field",
     threatLabel: "Special III",
     contractDetail: "Defense-heavy moon • hazard cadence accelerated",
+    objective: { requirements: { ore: 1100, platinum: 140, minedPercent: 28 } },
+    payoutCredits: 15400,
     visual: {
       badge: "Surge Contract",
       bodyLabel: "Defense-heavy moon",
-      bodyProfile: "fortified",
       accent: "rgba(255, 138, 112, 0.92)",
       glow: "rgba(255, 74, 90, 0.34)",
       panel: "rgba(58, 17, 22, 0.92)",
       paddingBlock: "16px",
       radius: "24px",
       titleSize: "1.22rem",
-      palette: {
-        surfaceHot: "#d46a57",
-        surfaceWarm: "#ffb18a",
-        industrialHot: "#f38b67",
-        industrialCool: "#ffd59d",
-        crystalHot: "#ac9dff",
-        crystalCool: "#e9dfff",
-        coreHot: "#ff88aa",
-        coreCool: "#ffdce7",
-      },
     },
-    objective: { requirements: { ore: 1100, platinum: 140, minedPercent: 28 } },
-    payoutCredits: 15400,
-    radiusBlocks: 60,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial", "crystalFault", "coreShell"],
-    materialBias: { ore: 1, platinum: 1.18, crystal: 0.92 },
-    blockHpBonus: 1,
-    hazardRateMult: 0.62,
-    sectorCompletionMult: 1.06,
-    hasCoreEvent: false,
   },
   {
     id: "clean-sweep-1",
+    familyId: "pocketAsteroid",
     name: "Clean Sweep",
-    contractType: "field",
     threatLabel: "Fun I",
     contractDetail: "Pocket asteroid • clear it to the bone",
+    objective: { requirements: { minedPercent: 100 } },
+    payoutCredits: 7600,
     visual: {
       badge: "Cleanroom Job",
       bodyLabel: "Pocket asteroid",
-      bodyProfile: "pocket",
       accent: "rgba(185, 255, 118, 0.92)",
       glow: "rgba(104, 255, 140, 0.26)",
       panel: "rgba(20, 48, 18, 0.92)",
       paddingBlock: "11px",
       radius: "17px",
       titleSize: "1.12rem",
-      palette: {
-        surfaceHot: "#7db65f",
-        surfaceWarm: "#d2ff85",
-        industrialHot: "#9fe06f",
-        industrialCool: "#f1ffb5",
-        crystalHot: "#8fe0ff",
-        crystalCool: "#ddf8ff",
-        coreHot: "#ffbf88",
-        coreCool: "#fff0cf",
-      },
     },
-    objective: { requirements: { minedPercent: 100 } },
-    payoutCredits: 7600,
-    radiusBlocks: 34,
-    coreRadiusBlocks: 3,
-    sectors: ["surface", "industrial"],
-    materialBias: { ore: 1.3, platinum: 0.82, crystal: 0.32 },
-    blockHpBonus: -1,
-    hazardRateMult: 1.12,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
   },
   {
     id: "courier-extraction-1",
+    familyId: "splitBody",
     name: "Courier Extraction",
-    contractType: "field",
     threatLabel: "Fun II",
     contractDetail: "Split-haul charter • complete two successful docks",
+    objective: { requirements: { ore: 700, docksRequired: 2 } },
+    payoutCredits: 8900,
     visual: {
       badge: "Courier Job",
       bodyLabel: "Split-haul body",
-      bodyProfile: "split",
       accent: "rgba(111, 184, 255, 0.92)",
       glow: "rgba(78, 118, 255, 0.28)",
       panel: "rgba(19, 29, 63, 0.92)",
       paddingBlock: "13px",
       radius: "19px",
       titleSize: "1.15rem",
-      palette: {
-        surfaceHot: "#6f8dcb",
-        surfaceWarm: "#bad0ff",
-        industrialHot: "#7ec3ff",
-        industrialCool: "#d9f1ff",
-        crystalHot: "#9db8ff",
-        crystalCool: "#edf5ff",
-        coreHot: "#ffb7b0",
-        coreCool: "#ffe6e3",
-      },
     },
-    objective: { requirements: { ore: 700, docksRequired: 2 } },
-    payoutCredits: 8900,
-    radiusBlocks: 46,
-    coreRadiusBlocks: 4,
-    sectors: ["surface", "industrial"],
-    materialBias: { ore: 1.18, platinum: 0.94, crystal: 0.42 },
-    blockHpBonus: 0,
-    hazardRateMult: 1,
-    sectorCompletionMult: 1,
-    hasCoreEvent: false,
   },
   {
     id: "volatile-pocket-1",
+    familyId: "volatileFragment",
     name: "Volatile Pocket",
-    contractType: "field",
     threatLabel: "Fun III",
     contractDetail: "Crystal-rich fragment • instability rises near the center",
+    objective: { requirements: { crystal: 90, minedPercent: 22 } },
+    payoutCredits: 13200,
     visual: {
       badge: "Volatile Job",
       bodyLabel: "Crystal-rich fragment",
-      bodyProfile: "volatile",
       accent: "rgba(204, 144, 255, 0.92)",
       glow: "rgba(155, 98, 255, 0.32)",
       panel: "rgba(37, 20, 62, 0.92)",
       paddingBlock: "15px",
       radius: "23px",
       titleSize: "1.2rem",
-      palette: {
-        surfaceHot: "#8d7cd7",
-        surfaceWarm: "#d5b9ff",
-        industrialHot: "#a892ff",
-        industrialCool: "#ece0ff",
-        crystalHot: "#ff7fee",
-        crystalCool: "#ffd4ff",
-        coreHot: "#ff9ed4",
-        coreCool: "#ffe2f7",
-      },
     },
-    objective: { requirements: { crystal: 90, minedPercent: 22 } },
-    payoutCredits: 13200,
-    radiusBlocks: 52,
-    coreRadiusBlocks: 4,
-    sectors: ["industrial", "crystalFault", "coreShell"],
-    materialBias: { ore: 0.4, platinum: 0.98, crystal: 1.9 },
-    blockHpBonus: 1,
-    hazardRateMult: 0.76,
-    sectorCompletionMult: 1.08,
-    hasCoreEvent: false,
+  },
+  {
+    id: "foundry-basin-1",
+    familyId: "fortifiedMoon",
+    name: "Foundry Basin",
+    threatLabel: "Special IV",
+    contractDetail: "Fortified moon • crack the platinum basin",
+    objective: { requirements: { platinum: 220, minedPercent: 24 } },
+    payoutCredits: 17100,
+    visual: {
+      badge: "Basin Job",
+      bodyLabel: "Fortified basin",
+      accent: "rgba(255, 154, 126, 0.92)",
+      glow: "rgba(255, 98, 94, 0.34)",
+      panel: "rgba(60, 20, 24, 0.92)",
+      paddingBlock: "15px",
+      radius: "23px",
+      titleSize: "1.2rem",
+    },
+  },
+  {
+    id: "shiver-spire-1",
+    familyId: "crystalShard",
+    name: "Shiver Spire",
+    threatLabel: "Fun IV",
+    contractDetail: "Tall shard • split crystal and platinum lift",
+    objective: { requirements: { crystal: 140, platinum: 80 } },
+    payoutCredits: 14900,
+    radiusBlocks: 54,
+    visual: {
+      badge: "Spire Job",
+      bodyLabel: "Tall crystal shard",
+      accent: "rgba(168, 222, 255, 0.92)",
+      glow: "rgba(194, 108, 255, 0.3)",
+      panel: "rgba(23, 27, 66, 0.92)",
+      paddingBlock: "14px",
+      radius: "22px",
+      titleSize: "1.18rem",
+    },
+  },
+  {
+    id: "core-scar-survey-1",
+    familyId: "brokenCore",
+    name: "Core Scar Survey",
+    threatLabel: "Special V",
+    contractDetail: "Breached core body • salvage and crystal sweep",
+    objective: { requirements: { crystal: 120, coreSamples: 6 } },
+    payoutCredits: 15800,
+    coreSampleYield: 6,
+    coreSampleNodeCount: 2,
+    visual: {
+      badge: "Scar Survey",
+      bodyLabel: "Breached core body",
+      accent: "rgba(255, 138, 146, 0.92)",
+      glow: "rgba(255, 90, 128, 0.34)",
+      panel: "rgba(61, 21, 36, 0.92)",
+      paddingBlock: "15px",
+      radius: "24px",
+      titleSize: "1.2rem",
+    },
   },
 ];
+
+const FIELD_CONTRACTS = FIELD_CONTRACT_TEMPLATES.map(applyFieldContractFamily);
 
 const SECTOR_BY_ID = Object.fromEntries(SECTORS.map((sector) => [sector.id, sector]));
 const PLANET_BY_ID = Object.fromEntries(PLANETS.map((planet) => [planet.id, planet]));
@@ -809,6 +1029,30 @@ const audio = {
 function cost(ore = 0, platinum = 0, crystal = 0) {
   const base = ore * MATERIAL_SALE_VALUES.ore + platinum * MATERIAL_SALE_VALUES.platinum + crystal * MATERIAL_SALE_VALUES.crystal;
   return Math.round((base * 1.8) / 5) * 5;
+}
+
+function applyFieldContractFamily(template) {
+  const family = CELESTIAL_FAMILY_BY_ID[template.familyId];
+  const defaults = family?.defaults || {};
+  return {
+    contractType: "field",
+    familyId: template.familyId,
+    ...defaults,
+    ...template,
+    sectors: template.sectors || defaults.sectors || ["surface", "industrial"],
+    materialBias: { ...(defaults.materialBias || {}), ...(template.materialBias || {}) },
+    radiusBlocks: template.radiusBlocks ?? family?.radiusBlocks ?? PLANET_RADIUS_BLOCKS,
+    coreRadiusBlocks: template.coreRadiusBlocks ?? family?.coreRadiusBlocks ?? CORE_RADIUS_BLOCKS,
+    blockHpBonus: template.blockHpBonus ?? defaults.blockHpBonus ?? 0,
+    hazardRateMult: template.hazardRateMult ?? defaults.hazardRateMult ?? 1,
+    sectorCompletionMult: template.sectorCompletionMult ?? defaults.sectorCompletionMult ?? 1,
+    hasCoreEvent: template.hasCoreEvent ?? defaults.hasCoreEvent ?? family?.contractTendencies?.coresCommon ?? false,
+    payoutCredits: template.payoutCredits ?? Math.round(4200 * (family?.contractTendencies?.payoutMultiplier || 1)),
+    visual: {
+      ...(template.visual || {}),
+      bodyLabel: template.visual?.bodyLabel || family?.label || "Field body",
+    },
+  };
 }
 
 function researchCost(ore = 0, platinum = 0, crystal = 0) {
@@ -887,6 +1131,13 @@ const upgradeNodes = [
   { id: "splash5", x: 340, y: 3930, label: "Cataclysm Array", lane: "Combat Mk II", symbol: "✹", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(160, 208, 160), requires: ["drill12"], effect: { splashRadius: 44, splashFalloff: 0.42 } },
   { id: "fire7", x: 340, y: 4050, label: "Redline Cyclers", lane: "Combat Mk II", symbol: "»", unlockPlanet: "vesper-2", researchId: "siegeProtocols", cost: cost(172, 222, 174), requires: ["splash5"], effect: { rateMult: 0.95 } },
   { id: "laser5", x: 340, y: 4170, label: "Escort Emitter", lane: "Combat Mk II", symbol: "◎", unlockPlanet: "vesper-2", researchId: "triBeamTheory", cost: cost(184, 236, 188), requires: ["fire7"], effect: { addLaser: { color: "#8dffb7", damageMult: 0.72 } } },
+  { id: "missile1", x: 340, y: 4290, label: "Missile Rack", lane: "Combat Mk III", symbol: "✺", unlockPlanet: "vesper-2", researchId: "missileTheory", cost: cost(196, 248, 196), requires: ["laser5"], effect: { missileCount: 1, missileDamage: 1.35, missileRate: 0.82, missileSplashRadius: 42 } },
+  { id: "missile2", x: 340, y: 4410, label: "Burst Tubes", lane: "Combat Mk III", symbol: "✺", unlockPlanet: "vesper-2", researchId: "missileTheory", cost: cost(208, 262, 208), requires: ["missile1"], effect: { missileRate: 0.84, missileDamage: 0.4, missileSplashRadius: 8 } },
+  { id: "drone1", x: 340, y: 4530, label: "Escort Drone", lane: "Combat Mk III", symbol: "◉", unlockPlanet: "vesper-2", researchId: "droneCommand", cost: cost(220, 276, 222), requires: ["missile2"], effect: { droneCount: 1, droneDamage: 0.78, droneRate: 0.88 } },
+  { id: "missile3", x: 340, y: 4650, label: "Seeker Warheads", lane: "Combat Mk III", symbol: "✺", unlockPlanet: "vesper-3", researchId: "orbitalArsenal", cost: cost(234, 294, 238), requires: ["drone1"], effect: { missileDamage: 0.56, missileRate: 0.88, missileSplashRadius: 10 } },
+  { id: "drone2", x: 340, y: 4770, label: "Twin Drone Bus", lane: "Combat Mk III", symbol: "◉", unlockPlanet: "vesper-3", researchId: "orbitalArsenal", cost: cost(248, 312, 254), requires: ["missile3"], effect: { droneCount: 1, droneDamage: 0.34, droneRate: 0.9 } },
+  { id: "missile4", x: 340, y: 4890, label: "Avalanche Pods", lane: "Combat Mk III", symbol: "✺", unlockPlanet: "vesper-3", researchId: "orbitalArsenal", cost: cost(264, 334, 272), requires: ["drone2"], effect: { missileCount: 1, missileDamage: 0.62, missileRate: 0.9, missileSplashRadius: 12 } },
+  { id: "drone3", x: 340, y: 5010, label: "Sentinel Logic", lane: "Combat Mk III", symbol: "◉", unlockPlanet: "vesper-3", researchId: "autonomousSiege", cost: cost(278, 352, 290), requires: ["missile4"], effect: { droneDamage: 0.42, droneRate: 0.9, droneOrbitRadius: 8 } },
 
   { id: "fuel1", x: 600, y: 90, label: "Fuel Tank", lane: "Cargo / Collection", symbol: "⛽", cost: cost(44), requires: [], effect: { fuelMax: 12 } },
   { id: "cargo1", x: 600, y: 210, label: "Cargo Rack", lane: "Cargo / Collection", symbol: "◫", cost: cost(52), requires: ["fuel1"], effect: { cargoCap: 5 } },
@@ -922,6 +1173,16 @@ const upgradeNodes = [
   { id: "fuel10", x: 600, y: 3570, label: "Expedition Core", lane: "Cargo Mk II", symbol: "⛽", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(186, 234, 182), requires: ["cargo10"], effect: { fuelMax: 20 } },
   { id: "magnet4", x: 600, y: 3690, label: "Void Scoop", lane: "Cargo Mk II", symbol: "🧲", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(198, 248, 196), requires: ["fuel10"], effect: { magnet: 14 } },
   { id: "trade3", x: 760, y: 3810, label: "Black Market Routes", lane: "Cargo Mk II", symbol: "¤", unlockPlanet: "vesper-2", researchId: "fortressDoctrine", cost: cost(214, 268, 212), requires: ["magnet4"], effect: { sellValueMult: { ore: 1.16, platinum: 1.2, crystal: 1.24 } } },
+  { id: "cargo11", x: 600, y: 3930, label: "Convoy Holds", lane: "Cargo Mk III", symbol: "◫", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(228, 286, 230), requires: ["trade3"], effect: { cargoCap: 10 } },
+  { id: "fuel11", x: 600, y: 4050, label: "Blue Arc Cells", lane: "Cargo Mk III", symbol: "⛽", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(242, 304, 246), requires: ["cargo11"], effect: { fuelMax: 18 } },
+  { id: "cargo12", x: 600, y: 4170, label: "Carrier Lattice", lane: "Cargo Mk III", symbol: "◫", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(256, 322, 264), requires: ["fuel11"], effect: { cargoCap: 10 } },
+  { id: "fuelEco6", x: 600, y: 4290, label: "Slipstream Reclaimers", lane: "Cargo Mk III", symbol: "◌", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(270, 340, 280), requires: ["cargo12"], effect: { thrustFuelMult: 0.86, collisionFuelMult: 0.84 } },
+  { id: "cargo13", x: 600, y: 4410, label: "Atlas Frames", lane: "Cargo Mk III", symbol: "◫", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(286, 360, 298), requires: ["fuelEco6"], effect: { cargoCap: 12 } },
+  { id: "fuel12", x: 600, y: 4530, label: "Atlas Reservoir", lane: "Cargo Mk III", symbol: "⛽", unlockPlanet: "vesper-3", researchId: "hyperLogistics", cost: cost(302, 380, 316), requires: ["cargo13"], effect: { fuelMax: 20 } },
+  { id: "trade4", x: 760, y: 4530, label: "Exchange Syndicate", lane: "Cargo Mk III", symbol: "¤", unlockPlanet: "vesper-3", researchId: "marketDominion", cost: cost(318, 402, 334), requires: ["cargo13"], effect: { sellValueMult: { ore: 1.18, platinum: 1.22, crystal: 1.26 } } },
+  { id: "cargo14", x: 600, y: 4650, label: "Titan Compartments", lane: "Cargo Mk III", symbol: "◫", unlockPlanet: "vesper-3", researchId: "marketDominion", cost: cost(334, 424, 354), requires: ["fuel12"], effect: { cargoCap: 12 } },
+  { id: "fuel13", x: 600, y: 4770, label: "Crown Reactor", lane: "Cargo Mk III", symbol: "⛽", unlockPlanet: "vesper-3", researchId: "marketDominion", cost: cost(350, 444, 372), requires: ["cargo14"], effect: { fuelMax: 22 } },
+  { id: "cargo15", x: 600, y: 4890, label: "Sovereign Holds", lane: "Cargo Mk III", symbol: "◫", unlockPlanet: "vesper-3", researchId: "marketDominion", cost: cost(368, 468, 394), requires: ["fuel13"], effect: { cargoCap: 15 } },
 ];
 
 const RESEARCH_NODES = [
@@ -935,14 +1196,22 @@ const RESEARCH_NODES = [
   { id: "triBeamTheory", label: "Tri-Beam Theory", description: "Authorize the third and escort beam emitters for sustained core extraction.", cost: researchCost(20, 48, 36), requires: ["deepCoreOptics"], requiresPlanet: "vesper-2" },
   { id: "siegeProtocols", label: "Siege Protocols", description: "Unlock the heaviest projectile and AOE refinements for hardened breach work.", cost: researchCost(26, 54, 42), requires: ["triBeamTheory"], requiresPlanet: "vesper-2" },
   { id: "fortressDoctrine", label: "Fortress Doctrine", description: "Authorize the final cargo and shield package for maximum-endurance contracts.", cost: researchCost(24, 58, 48), requires: ["shieldTheory", "expeditionRigs", "siegeProtocols"], requiresPlanet: "vesper-2" },
+  { id: "vesper3Charter", label: "Vesper-3 Charter", description: "Spend the final expedition package to route a breach run into Vesper-3.", cost: researchCost(28, 72, 64), requires: ["fortressDoctrine"], planetClearRequirement: "vesper-2", unlockPlanet: "vesper-3" },
+  { id: "missileTheory", label: "Missile Theory", description: "Authorize auto-seeking breaching missiles with splash warheads.", cost: researchCost(22, 64, 54), requires: ["siegeProtocols"], requiresPlanet: "vesper-2" },
+  { id: "droneCommand", label: "Drone Command", description: "Authorize support drones that orbit the hull and chip away at nearby blocks.", cost: researchCost(24, 66, 58), requires: ["missileTheory"], requiresPlanet: "vesper-2" },
+  { id: "hyperLogistics", label: "Hyper Logistics", description: "Open the deep cargo spine, long-burn cells, and freight systems needed for 150-capacity rigs.", cost: researchCost(26, 74, 62), requires: ["vesper3Charter", "expeditionRigs"], requiresPlanet: "vesper-3" },
+  { id: "marketDominion", label: "Market Dominion", description: "Authorize the heaviest trade and carrier frames for late-contract hauling.", cost: researchCost(28, 84, 70), requires: ["hyperLogistics"], requiresPlanet: "vesper-3" },
+  { id: "orbitalArsenal", label: "Orbital Arsenal", description: "Open the advanced missile bus and twin-drone package for the last breach contracts.", cost: researchCost(30, 86, 76), requires: ["droneCommand", "vesper3Charter"], requiresPlanet: "vesper-3" },
+  { id: "autonomousSiege", label: "Autonomous Siege", description: "Refine drone logic for persistent support fire in the deepest shell bands.", cost: researchCost(32, 92, 82), requires: ["orbitalArsenal"], requiresPlanet: "vesper-3" },
 ];
 
 const SHIP_SKINS = [
-  { id: "standard", label: "Standard Hull", rewardAchievementId: null, bonus: {} },
-  { id: "prospector", label: "Prospector Skin", rewardAchievementId: "ore_1000", bonus: { cargoCap: 4, fuelMax: 8 } },
-  { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_1000", bonus: { hpMax: 12, bulletDamage: 0.18 } },
-  { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "contracts_1", bonus: { magnet: 10, thrustFuelMult: 0.94 } },
-  { id: "archon", label: "Archon Skin", rewardAchievementId: "fortress_doctrine", bonus: { hpMax: 16, shieldMult: 0.92, fuelMax: 10, bulletDamage: 0.14 } },
+  { id: "standard", label: "Standard Hull", rewardAchievementId: null, bonus: {}, style: { hull: "#89f3ff", canopy: "#f6fbff", wing: "#2ed7ff", trim: "#0b2e4a", thruster: "#ffb85b", fin: "split", nose: "arrow" } },
+  { id: "prospector", label: "Prospector Skin", rewardAchievementId: "ore_1000", bonus: { cargoCap: 4, fuelMax: 8 }, style: { hull: "#ffd86f", canopy: "#fff4cf", wing: "#ff9b45", trim: "#5f2a05", thruster: "#ffe08c", fin: "hauler", nose: "wide" } },
+  { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_1000", bonus: { hpMax: 12, bulletDamage: 0.18 }, style: { hull: "#ff8d78", canopy: "#ffe3d8", wing: "#ff4d61", trim: "#541222", thruster: "#ffcf72", fin: "hammer", nose: "ram" } },
+  { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "contracts_1", bonus: { magnet: 10, thrustFuelMult: 0.94 }, style: { hull: "#8bf6c4", canopy: "#e8fff6", wing: "#59d6ff", trim: "#053947", thruster: "#8dffff", fin: "swept", nose: "needle" } },
+  { id: "archon", label: "Archon Skin", rewardAchievementId: "fortress_doctrine", bonus: { hpMax: 16, shieldMult: 0.92, fuelMax: 10, bulletDamage: 0.14 }, style: { hull: "#d1a0ff", canopy: "#fff1ff", wing: "#ff85d5", trim: "#2b144f", thruster: "#ffe88d", fin: "crown", nose: "spire" } },
+  { id: "sovereign", label: "Sovereign Skin", rewardAchievementId: "core_planets_3", bonus: { hpMax: 18, cargoCap: 6, fuelMax: 12, bulletDamage: 0.18, shieldMult: 0.9 }, style: { hull: "#7fb2ff", canopy: "#f0f6ff", wing: "#ffd76d", trim: "#0f1e5d", thruster: "#fff0b8", fin: "royal", nose: "spire" } },
 ];
 
 const SHIP_SKIN_BY_ID = Object.fromEntries(SHIP_SKINS.map((skin) => [skin.id, skin]));
@@ -961,21 +1230,36 @@ const HIDDEN_ACHIEVEMENTS = [
   { id: "platinum_100", label: "Platinum Spark", type: "platinumMined", threshold: 100 },
   { id: "platinum_1000", label: "Platinum Vein", type: "platinumMined", threshold: 1000 },
   { id: "platinum_10000", label: "Platinum Vault", type: "platinumMined", threshold: 10000 },
+  { id: "platinum_50000", label: "Platinum Reserve", type: "platinumMined", threshold: 50000 },
   { id: "crystal_50", label: "Crystal Static", type: "crystalMined", threshold: 50 },
   { id: "crystal_500", label: "Crystal Choir", type: "crystalMined", threshold: 500 },
   { id: "crystal_5000", label: "Crystal Cathedral", type: "crystalMined", threshold: 5000 },
+  { id: "crystal_25000", label: "Crystal Dynasty", type: "crystalMined", threshold: 25000 },
   { id: "contracts_1", label: "First Charter", type: "fieldContractsCompleted", threshold: 1 },
   { id: "contracts_5", label: "Freelancer", type: "fieldContractsCompleted", threshold: 5 },
   { id: "contracts_20", label: "Contract Fleet", type: "fieldContractsCompleted", threshold: 20 },
+  { id: "contracts_50", label: "Contract Syndicate", type: "fieldContractsCompleted", threshold: 50 },
   { id: "core_planets_1", label: "Corebreaker", type: "corePlanetsCleared", threshold: 1 },
+  { id: "core_planets_2", label: "Twin World Breach", type: "corePlanetsCleared", threshold: 2 },
+  { id: "core_planets_3", label: "World Line Broken", type: "corePlanetsCleared", threshold: 3, rewardSkinId: "sovereign" },
   { id: "research_3", label: "Theory Stack", type: "researchUnlocked", threshold: 3 },
   { id: "research_8", label: "Black Archive", type: "researchUnlocked", threshold: 8 },
+  { id: "research_12", label: "Deep Archive", type: "researchUnlocked", threshold: 12 },
+  { id: "research_16", label: "Singularity Library", type: "researchUnlocked", threshold: 16 },
   { id: "upgrades_10", label: "Systems Online", type: "upgradesUnlocked", threshold: 10 },
   { id: "upgrades_30", label: "Refit Complete", type: "upgradesUnlocked", threshold: 30 },
   { id: "upgrades_60", label: "Full Arsenal", type: "upgradesUnlocked", threshold: 60 },
+  { id: "upgrades_80", label: "Fleet Standard", type: "upgradesUnlocked", threshold: 80 },
+  { id: "upgrades_95", label: "Shipwright Prime", type: "upgradesUnlocked", threshold: 95 },
+  { id: "core_samples_25", label: "Salvage Drawer", type: "coreSamplesRecovered", threshold: 25 },
+  { id: "core_samples_100", label: "Core Reliquary", type: "coreSamplesRecovered", threshold: 100 },
+  { id: "missiles_250", label: "Warhead Choir", type: "missilesLaunched", threshold: 250 },
+  { id: "drone_bursts_500", label: "Drone Nest", type: "droneBursts", threshold: 500 },
   { id: "perfect_contract_1", label: "Perfect Survey", type: "perfectFieldContracts", threshold: 1, rewardSkinId: "surveyor" },
   { id: "perfect_planet_1", label: "World Hollowed", type: "perfectPlanets", threshold: 1 },
   { id: "fortress_doctrine", label: "Fortress Doctrine", type: "researchNodeUnlocked", threshold: "fortressDoctrine", rewardSkinId: "archon" },
+  { id: "autonomous_siege", label: "Autonomous Siege", type: "researchNodeUnlocked", threshold: "autonomousSiege" },
+  { id: "build_complete", label: "Build Completed", type: "buildComplete", threshold: 1 },
 ];
 
 const HIDDEN_ACHIEVEMENT_BY_ID = Object.fromEntries(HIDDEN_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement]));
@@ -986,6 +1270,41 @@ function clamp(value, min, max) {
 
 function colorWithAlpha(color, alphaHex = "ff") {
   return typeof color === "string" && color.startsWith("#") && color.length === 7 ? `${color}${alphaHex}` : color;
+}
+
+function hexToRgb(hex) {
+  if (typeof hex !== "string" || !hex.startsWith("#")) return null;
+  const normalized = hex.length === 4
+    ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+    : hex.length >= 7 ? hex.slice(0, 7) : hex;
+  if (normalized.length !== 7) return null;
+  return {
+    r: Number.parseInt(normalized.slice(1, 3), 16),
+    g: Number.parseInt(normalized.slice(3, 5), 16),
+    b: Number.parseInt(normalized.slice(5, 7), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  const toHex = (value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function mixHex(base, tint, amount = 0) {
+  const baseRgb = hexToRgb(base);
+  const tintRgb = hexToRgb(tint);
+  if (!baseRgb || !tintRgb || amount <= 0) return base;
+  const t = clamp(amount, 0, 1);
+  return rgbToHex({
+    r: lerp(baseRgb.r, tintRgb.r, t),
+    g: lerp(baseRgb.g, tintRgb.g, t),
+    b: lerp(baseRgb.b, tintRgb.b, t),
+  });
+}
+
+function shiftHex(hex, amount = 0) {
+  if (!amount) return hex;
+  return amount > 0 ? mixHex(hex, "#ffffff", amount) : mixHex(hex, "#000000", Math.abs(amount));
 }
 
 function length2D(x, y) {
@@ -1052,6 +1371,8 @@ function defaultLifetimeStats() {
     corePlanetsCleared: 0,
     perfectFieldContracts: 0,
     perfectPlanets: 0,
+    missilesLaunched: 0,
+    droneBursts: 0,
   };
 }
 
@@ -1152,12 +1473,19 @@ function getActiveContractDefinition() {
     : getPlanetDefinition(progress.currentPlanetId);
 }
 
+function getCelestialFamily(contract) {
+  if (!contract || contract.contractType !== "field") return null;
+  return CELESTIAL_FAMILY_BY_ID[contract.familyId] || null;
+}
+
 function contractRadiusBlocks(contract) {
-  return contract?.radiusBlocks || PLANET_RADIUS_BLOCKS;
+  const family = getCelestialFamily(contract);
+  return contract?.radiusBlocks ?? family?.radiusBlocks ?? PLANET_RADIUS_BLOCKS;
 }
 
 function contractCoreRadiusBlocks(contract) {
-  return contract?.coreRadiusBlocks ?? CORE_RADIUS_BLOCKS;
+  const family = getCelestialFamily(contract);
+  return contract?.coreRadiusBlocks ?? family?.coreRadiusBlocks ?? CORE_RADIUS_BLOCKS;
 }
 
 function contractPlanetRadius(contract) {
@@ -1173,12 +1501,90 @@ function contractHasCoreEvent(contract) {
 }
 
 function contractPalette(contract) {
-  return contract?.visual?.palette || null;
+  const family = getCelestialFamily(contract);
+  const basePalette = family?.palette;
+  if (!basePalette) return contract?.paletteOverrides || null;
+  const shift = contract?.paletteShift || 0;
+  const shiftedPalette = Object.fromEntries(Object.entries(basePalette).map(([key, value]) => [key, shiftHex(value, shift)]));
+  return { ...shiftedPalette, ...(contract?.paletteOverrides || {}) };
 }
 
 function contractBodyProfile(contract) {
-  return contract?.visual?.bodyProfile || (contract?.contractType === "field" ? "asteroid" : "planet");
+  const family = getCelestialFamily(contract);
+  return contract?.shapeProfile || family?.shapeProfile || (contract?.contractType === "field" ? "asteroid" : "planet");
 }
+
+function contractMaterialTintBias(contract, material) {
+  const family = getCelestialFamily(contract);
+  return contract?.materialTintBias?.[material] ?? family?.materialTintBias?.[material] ?? 0;
+}
+
+function paletteColorForContract(contract, paletteKey, material, fallback) {
+  const palette = contractPalette(contract);
+  let color = palette?.[paletteKey] || fallback;
+  const tintColor = MATERIAL_TINT_COLORS[material];
+  const tintBias = contractMaterialTintBias(contract, material);
+  if (tintColor && tintBias > 0) color = mixHex(color, tintColor, tintBias);
+  return color;
+}
+
+const SHAPE_PROFILE_GENERATORS = {
+  planet({ dist, radiusBlocks }) {
+    return dist <= radiusBlocks;
+  },
+  moon({ gx, gy, dist, radiusBlocks, coreRadiusBlocks }) {
+    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * 1.08)
+      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.94);
+    return ellipse <= 1.03 && dist >= coreRadiusBlocks;
+  },
+  micro({ angle, dist, radiusBlocks }) {
+    const ridge = Math.sin(angle * 4.2) * 1.5 + Math.cos(angle * 7.3) * 0.8;
+    return dist <= radiusBlocks - 1 + ridge;
+  },
+  asteroid({ angle, dist, radiusBlocks }) {
+    const jag = Math.sin(angle * 6.4 + dist * 0.08) * 2.6 + Math.cos(angle * 2.7 - dist * 0.04) * 1.3;
+    return dist <= radiusBlocks - 1 + jag;
+  },
+  shard({ angle, gx, gy, radiusBlocks }) {
+    const diamond = Math.abs(gx) * 0.86 + Math.abs(gy) * 1.12;
+    const twist = Math.sin(angle * 4.8) * 2.1;
+    return diamond <= radiusBlocks * 1.08 + twist;
+  },
+  brokenCore({ gx, gy, radiusBlocks, coreRadiusBlocks }) {
+    const craterX = radiusBlocks * 0.14;
+    const craterY = radiusBlocks * 0.12;
+    const craterDx = gx - craterX;
+    const craterDy = gy - craterY;
+    const craterRadius = coreRadiusBlocks + 5;
+    return craterDx * craterDx + craterDy * craterDy >= craterRadius * craterRadius;
+  },
+  terraced({ angle, dist, gy, radiusBlocks }) {
+    const terrace = Math.floor((gy + radiusBlocks) / 6) % 2 === 0 ? 0 : 2.4;
+    return dist <= radiusBlocks - terrace + Math.sin(angle * 2.5) * 0.8;
+  },
+  lean({ gx, gy, radiusBlocks }) {
+    const stretch = gx > 0 ? 0.92 : 1.06;
+    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * stretch * stretch)
+      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.96);
+    return ellipse <= 1.01;
+  },
+  fortified({ angle, dist, radiusBlocks }) {
+    const shell = Math.abs(Math.sin(angle * 8)) * 1.6;
+    return dist <= radiusBlocks - 0.5 + shell;
+  },
+  pocket({ angle, dist, gx, gy, radiusBlocks }) {
+    if (Math.abs(gx) < radiusBlocks * 0.2 && gy < -radiusBlocks * 0.18) return false;
+    return dist <= radiusBlocks + Math.sin(angle * 5.5) * 1.2;
+  },
+  split({ angle, dist, gx, gy, radiusBlocks }) {
+    if (Math.abs(gx) < 2 && Math.abs(gy) < radiusBlocks * 0.55) return false;
+    return dist <= radiusBlocks + Math.cos(angle * 3.5) * 0.9;
+  },
+  volatile({ angle, dist, radiusBlocks }) {
+    const ripple = Math.sin(angle * 9 + dist * 0.12) * 2.3;
+    return dist <= radiusBlocks - 0.8 + ripple;
+  },
+};
 
 function contractCellAllowed(contract, gx, gy, dist, radiusBlocks, coreRadiusBlocks) {
   if (dist > radiusBlocks || dist < coreRadiusBlocks) return false;
@@ -1188,60 +1594,8 @@ function contractCellAllowed(contract, gx, gy, dist, radiusBlocks, coreRadiusBlo
   const edgeNoise = Math.sin(angle * 3 + radiusBlocks * 0.05) * 1.8 + Math.cos(angle * 5 - radiusBlocks * 0.09) * 1.1;
   const profileRadius = radiusBlocks + edgeNoise;
   if (dist > profileRadius) return false;
-  if (profile === "moon") {
-    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * 1.08)
-      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.94);
-    return ellipse <= 1.03 && dist >= coreRadiusBlocks;
-  }
-  if (profile === "micro") {
-    const ridge = Math.sin(angle * 4.2) * 1.5 + Math.cos(angle * 7.3) * 0.8;
-    return dist <= radiusBlocks - 1 + ridge;
-  }
-  if (profile === "asteroid") {
-    const jag = Math.sin(angle * 6.4 + dist * 0.08) * 2.6 + Math.cos(angle * 2.7 - dist * 0.04) * 1.3;
-    return dist <= radiusBlocks - 1 + jag;
-  }
-  if (profile === "shard") {
-    const diamond = Math.abs(gx) * 0.86 + Math.abs(gy) * 1.12;
-    const twist = Math.sin(angle * 4.8) * 2.1;
-    return diamond <= radiusBlocks * 1.08 + twist;
-  }
-  if (profile === "brokenCore") {
-    const craterX = radiusBlocks * 0.14;
-    const craterY = radiusBlocks * 0.12;
-    const craterDx = gx - craterX;
-    const craterDy = gy - craterY;
-    const craterRadius = coreRadiusBlocks + 5;
-    if (craterDx * craterDx + craterDy * craterDy < craterRadius * craterRadius) return false;
-    return true;
-  }
-  if (profile === "terraced") {
-    const terrace = Math.floor((gy + radiusBlocks) / 6) % 2 === 0 ? 0 : 2.4;
-    return dist <= radiusBlocks - terrace + Math.sin(angle * 2.5) * 0.8;
-  }
-  if (profile === "lean") {
-    const stretch = gx > 0 ? 0.92 : 1.06;
-    const ellipse = (gx * gx) / Math.max(1, radiusBlocks * radiusBlocks * stretch * stretch)
-      + (gy * gy) / Math.max(1, radiusBlocks * radiusBlocks * 0.96);
-    return ellipse <= 1.01;
-  }
-  if (profile === "fortified") {
-    const shell = Math.abs(Math.sin(angle * 8)) * 1.6;
-    return dist <= radiusBlocks - 0.5 + shell;
-  }
-  if (profile === "pocket") {
-    if (Math.abs(gx) < radiusBlocks * 0.2 && gy < -radiusBlocks * 0.18) return false;
-    return dist <= radiusBlocks + Math.sin(angle * 5.5) * 1.2;
-  }
-  if (profile === "split") {
-    if (Math.abs(gx) < 2 && Math.abs(gy) < radiusBlocks * 0.55) return false;
-    return dist <= radiusBlocks + Math.cos(angle * 3.5) * 0.9;
-  }
-  if (profile === "volatile") {
-    const ripple = Math.sin(angle * 9 + dist * 0.12) * 2.3;
-    return dist <= radiusBlocks - 0.8 + ripple;
-  }
-  return true;
+  const generator = SHAPE_PROFILE_GENERATORS[profile] || SHAPE_PROFILE_GENERATORS.planet;
+  return generator({ gx, gy, dist, angle, radiusBlocks, coreRadiusBlocks });
 }
 
 function contractObjectiveLabel(contract) {
@@ -1415,10 +1769,13 @@ function achievementProgressValue(achievement) {
     case "oreMined":
     case "platinumMined":
     case "crystalMined":
+    case "coreSamplesRecovered":
     case "fieldContractsCompleted":
     case "corePlanetsCleared":
     case "perfectFieldContracts":
     case "perfectPlanets":
+    case "missilesLaunched":
+    case "droneBursts":
       return stats[achievement.type] || 0;
     case "researchUnlocked":
       return researchCount();
@@ -1426,6 +1783,8 @@ function achievementProgressValue(achievement) {
       return upgradeCount();
     case "researchNodeUnlocked":
       return progress.research?.[achievement.threshold] ? 1 : 0;
+    case "buildComplete":
+      return progress.buildComplete ? 1 : 0;
     default:
       return 0;
   }
@@ -1599,6 +1958,16 @@ function previewTextForNode(node, purchased) {
     const oreBefore = purchased ? Math.round(values.ore / (effect.sellValueMult.ore || 1)) : values.ore;
     const oreAfter = purchased ? values.ore : Math.round(values.ore * (effect.sellValueMult.ore || 1));
     return `${oreBefore} -> ${oreAfter} ore sell`;
+  }
+  if (effect.missileCount || effect.missileDamage || effect.missileRate) {
+    const count = state.ship.missileCount + (purchased ? 0 : (effect.missileCount || 0));
+    const damage = state.ship.missileDamage + (purchased ? 0 : (effect.missileDamage || 0));
+    return `${count} rack • ${damage.toFixed(1)} dmg`;
+  }
+  if (effect.droneCount || effect.droneDamage || effect.droneRate) {
+    const count = state.ship.droneCount + (purchased ? 0 : (effect.droneCount || 0));
+    const damage = state.ship.droneDamage + (purchased ? 0 : (effect.droneDamage || 0));
+    return `${count} drone • ${damage.toFixed(1)} dmg`;
   }
   if (effect.splashRadius) {
     const before = purchased ? effect.splashRadius : state.ship.bulletSplashRadius;
@@ -1784,6 +2153,7 @@ function defaultProgress() {
     achievements: {},
     unlockedSkins: ["standard"],
     activeSkinId: "standard",
+    buildComplete: false,
     lifetimeStats: defaultLifetimeStats(),
     research: {},
     upgrades: {},
@@ -1821,6 +2191,7 @@ function loadProgress() {
     if (!merged.unlockedSkins.includes("standard")) merged.unlockedSkins.unshift("standard");
     merged.activeSkinId = SHIP_SKIN_BY_ID[merged.activeSkinId] ? merged.activeSkinId : merged.unlockedSkins[merged.unlockedSkins.length - 1] || "standard";
     if (!merged.unlockedSkins.includes(merged.activeSkinId)) merged.unlockedSkins.push(merged.activeSkinId);
+    merged.buildComplete = !!merged.buildComplete || PLANETS.every((planet) => merged.planetProgress?.[planet.id]?.coreCleared);
     merged.lifetimeStats = normalizeLifetimeStats(merged.lifetimeStats);
     merged.research = typeof merged.research === "object" && merged.research ? { ...merged.research } : {};
     merged.currentPlanetId = getPlanetDefinition(merged.currentPlanetId).id;
@@ -2186,6 +2557,7 @@ function makeSortieReport(success, delivered, reportPlanetSnapshot = null, repor
     planetCompletionPercent: planetSnapshot.completionPercent,
     coreUnlocked: planetSnapshot.coreUnlocked,
     coreCleared: planetSnapshot.coreCleared,
+    buildComplete: !!progress.buildComplete && !!planetDefinition.finalPlanet && !!planetSnapshot.coreCleared,
     coreStatusLabel: hasCoreEvent ? (planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed") : "No Core",
   };
 }
@@ -2246,6 +2618,17 @@ function makeState() {
       bulletSplashRadius: 0,
       bulletSplashFalloff: 0,
       rateMult: 1,
+      missileCooldown: 0,
+      missileRate: 0,
+      missileDamage: 0,
+      missileCount: 0,
+      missileSplashRadius: 0,
+      missileSplashFalloff: 0.44,
+      droneCount: 0,
+      droneDamage: 0,
+      droneRate: 0,
+      droneCooldown: 0,
+      droneOrbitRadius: 28,
       hasLaser: false,
       laserDamage: 1,
       laserFuelMult: 1,
@@ -2268,6 +2651,7 @@ function makeState() {
     bullets: [],
     pickups: [],
     particles: [],
+    drones: [],
     hazards: [],
     damageShake: 0,
     wreckTimer: 0,
@@ -2314,6 +2698,8 @@ function makeState() {
       bulletDamage: 0,
       laserPulses: 0,
       laserDamage: 0,
+      missilesLaunched: 0,
+      droneBursts: 0,
       materials: emptyMaterials(),
       coreSamples: 0,
       peakCargo: 0,
@@ -2534,11 +2920,10 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
   targetCtx.strokeStyle = "rgba(255, 245, 215, 0.28)";
   targetCtx.lineWidth = 1;
   targetCtx.strokeRect(left + 0.5, top + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
-  const palette = contractPalette(state?.contract);
   targetCtx.fillStyle = "rgba(255, 255, 255, 0.12)";
   targetCtx.fillRect(left + 2, top + 2, BLOCK_SIZE - 6, 3);
   if (block.material === "platinum") {
-    targetCtx.strokeStyle = palette?.industrialCool ? colorWithAlpha(palette.industrialCool, "dd") : "rgba(149, 239, 255, 0.86)";
+    targetCtx.strokeStyle = colorWithAlpha(paletteColorForContract(state?.contract, "industrialCool", "platinum", "#89efff"), "dd");
     targetCtx.beginPath();
     targetCtx.moveTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.22);
     targetCtx.lineTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.78);
@@ -2546,7 +2931,7 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
     targetCtx.lineTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.78);
     targetCtx.stroke();
   } else if (block.material === "crystal") {
-    targetCtx.strokeStyle = palette?.crystalHot ? colorWithAlpha(palette.crystalHot, "ee") : "rgba(255, 186, 255, 0.92)";
+    targetCtx.strokeStyle = colorWithAlpha(paletteColorForContract(state?.contract, "crystalHot", "crystal", "#f889ff"), "ee");
     targetCtx.beginPath();
     targetCtx.moveTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.12);
     targetCtx.lineTo(left + BLOCK_SIZE * 0.86, top + BLOCK_SIZE * 0.5);
@@ -2568,6 +2953,7 @@ function snapCameraToTarget() {
 function applyUpgrades() {
   const ship = state.ship;
   const skinBonus = currentSkin().bonus || {};
+  const droneResearchUnlocked = !!progress.research?.droneCommand;
   ship.fuelMax = 120;
   ship.hpMax = 80;
   ship.cargoCap = 28;
@@ -2581,6 +2967,17 @@ function applyUpgrades() {
   ship.bulletSplashRadius = 0;
   ship.bulletSplashFalloff = 0;
   ship.rateMult = 1;
+  ship.missileCooldown = 0;
+  ship.missileRate = 0;
+  ship.missileDamage = 0;
+  ship.missileCount = 0;
+  ship.missileSplashRadius = 0;
+  ship.missileSplashFalloff = 0.44;
+  ship.droneCount = 0;
+  ship.droneDamage = 0;
+  ship.droneRate = 0;
+  ship.droneCooldown = 0;
+  ship.droneOrbitRadius = 28;
   ship.hasLaser = false;
   ship.laserDamage = 1;
   ship.laserFuelMult = 1;
@@ -2618,6 +3015,20 @@ function applyUpgrades() {
     if (effect.splashRadius) ship.bulletSplashRadius = Math.max(ship.bulletSplashRadius, effect.splashRadius);
     if (effect.splashFalloff) ship.bulletSplashFalloff = Math.max(ship.bulletSplashFalloff, effect.splashFalloff);
     if (effect.rateMult) ship.rateMult *= effect.rateMult;
+    if (effect.missileCount) ship.missileCount += effect.missileCount;
+    if (effect.missileDamage) ship.missileDamage += effect.missileDamage;
+    if (effect.missileRate) {
+      ship.missileRate = ship.missileRate > 0 ? ship.missileRate * effect.missileRate : effect.missileRate;
+    }
+    if (effect.missileSplashRadius) ship.missileSplashRadius = Math.max(ship.missileSplashRadius, effect.missileSplashRadius);
+    if (droneResearchUnlocked) {
+      if (effect.droneCount) ship.droneCount += effect.droneCount;
+      if (effect.droneDamage) ship.droneDamage += effect.droneDamage;
+      if (effect.droneRate) {
+        ship.droneRate = ship.droneRate > 0 ? ship.droneRate * effect.droneRate : effect.droneRate;
+      }
+      if (effect.droneOrbitRadius) ship.droneOrbitRadius += effect.droneOrbitRadius;
+    }
     if (effect.unlockLaser) {
       ship.hasLaser = true;
       if (!ship.lasers.some((laser) => laser.id === "amber")) {
@@ -2643,6 +3054,7 @@ function applyUpgrades() {
     if (effect.collisionFuelMult) ship.collisionFuelMult *= effect.collisionFuelMult;
     if (effect.collisionCostMult) ship.collisionCostMult *= effect.collisionCostMult;
   }
+  syncDroneState();
 }
 
 function resetSortie() {
@@ -2737,6 +3149,7 @@ function selectPlanet(direction) {
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   showHangarStatus(`Contract routed to ${getActiveContractDefinition().name}.`);
   syncUi();
@@ -2811,6 +3224,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
   progress.hasSeenTip = true;
   saveProgress();
   applyUpgrades();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -2850,6 +3264,7 @@ function showHangarScreen() {
   ui.hangarScreen.classList.add("visible");
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -2946,7 +3361,7 @@ function showHangarStatus(message, duration = 3.6) {
 }
 
 function setHangarView(view) {
-  state.hangarView = view === "research" ? "research" : view === "skins" ? "skins" : "upgrades";
+  state.hangarView = view === "research" ? "research" : view === "skins" ? "skins" : view === "logbook" ? "logbook" : "upgrades";
   syncUi();
 }
 
@@ -2969,6 +3384,7 @@ function buyNode(id) {
   playUnlock();
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -2990,6 +3406,7 @@ function buyResearchNode(id) {
   playUnlock();
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -3006,6 +3423,7 @@ function sellMaterial(material, amount = progress.bank[material] || 0) {
   saveProgress();
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -3024,6 +3442,7 @@ function sellAllMaterials() {
   saveProgress();
   renderUpgradeTree();
   renderResearchTree();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -3115,12 +3534,62 @@ function renderResearchTree() {
   }
 }
 
+function renderLogbook() {
+  const clearedCorePlanets = PLANETS.filter((planet) => progress.planetProgress?.[planet.id]?.coreCleared).length;
+  const unlockedAchievements = HIDDEN_ACHIEVEMENTS.filter((achievement) => hiddenAchievementUnlocked(achievement.id));
+  const lockedCount = HIDDEN_ACHIEVEMENTS.length - unlockedAchievements.length;
+  const familyCards = CELESTIAL_FAMILIES.map((family) => {
+    const contractCount = FIELD_CONTRACTS.filter((contract) => contract.familyId === family.id).length;
+    const tendency = family.contractTendencies?.commonObjectives?.slice(0, 2).join(" / ") || "mixed";
+    return `<div class="logbook-chip"><strong>${family.label}</strong><br>${family.sizeClass} • ${contractCount} jobs • ${tendency}</div>`;
+  }).join("");
+  const milestoneCards = unlockedAchievements.length
+    ? unlockedAchievements.slice(-8).reverse().map((achievement) => `<div class="logbook-chip">${achievement.label}</div>`).join("")
+    : `<div class="logbook-chip">No milestones logged yet.</div>`;
+  const activeCore = getPlanetDefinition(progress.currentPlanetId);
+  const activeField = getFieldContractDefinition(progress.currentFieldContractId);
+  ui.logbookTree.innerHTML = `
+    <section class="logbook-section">
+      <h4>Campaign</h4>
+      <div class="logbook-grid">
+        <div class="logbook-row"><span>Status</span><strong>${progress.buildComplete ? "Build Cleared" : "In Progress"}</strong></div>
+        <div class="logbook-row"><span>Core Worlds</span><strong>${clearedCorePlanets} / ${PLANETS.length}</strong></div>
+        <div class="logbook-row"><span>Active World</span><strong>${activeCore.name}</strong></div>
+        <div class="logbook-row"><span>Field Clears</span><strong>${fmt(progress.lifetimeStats.fieldContractsCompleted || 0)}</strong></div>
+      </div>
+      <p>${progress.buildComplete ? "Vesper-3 is down. The current build is fully cleared." : "Break core worlds, cash field jobs, and finish the charter ladder."}</p>
+    </section>
+    <section class="logbook-section">
+      <h4>Routes</h4>
+      <div class="logbook-grid">
+        <div class="logbook-row"><span>Core Route</span><strong>${activeCore.name}</strong></div>
+        <div class="logbook-row"><span>Field Route</span><strong>${activeField.name}</strong></div>
+      </div>
+      <p>${activeField.contractDetail}. Goal: ${contractObjectiveLabel(activeField)}.</p>
+    </section>
+    <section class="logbook-section">
+      <h4>Families</h4>
+      <div class="logbook-list">${familyCards}</div>
+    </section>
+    <section class="logbook-section">
+      <h4>Milestones</h4>
+      <div class="logbook-grid">
+        <div class="logbook-row"><span>Unlocked</span><strong>${unlockedAchievements.length}</strong></div>
+        <div class="logbook-row"><span>Hidden</span><strong>${lockedCount}</strong></div>
+        <div class="logbook-row"><span>Skins</span><strong>${progress.unlockedSkins.length} / ${SHIP_SKINS.length}</strong></div>
+      </div>
+      <div class="logbook-list">${milestoneCards}</div>
+    </section>
+  `;
+}
+
 function equipSkin(skinId) {
   if (!progress.unlockedSkins.includes(skinId) || progress.activeSkinId === skinId) return;
   progress.activeSkinId = skinId;
   applyUpgrades();
   showHangarStatus(`${SHIP_SKIN_BY_ID[skinId].label} equipped.`);
   saveProgress();
+  renderLogbook();
   renderSkinsTree();
   syncUi();
 }
@@ -3219,27 +3688,30 @@ function setupUpgradeTreePan() {
 }
 
 function blockColor(block) {
-  const palette = contractPalette(state?.contract);
   const visualHp = blockVisualHp(block);
   if (block.isCoreSample || block.material === "coreSample") {
     return visualHp >= 12 ? "#fff5b8" : visualHp >= 9 ? "#ffd86b" : visualHp >= 6 ? "#ffae5d" : visualHp >= 3 ? "#ff7b47" : "#8cffba";
   }
   if (block.sectorId === "surface") {
-    return visualHp >= 3 ? (palette?.surfaceHot || "#ff8c63") : visualHp === 2 ? (palette?.surfaceWarm || "#ffd24f") : "#79ff9e";
+    return visualHp >= 3
+      ? paletteColorForContract(state?.contract, "surfaceHot", "ore", "#ff8c63")
+      : visualHp === 2
+        ? paletteColorForContract(state?.contract, "surfaceWarm", "ore", "#ffd24f")
+        : "#79ff9e";
   }
   if (block.sectorId === "industrial") {
     return block.material === "platinum"
-      ? visualHp >= 4 ? (palette?.industrialCool || "#89efff") : visualHp === 3 ? "#b9f5ff" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? (palette?.industrialHot || "#ff7c52") : visualHp === 3 ? "#ffaf70" : visualHp === 2 ? "#ffe07d" : "#8cffba";
+      ? visualHp >= 4 ? paletteColorForContract(state?.contract, "industrialCool", "platinum", "#89efff") : visualHp === 3 ? "#b9f5ff" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+      : visualHp >= 4 ? paletteColorForContract(state?.contract, "industrialHot", "ore", "#ff7c52") : visualHp === 3 ? "#ffaf70" : visualHp === 2 ? "#ffe07d" : "#8cffba";
   }
   if (block.sectorId === "crystalFault") {
     return block.material === "crystal"
-      ? visualHp >= 5 ? (palette?.crystalHot || "#f889ff") : visualHp === 4 ? "#d582ff" : visualHp === 3 ? "#ffacf7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? (palette?.crystalCool || "#7ddcff") : visualHp === 3 ? "#c3f4ff" : visualHp === 2 ? "#ffe07d" : "#8cffba";
+      ? visualHp >= 5 ? paletteColorForContract(state?.contract, "crystalHot", "crystal", "#f889ff") : visualHp === 4 ? "#d582ff" : visualHp === 3 ? "#ffacf7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+      : visualHp >= 4 ? paletteColorForContract(state?.contract, "crystalCool", "platinum", "#7ddcff") : visualHp === 3 ? "#c3f4ff" : visualHp === 2 ? "#ffe07d" : "#8cffba";
   }
   return block.material === "crystal"
-    ? visualHp >= 5 ? (palette?.coreHot || "#ff74ba") : visualHp === 4 ? "#ff9ae0" : visualHp === 3 ? "#ffd1f7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-    : visualHp >= 5 ? (palette?.coreCool || "#93b0ff") : visualHp === 4 ? "#badaff" : visualHp === 3 ? "#ffe3a3" : visualHp === 2 ? "#ffb96d" : "#8cffba";
+    ? visualHp >= 5 ? paletteColorForContract(state?.contract, "coreHot", "crystal", "#ff74ba") : visualHp === 4 ? "#ff9ae0" : visualHp === 3 ? "#ffd1f7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
+    : visualHp >= 5 ? paletteColorForContract(state?.contract, "coreCool", "platinum", "#93b0ff") : visualHp === 4 ? "#badaff" : visualHp === 3 ? "#ffe3a3" : visualHp === 2 ? "#ffb96d" : "#8cffba";
 }
 
 function blockVisualHp(block) {
@@ -3376,6 +3848,61 @@ function nearestLaserTargets(maxCount) {
   return candidates.slice(0, maxCount);
 }
 
+function nearestProjectileTarget(originX, originY, range, { includeCore = false } = {}) {
+  const rangeSq = range * range;
+  const bounds = {
+    left: originX - range,
+    right: originX + range,
+    top: originY - range,
+    bottom: originY + range,
+  };
+  let best = null;
+  forEachBlockInBounds(bounds, (block) => {
+    const distSq = distanceSq(originX, originY, block.x, block.y);
+    if (distSq > rangeSq) return;
+    if (pointInsideDefenseRing(block.x, block.y)) return;
+    if (segmentBlockedByDefenseRing(originX, originY, block.x, block.y)) return;
+    if (!best || distSq < best.distSq) best = { type: "block", block, x: block.x, y: block.y, distSq };
+  });
+  if (includeCore && contractHasCoreEvent(state.contract) && state.planetProgressSnapshot?.coreUnlocked && state.core.phase === "vulnerable") {
+    const distSq = distanceSq(originX, originY, 0, 0);
+    if (distSq <= rangeSq && !segmentBlockedByDefenseRing(originX, originY, 0, 0) && (!best || distSq < best.distSq)) {
+      best = { type: "core", x: 0, y: 0, distSq };
+    }
+  }
+  return best;
+}
+
+function droneAnchor(index) {
+  const total = Math.max(1, state.ship.droneCount || 1);
+  const orbitRadius = state.ship.droneOrbitRadius || 28;
+  const angle = state.time * 1.8 + (index / total) * Math.PI * 2;
+  const wobble = Math.sin(state.time * 3.2 + index) * 4;
+  return {
+    x: state.ship.x + Math.cos(angle) * (orbitRadius + wobble),
+    y: state.ship.y + Math.sin(angle) * (orbitRadius * 0.76 + wobble * 0.4),
+    angle,
+  };
+}
+
+function syncDroneState() {
+  if (!progress.research?.droneCommand) {
+    state.drones = [];
+    return;
+  }
+  const desired = Math.max(0, Math.floor(state.ship.droneCount || 0));
+  if (!Array.isArray(state.drones)) state.drones = [];
+  while (state.drones.length < desired) {
+    const index = state.drones.length;
+    state.drones.push({
+      id: `drone-${index + 1}`,
+      phase: (index / Math.max(1, desired || 1)) * Math.PI * 2,
+      fireJitter: 0.2 + index * 0.08,
+    });
+  }
+  if (state.drones.length > desired) state.drones.length = desired;
+}
+
 function pickupBlockDamage(block, damage) {
   if (!block || !block.alive) return false;
   const previousVisualHp = blockVisualHp(block);
@@ -3413,13 +3940,12 @@ function pickupBlockDamage(block, damage) {
 }
 
 function recordDamage(source, amount) {
-  if (source === "bullet") state.runStats.bulletDamage += amount;
+  if (source === "bullet" || source === "missile" || source === "drone") state.runStats.bulletDamage += amount;
   if (source === "laser") state.runStats.laserDamage += amount;
 }
 
-function applySplashDamage(x, y, directKey) {
-  if (state.ship.bulletSplashRadius <= 0) return;
-  const radius = state.ship.bulletSplashRadius;
+function applySplashDamage(x, y, directKey, baseDamage = state.ship.bulletDamage, radius = state.ship.bulletSplashRadius, falloffScale = state.ship.bulletSplashFalloff) {
+  if (radius <= 0 || falloffScale <= 0) return;
   const minGX = Math.floor((x - radius) / BLOCK_SIZE);
   const maxGX = Math.floor((x + radius) / BLOCK_SIZE);
   const minGY = Math.floor((y - radius) / BLOCK_SIZE);
@@ -3433,7 +3959,7 @@ function applySplashDamage(x, y, directKey) {
       const dist = distancePointToBlockEdge(x, y, block);
       if (dist > radius) continue;
       const falloff = 1 - dist / Math.max(radius, 0.001);
-      const splashDamage = state.ship.bulletDamage * state.ship.bulletSplashFalloff * falloff;
+      const splashDamage = baseDamage * falloffScale * falloff;
       if (splashDamage > 0.025) pickupBlockDamage(block, splashDamage);
     }
   }
@@ -3554,6 +4080,40 @@ function shipHitsBlock() {
   return null;
 }
 
+function spawnProjectile({
+  x,
+  y,
+  dirX,
+  dirY,
+  speed,
+  life,
+  damage,
+  color = "#fff2b3",
+  radius = 3,
+  source = "bullet",
+  splashRadius = 0,
+  splashFalloff = 0,
+  target = null,
+  homingTurn = 0,
+}) {
+  state.bullets.push({
+    x,
+    y,
+    vx: dirX * speed,
+    vy: dirY * speed,
+    life,
+    damage,
+    color,
+    radius,
+    source,
+    splashRadius,
+    splashFalloff,
+    targetType: target?.type || null,
+    targetKey: target?.block?.key || null,
+    homingTurn,
+  });
+}
+
 function spawnBullet() {
   const stats = WEAPON_STATS.blaster;
   const angleJitter = rand(-stats.spread, stats.spread);
@@ -3563,13 +4123,17 @@ function spawnBullet() {
   const dy = Math.sin(state.ship.facingAngle);
   const dirX = dx * cos - dy * sin;
   const dirY = dx * sin + dy * cos;
-  state.bullets.push({
+  spawnProjectile({
     x: state.ship.x + dirX * 20,
     y: state.ship.y + dirY * 20,
-    vx: dirX * stats.bulletSpeed,
-    vy: dirY * stats.bulletSpeed,
+    dirX,
+    dirY,
+    speed: stats.bulletSpeed,
     life: stats.life * state.ship.bulletLifeMult,
     damage: state.ship.bulletDamage,
+    source: "bullet",
+    splashRadius: state.ship.bulletSplashRadius,
+    splashFalloff: state.ship.bulletSplashFalloff,
   });
   state.runStats.bulletShots += 1;
   state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel * state.ship.blasterFuelMult);
@@ -3685,9 +4249,14 @@ function finishCoreMeltdown() {
   state.gravityPulse.radius = 0;
   state.gravityPulse.strength = 0;
   setCorePhase("cleared", 0);
-  state.hangarMessage = activePlanet.nextPlanetId && !progress.unlockedPlanets.includes(activePlanet.nextPlanetId)
-    ? "Planet cracked open. Core haul recovered. Research the next contract in the hangar."
-    : "Planet cracked open. Core haul recovered.";
+  if (activePlanet.finalPlanet) {
+    progress.buildComplete = true;
+    state.hangarMessage = "Vesper-3 cracked open. Build complete.";
+  } else {
+    state.hangarMessage = activePlanet.nextPlanetId && !progress.unlockedPlanets.includes(activePlanet.nextPlanetId)
+      ? "Planet cracked open. Core haul recovered. Research the next contract in the hangar."
+      : "Planet cracked open. Core haul recovered.";
+  }
   progress.lastStatus = state.hangarMessage;
   sendToHangar(true, reportSnapshot, reportPlanetDefinition);
 }
@@ -3853,49 +4422,138 @@ function updateWeapons(dt) {
   const ship = state.ship;
   ship.fireCooldown = Math.max(0, ship.fireCooldown - dt);
   ship.laserCooldown = Math.max(0, ship.laserCooldown - dt);
-  if (!state.input.firing) return;
-
-  const rate = WEAPON_STATS.blaster.rate * ship.rateMult;
-  if (ship.fireCooldown <= 0) {
-    spawnBullet();
-    ship.fireCooldown = rate;
+  ship.missileCooldown = Math.max(0, ship.missileCooldown - dt);
+  ship.droneCooldown = Math.max(0, ship.droneCooldown - dt);
+  if (state.input.firing) {
+    const rate = WEAPON_STATS.blaster.rate * ship.rateMult;
+    if (ship.fireCooldown <= 0) {
+      spawnBullet();
+      ship.fireCooldown = rate;
+    }
   }
 
-  if (ship.hasLaser && ship.lasers.length && ship.laserCooldown <= 0) {
+  if (state.input.firing && ship.hasLaser && ship.lasers.length && ship.laserCooldown <= 0) {
     const availableTargets = nearestLaserTargets(ship.lasers.length);
-    if (!availableTargets.length) return;
-
-    const neededFuel = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * ship.lasers.length;
-    if (ship.fuel < neededFuel) return;
-
-    ship.fuel = Math.max(0, ship.fuel - neededFuel);
-    ship.laserCooldown = WEAPON_STATS.laser.cooldown;
-    state.runStats.laserPulses += ship.lasers.length;
-    ship.lasers.forEach((laser, index) => {
-      const target = availableTargets[Math.min(index, availableTargets.length - 1)];
-      if (!target) return;
-      const damage = WEAPON_STATS.laser.pulseDamage * ship.laserDamage * laser.damageMult;
-      if (target.type === "core") {
-        damageCore(damage, target.x, target.y, "laser");
-      } else {
-        pickupBlockDamage(target.block, damage);
-        recordDamage("laser", damage);
+    if (availableTargets.length) {
+      const neededFuel = WEAPON_STATS.laser.shotFuel * ship.laserFuelMult * ship.lasers.length;
+      if (ship.fuel >= neededFuel) {
+        ship.fuel = Math.max(0, ship.fuel - neededFuel);
+        ship.laserCooldown = WEAPON_STATS.laser.cooldown;
+        state.runStats.laserPulses += ship.lasers.length;
+        ship.lasers.forEach((laser, index) => {
+          const target = availableTargets[Math.min(index, availableTargets.length - 1)];
+          if (!target) return;
+          const damage = WEAPON_STATS.laser.pulseDamage * ship.laserDamage * laser.damageMult;
+          if (target.type === "core") {
+            damageCore(damage, target.x, target.y, "laser");
+          } else {
+            pickupBlockDamage(target.block, damage);
+            recordDamage("laser", damage);
+          }
+          state.laserBursts.push({
+            sx: ship.x,
+            sy: ship.y,
+            tx: target.x,
+            ty: target.y,
+            color: laser.color,
+            life: WEAPON_STATS.laser.burstLife,
+          });
+        });
       }
-      state.laserBursts.push({
-        sx: ship.x,
-        sy: ship.y,
-        tx: target.x,
-        ty: target.y,
-        color: laser.color,
-        life: WEAPON_STATS.laser.burstLife,
+    }
+  }
+
+  if (ship.missileCount > 0 && ship.missileRate > 0 && ship.missileCooldown <= 0) {
+    const salvoCount = Math.max(1, Math.floor(ship.missileCount));
+    const targets = [];
+    for (let i = 0; i < salvoCount; i += 1) {
+      const angle = state.ship.facingAngle + (salvoCount === 1 ? 0 : lerp(-0.18, 0.18, i / Math.max(1, salvoCount - 1)));
+      const originX = state.ship.x + Math.cos(angle) * 16;
+      const originY = state.ship.y + Math.sin(angle) * 16;
+      const target = nearestProjectileTarget(originX, originY, 420, { includeCore: true });
+      if (target) targets.push({ angle, originX, originY, target });
+    }
+    if (targets.length) {
+      ship.missileCooldown = ship.missileRate;
+      for (const launch of targets) {
+        spawnProjectile({
+          x: launch.originX,
+          y: launch.originY,
+          dirX: Math.cos(launch.angle),
+          dirY: Math.sin(launch.angle),
+          speed: 340,
+          life: 1.45,
+          damage: ship.missileDamage,
+          color: "#ff8f61",
+          radius: 5,
+          source: "missile",
+          splashRadius: ship.missileSplashRadius,
+          splashFalloff: ship.missileSplashFalloff,
+          target: launch.target,
+          homingTurn: 5.4,
+        });
+        state.runStats.missilesLaunched = (state.runStats.missilesLaunched || 0) + 1;
+        progress.lifetimeStats.missilesLaunched = (progress.lifetimeStats.missilesLaunched || 0) + 1;
+      }
+    }
+  }
+
+  if (ship.droneCount > 0 && ship.droneRate > 0 && ship.droneCooldown <= 0) {
+    let fired = false;
+    for (let i = 0; i < state.drones.length; i += 1) {
+      const anchor = droneAnchor(i);
+      const target = nearestProjectileTarget(anchor.x, anchor.y, 250, { includeCore: false });
+      if (!target) continue;
+      const dx = target.x - anchor.x;
+      const dy = target.y - anchor.y;
+      const dist = Math.max(1, length2D(dx, dy));
+      spawnProjectile({
+        x: anchor.x,
+        y: anchor.y,
+        dirX: dx / dist,
+        dirY: dy / dist,
+        speed: 620,
+        life: 0.52,
+        damage: ship.droneDamage,
+        color: "#8dfff0",
+        radius: 2.4,
+        source: "drone",
       });
-    });
+      state.runStats.droneBursts = (state.runStats.droneBursts || 0) + 1;
+      progress.lifetimeStats.droneBursts = (progress.lifetimeStats.droneBursts || 0) + 1;
+      fired = true;
+    }
+    if (fired) ship.droneCooldown = ship.droneRate;
   }
 }
 
 function updateBullets(dt) {
   for (const bullet of state.bullets) {
     bullet.life -= dt;
+    if (bullet.homingTurn > 0) {
+      let targetX = null;
+      let targetY = null;
+      if (bullet.targetType === "core" && contractHasCoreEvent(state.contract) && state.planetProgressSnapshot?.coreUnlocked && state.core.phase === "vulnerable") {
+        targetX = 0;
+        targetY = 0;
+      } else if (bullet.targetKey) {
+        const targetBlock = state.planet.map.get(bullet.targetKey);
+        if (targetBlock?.alive) {
+          targetX = targetBlock.x;
+          targetY = targetBlock.y;
+        }
+      }
+      if (targetX !== null && targetY !== null) {
+        const dirX = targetX - bullet.x;
+        const dirY = targetY - bullet.y;
+        const dist = Math.max(1, length2D(dirX, dirY));
+        const speed = length2D(bullet.vx, bullet.vy);
+        const desiredVX = (dirX / dist) * speed;
+        const desiredVY = (dirY / dist) * speed;
+        bullet.vx = lerp(bullet.vx, desiredVX, clamp(dt * bullet.homingTurn, 0, 1));
+        bullet.vy = lerp(bullet.vy, desiredVY, clamp(dt * bullet.homingTurn, 0, 1));
+      }
+    }
     const nextX = bullet.x + bullet.vx * dt;
     const nextY = bullet.y + bullet.vy * dt;
     const dx = nextX - bullet.x;
@@ -3915,9 +4573,10 @@ function updateBullets(dt) {
         break;
       }
       if (coreHitTest(sampleX, sampleY)) {
-        damageCore(bullet.damage, sampleX, sampleY, "bullet");
+        damageCore(bullet.damage, sampleX, sampleY, bullet.source || "bullet");
         bullet.x = sampleX;
         bullet.y = sampleY;
+        applySplashDamage(sampleX, sampleY, null, bullet.damage, bullet.splashRadius, bullet.splashFalloff);
         bullet.life = 0;
         hit = true;
         break;
@@ -3925,10 +4584,10 @@ function updateBullets(dt) {
       const key = `${Math.floor(sampleX / BLOCK_SIZE)},${Math.floor(sampleY / BLOCK_SIZE)}`;
       const block = state.planet.map.get(key);
       if (block && block.alive && pickupBlockDamage(block, bullet.damage)) {
-        recordDamage("bullet", bullet.damage);
+        recordDamage(bullet.source === "drone" ? "drone" : bullet.source === "missile" ? "missile" : "bullet", bullet.damage);
         bullet.x = sampleX;
         bullet.y = sampleY;
-        applySplashDamage(sampleX, sampleY, key);
+        applySplashDamage(sampleX, sampleY, key, bullet.damage, bullet.splashRadius, bullet.splashFalloff);
         bullet.life = 0;
         hit = true;
         break;
@@ -4501,12 +5160,20 @@ function drawHazards() {
 }
 
 function drawBullets() {
-  ctx.fillStyle = "#fff2b3";
   for (const bullet of state.bullets) {
     const screen = worldToScreen(bullet.x, bullet.y);
+    ctx.fillStyle = bullet.color || "#fff2b3";
     ctx.beginPath();
-    ctx.arc(screen.x, screen.y, 3, 0, Math.PI * 2);
+    ctx.arc(screen.x, screen.y, bullet.radius || 3, 0, Math.PI * 2);
     ctx.fill();
+    if (bullet.source === "missile" && dynamicLightsEnabled()) {
+      ctx.strokeStyle = "rgba(255, 214, 143, 0.72)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(screen.x - bullet.vx * 0.01 * state.camera.zoom, screen.y - bullet.vy * 0.01 * state.camera.zoom);
+      ctx.lineTo(screen.x, screen.y);
+      ctx.stroke();
+    }
   }
 }
 
@@ -4550,24 +5217,149 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+function drawDrones() {
+  if (!state.drones.length) return;
+  const skinStyle = currentSkin().style || SHIP_SKIN_BY_ID.standard.style || {};
+  for (let i = 0; i < state.drones.length; i += 1) {
+    const anchor = droneAnchor(i);
+    const screen = worldToScreen(anchor.x, anchor.y);
+    ctx.save();
+    ctx.translate(screen.x, screen.y);
+    ctx.rotate(anchor.angle + Math.PI / 2);
+    ctx.fillStyle = skinStyle.wing || "#8dfff0";
+    if (dynamicLightsEnabled()) {
+      ctx.shadowColor = skinStyle.wing || "#8dfff0";
+      ctx.shadowBlur = 12;
+    }
+    ctx.beginPath();
+    ctx.moveTo(0, -6);
+    ctx.lineTo(5.5, 3.5);
+    ctx.lineTo(0, 1.5);
+    ctx.lineTo(-5.5, 3.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = skinStyle.canopy || "#f6fbff";
+    ctx.beginPath();
+    ctx.arc(0, -1.5, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 function drawShip() {
   const ship = worldToScreen(state.ship.x, state.ship.y);
   const angle = state.wreckTimer > 0 ? state.failAngle : state.ship.facingAngle;
   const alpha = state.failMode === "fuel" && state.wreckTimer > 0 ? clamp(state.wreckTimer / 1.1, 0.35, 1) : 1;
+  const style = currentSkin().style || SHIP_SKIN_BY_ID.standard.style || {};
   ctx.save();
   ctx.translate(ship.x, ship.y);
   ctx.rotate(angle + Math.PI / 2);
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "#89f3ff";
+  ctx.fillStyle = style.hull || "#89f3ff";
   if (dynamicLightsEnabled()) {
-    ctx.shadowColor = "#58dfff";
+    ctx.shadowColor = style.wing || "#58dfff";
     ctx.shadowBlur = 18;
   }
+
+  if (style.fin === "hauler") {
+    ctx.beginPath();
+    ctx.moveTo(-12, 8);
+    ctx.lineTo(-5, 15);
+    ctx.lineTo(5, 15);
+    ctx.lineTo(12, 8);
+    ctx.lineTo(7, 5);
+    ctx.lineTo(-7, 5);
+    ctx.closePath();
+    ctx.fillStyle = style.trim || "#10263f";
+    ctx.fill();
+  } else if (style.fin === "hammer") {
+    ctx.fillStyle = style.trim || "#10263f";
+    ctx.fillRect(-12, 6, 24, 5);
+  } else if (style.fin === "crown" || style.fin === "royal") {
+    ctx.fillStyle = style.trim || "#10263f";
+    ctx.beginPath();
+    ctx.moveTo(-12, 10);
+    ctx.lineTo(-8, 3);
+    ctx.lineTo(-2, 10);
+    ctx.lineTo(0, 4);
+    ctx.lineTo(2, 10);
+    ctx.lineTo(8, 3);
+    ctx.lineTo(12, 10);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = style.wing || style.hull || "#89f3ff";
+  if (style.fin === "swept") {
+    ctx.beginPath();
+    ctx.moveTo(0, -12);
+    ctx.lineTo(14, 10);
+    ctx.lineTo(5, 8);
+    ctx.lineTo(0, 4);
+    ctx.lineTo(-5, 8);
+    ctx.lineTo(-14, 10);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(0, -14);
+    ctx.lineTo(10, 12);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(-10, 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = style.hull || "#89f3ff";
   ctx.beginPath();
-  ctx.moveTo(0, -14);
-  ctx.lineTo(10, 12);
-  ctx.lineTo(0, 7);
-  ctx.lineTo(-10, 12);
+  if (style.nose === "needle") {
+    ctx.moveTo(0, -16);
+    ctx.lineTo(7, 11);
+    ctx.lineTo(0, 5);
+    ctx.lineTo(-7, 11);
+  } else if (style.nose === "ram") {
+    ctx.moveTo(0, -16);
+    ctx.lineTo(11, 8);
+    ctx.lineTo(4, 10);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-4, 10);
+    ctx.lineTo(-11, 8);
+  } else if (style.nose === "spire") {
+    ctx.moveTo(0, -18);
+    ctx.lineTo(9, 11);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-9, 11);
+  } else if (style.nose === "wide") {
+    ctx.moveTo(0, -13);
+    ctx.lineTo(12, 12);
+    ctx.lineTo(0, 8);
+    ctx.lineTo(-12, 12);
+  } else {
+    ctx.moveTo(0, -14);
+    ctx.lineTo(10, 12);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(-10, 12);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = style.trim || "#10263f";
+  ctx.fillRect(-2, -3, 4, 11);
+  ctx.fillStyle = style.canopy || "#f6fbff";
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 4.2, 5.8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = style.thruster || "#ffb85b";
+  ctx.beginPath();
+  ctx.moveTo(-4.5, 12);
+  ctx.lineTo(-1.4, 18);
+  ctx.lineTo(0, 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4.5, 12);
+  ctx.lineTo(1.4, 18);
+  ctx.lineTo(0, 12);
   ctx.closePath();
   ctx.fill();
   ctx.shadowBlur = 0;
@@ -4656,6 +5448,7 @@ function render() {
   drawBullets();
   drawLaser();
   drawParticles();
+  drawDrones();
   drawShip();
   if (state.cinematic.active) {
     ctx.fillStyle = `rgba(255, 240, 200, ${Math.min(0.42, state.cinematic.timer * 0.16)})`;
@@ -4744,7 +5537,7 @@ function drawResultsMap(report) {
 function renderResultsScreen() {
   const report = progress.lastSortieReport;
   if (!report) return;
-  ui.resultsTitle.textContent = report.success ? "Return Complete" : "Sortie Lost";
+  ui.resultsTitle.textContent = report.buildComplete ? "Build Complete" : report.success ? "Return Complete" : "Sortie Lost";
   ui.resultsSortieLabel.textContent = `Sortie #${report.sortieNumber}`;
   ui.resultsMinedLabel.textContent = report.contractType === "field"
     ? `${report.objectiveLabel}${report.objectiveProgressLabel ? ` • ${report.objectiveProgressLabel}` : ""}`
@@ -4758,7 +5551,7 @@ function renderResultsScreen() {
   ui.resultsPeakCargo.textContent = fmt(report.peakCargo);
   ui.resultsPlanet.textContent = report.planetName;
   ui.resultsSector.textContent = report.sectorName;
-  ui.resultsCompletion.textContent = formatPercent(report.planetCompletionPercent || 0);
+  ui.resultsCompletion.textContent = formatPercent(report.minedPercent || 0);
   ui.resultsCoreStatus.textContent = report.coreStatusLabel || (report.coreCleared ? "Cleared" : report.coreUnlocked ? "Unlocked" : "Sealed");
   drawResultsMap(report);
 }
@@ -4798,29 +5591,29 @@ function syncUi(force = true) {
   const contractCompletions = activePlanet.contractType === "field" ? fieldContractCompletionCount(activePlanet.id) : 0;
   const lowFuelTag = activePlanet.startingFuelMult ? ` • ${Math.round(activePlanet.startingFuelMult * 100)}% fuel start` : "";
   ui.hangarPlanetDetail.textContent = activePlanet.contractType === "field"
-    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "Unfinished charter"}${lowFuelTag}`
+    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}${lowFuelTag}`
     : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
   const fieldObjectiveProgress = activePlanet.contractType === "field"
     ? contractObjectiveProgress(activePlanet, ensureFieldContractProgressRecord(progress, activePlanet.id))
     : null;
   ui.hangarSectorDetail.textContent = activePlanet.contractType === "field"
-    ? `${fieldObjectiveProgress?.progressLabel || "No progress yet"} • payout ${formatCredits(activePlanet.payoutCredits || 0)}`
+    ? `${fieldObjectiveProgress?.missingLabel ? `Need ${fieldObjectiveProgress.missingLabel}` : "Ready to cash"} • ${formatCredits(activePlanet.payoutCredits || 0)}`
     : `${planetSnapshot.currentSector.primaryMaterial} route • target ${formatPercent(planetSnapshot.currentSector.completionTarget)}`;
   ui.hangarCompletionValue.textContent = formatPercent(planetSnapshot.terrainClearedPercent || 0);
   ui.hangarCoreValue.textContent = activePlanet.contractType === "field"
     ? `Payout ${formatCredits(activePlanet.payoutCredits || 0)}`
-    : planetSnapshot.coreCleared ? "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
+    : planetSnapshot.coreCleared ? activePlanet.finalPlanet ? "Build Clear" : "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
   ui.hangarContractName.textContent = activePlanet.name;
   ui.hangarContractDetail.textContent = activePlanet.contractType === "field"
-    ? `${planetContractDetail(activePlanet)} • ${contractCompletions ? `Completed ${fmt(contractCompletions)}x` : "First completion pending"}`
+    ? `${activePlanet.visual?.bodyLabel || "Field body"} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}`
     : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarContractObjective.textContent = activePlanet.contractType === "field"
-    ? `Objective: ${contractObjectiveLabel(activePlanet)}`
+    ? `Goal: ${contractObjectiveLabel(activePlanet)}`
     : "Objective: Clear the sectors and destroy the core";
   ui.hangarContractYield.textContent = activePlanet.contractType === "field"
-    ? `Progress: ${fieldObjectiveProgress?.progressLabel || "No progress yet"}`
-    : `Yield Bias: ${planetYieldLabel(activePlanet)}`;
+    ? `Status: ${fieldObjectiveProgress?.progressLabel || "No progress"}`
+    : `Focus: ${planetYieldLabel(activePlanet)}`;
   ui.hangarContractPressure.textContent = planetThreatLabel(activePlanet);
   ui.hangarUpgradeGrid.textContent = `${purchasedCount} / ${visibleNodeCount} online`;
   ui.hangarNextUpgrade.textContent = readyUpgrade
@@ -4846,13 +5639,17 @@ function syncUi(force = true) {
   ui.showFieldContractsBtn.classList.toggle("active", progress.currentContractLane === "field");
   ui.showUpgradesBtn.classList.toggle("active", state.hangarView === "upgrades");
   ui.showResearchBtn.classList.toggle("active", state.hangarView === "research");
+  ui.showLogbookBtn.classList.toggle("active", state.hangarView === "logbook");
   ui.showSkinsBtn.classList.toggle("active", state.hangarView === "skins");
   ui.upgradeTree.classList.toggle("hidden", state.hangarView !== "upgrades");
   ui.researchTree.classList.toggle("hidden", state.hangarView !== "research");
+  ui.logbookTree.classList.toggle("hidden", state.hangarView !== "logbook");
   ui.skinsTree.classList.toggle("hidden", state.hangarView !== "skins");
   ui.launchSortieBtn.textContent = activePlanet.contractType === "field" && contractCompletions > 0
     ? `Replay ${activePlanet.name}`
-    : `Launch ${activePlanet.name} Sortie`;
+    : progress.buildComplete && activePlanet.finalPlanet
+      ? `Replay Final Sortie`
+      : `Launch ${activePlanet.name} Sortie`;
   const qualityId = qualityProfileId();
   const qualityProfile = currentQualityProfile();
   ui.qualityProfileDetail.textContent = `${qualityProfile.description} ${qualityProfile.fps} FPS • DPR ${qualityProfile.dprCap} cap.`;
@@ -5012,6 +5809,10 @@ ui.showUpgradesBtn.addEventListener("click", () => {
 ui.showResearchBtn.addEventListener("click", () => {
   playUiClick();
   setHangarView("research");
+});
+ui.showLogbookBtn.addEventListener("click", () => {
+  playUiClick();
+  setHangarView("logbook");
 });
 ui.showSkinsBtn.addEventListener("click", () => {
   playUiClick();
@@ -5270,6 +6071,7 @@ applyUpgrades();
 refreshPlanetProgress({ persist: true });
 renderUpgradeTree();
 renderResearchTree();
+renderLogbook();
 renderSkinsTree();
 setupUpgradeTreeZoom();
 setupUpgradeTreePan();
@@ -5283,6 +6085,7 @@ window.addEventListener("resize", () => {
   if (state.mode === "hangar") {
     renderUpgradeTree();
     renderResearchTree();
+    renderLogbook();
     renderSkinsTree();
   }
   render();
@@ -5295,6 +6098,7 @@ window.addEventListener("orientationchange", () => {
     if (state.mode === "hangar") {
       renderUpgradeTree();
       renderResearchTree();
+      renderLogbook();
       renderSkinsTree();
     }
     render();
