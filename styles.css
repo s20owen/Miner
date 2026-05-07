@@ -807,10 +807,6 @@ canvas,
   padding: 20px 24px;
 }
 
-.results-panels .results-panel:last-child {
-  padding-bottom: 78px;
-}
-
 .results-panel-grid {
   margin-top: 14px;
   display: grid;

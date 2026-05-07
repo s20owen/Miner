@@ -53,10 +53,6 @@ const ui = {
   resultsBlocks: document.getElementById("results-blocks"),
   resultsTotalHaul: document.getElementById("results-total-haul"),
   resultsBankTotal: document.getElementById("results-bank-total"),
-  resultsOre: document.getElementById("results-ore"),
-  resultsPlatinum: document.getElementById("results-platinum"),
-  resultsCrystal: document.getElementById("results-crystal"),
-  resultsPeakCargo: document.getElementById("results-peak-cargo"),
   resultsPlanet: document.getElementById("results-planet"),
   resultsSector: document.getElementById("results-sector"),
   resultsCompletion: document.getElementById("results-completion"),
@@ -3812,6 +3808,24 @@ function pickDefenseRingAnchor() {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+function pickVentAnchor() {
+  const searchBounds = {
+    left: state.ship.x - 240,
+    right: state.ship.x + 240,
+    top: state.ship.y - 240,
+    bottom: state.ship.y + 240,
+  };
+  const candidates = [];
+  forEachBlockInBounds(searchBounds, (block) => {
+    if (block.sectorId !== "industrial" && block.sectorId !== "crystalFault") return;
+    if (distanceSq(block.x, block.y, state.ship.x, state.ship.y) > 240 * 240) return;
+    candidates.push(block);
+  });
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => distanceSq(a.x, a.y, state.ship.x, state.ship.y) - distanceSq(b.x, b.y, state.ship.x, state.ship.y));
+  return candidates[Math.floor(Math.random() * Math.min(6, candidates.length))] || candidates[0];
+}
+
 function pushParticle(particle) {
   if (state.particles.length >= particleBudget()) return;
   state.particles.push(particle);
@@ -4168,6 +4182,10 @@ function damageShip(hullDamage, fuelDamage, dtMultiplier = 1) {
   state.hazardFlash = 0.18;
 }
 
+function coreHazardActive() {
+  return contractHasCoreEvent(state.contract) && state.planetProgressSnapshot?.coreUnlocked && state.core.phase !== "cleared" && !state.cinematic.active;
+}
+
 function completeFieldCoreEvent() {
   const activePlanetProgress = getActivePlanetProgress();
   activePlanetProgress.coreCleared = true;
@@ -4378,9 +4396,15 @@ function updateShip(dt) {
     }
     pushX /= pushLen;
     pushY /= pushLen;
-    const separation = BLOCK_SIZE * 0.5 + SHIP_RADIUS + 4;
+    const separation = BLOCK_SIZE * 0.5 + SHIP_RADIUS + 7;
     ship.x = hit.x + pushX * separation;
     ship.y = hit.y + pushY * separation;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const followupHit = shipHitsBlock();
+      if (!followupHit) break;
+      ship.x += pushX * (BLOCK_SIZE * 0.42);
+      ship.y += pushY * (BLOCK_SIZE * 0.42);
+    }
     const impactHullDamage = (82 + impactSpeed * 0.42) * ship.collisionCostMult;
     const impactFuelDamage = (28 + impactSpeed * 0.12) * lerp(1, ship.collisionCostMult, 0.8) * ship.collisionFuelMult;
     ship.hp = Math.max(0, ship.hp - dt * impactHullDamage);
@@ -4390,8 +4414,8 @@ function updateShip(dt) {
       ship.vx -= pushX * normalVelocity;
       ship.vy -= pushY * normalVelocity;
     }
-    ship.vx = ship.vx * 0.42 + pushX * 18;
-    ship.vy = ship.vy * 0.42 + pushY * 18;
+    ship.vx = ship.vx * 0.24 + pushX * 42;
+    ship.vy = ship.vy * 0.24 + pushY * 42;
     state.damageShake = 1;
     playHit();
   }
@@ -4679,19 +4703,19 @@ function spawnHazardForSector(sector) {
   }
 
   if (sector.hazardType === "vent") {
-    const angle = rand(-Math.PI, Math.PI);
-    const radius = rand(80, 150);
+    const anchor = pickVentAnchor();
+    if (!anchor) return;
     state.hazards.push({
       type: "vent",
-      x: state.ship.x + Math.cos(angle) * radius,
-      y: state.ship.y + Math.sin(angle) * radius,
+      x: anchor.x,
+      y: anchor.y,
       radius: rand(34, 48),
       life: 2.8,
       telegraph: 0.8,
       active: false,
       color: "#ff7b47",
     });
-    showGameplayBanner("Heat vent rising.", 1.8);
+    showGameplayBanner("Planet heat vent rising.", 1.8);
     return;
   }
 
@@ -4789,6 +4813,19 @@ function updateHazards(dt) {
     state.gravityPulse.life = 0.85;
     state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.26;
     state.gravityPulse.strength = 220;
+  }
+
+  if (coreHazardActive()) {
+    const dist = length2D(state.ship.x, state.ship.y);
+    const outerCoreBand = state.core.radius * 2.4;
+    const innerCoreBand = state.core.radius * 1.15;
+    if (dist < outerCoreBand) {
+      const pullBlend = 1 - clamp((dist - state.core.radius) / Math.max(outerCoreBand - state.core.radius, 1), 0, 1);
+      damageShip(8 + pullBlend * 10, 5 + pullBlend * 7, dt);
+    }
+    if (dist < innerCoreBand) {
+      damageShip(20, 12, dt);
+    }
   }
 }
 
@@ -5130,6 +5167,41 @@ function drawHazards() {
     }
 
     const telegraphAlpha = hazard.telegraph > 0 ? 0.25 + hazard.telegraph * 0.6 : 0.18;
+    if (hazard.type === "vent") {
+      const worldLen = Math.max(1, length2D(hazard.x, hazard.y));
+      const normalX = hazard.x / worldLen;
+      const normalY = hazard.y / worldLen;
+      const plumeBase = worldToScreen(hazard.x - normalX * 10, hazard.y - normalY * 10);
+      const plumeTip = worldToScreen(hazard.x + normalX * (hazard.radius * (hazard.active ? 1.05 : 0.8)), hazard.y + normalY * (hazard.radius * (hazard.active ? 1.05 : 0.8)));
+      const crossX = -normalY;
+      const crossY = normalX;
+      const crackWidth = (hazard.radius * 0.34 + Math.sin(state.time * 9) * 2) * state.camera.zoom;
+
+      ctx.strokeStyle = `rgba(255, 196, 92, ${hazard.active ? 0.78 : telegraphAlpha})`;
+      ctx.lineWidth = hazard.active ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(plumeBase.x - crossX * crackWidth, plumeBase.y - crossY * crackWidth);
+      ctx.lineTo(plumeBase.x + crossX * crackWidth, plumeBase.y + crossY * crackWidth);
+      ctx.moveTo(plumeBase.x, plumeBase.y);
+      ctx.lineTo(plumeTip.x, plumeTip.y);
+      ctx.stroke();
+
+      const plumeGlow = ctx.createLinearGradient(plumeBase.x, plumeBase.y, plumeTip.x, plumeTip.y);
+      plumeGlow.addColorStop(0, `rgba(255, 214, 120, ${hazard.active ? 0.14 : 0.08})`);
+      plumeGlow.addColorStop(1, `rgba(255, 123, 71, ${hazard.active ? 0.26 : 0.12})`);
+      ctx.strokeStyle = plumeGlow;
+      ctx.lineWidth = Math.max(4, hazard.radius * 0.22 * state.camera.zoom);
+      ctx.beginPath();
+      ctx.moveTo(plumeBase.x, plumeBase.y);
+      ctx.lineTo(plumeTip.x, plumeTip.y);
+      ctx.stroke();
+
+      ctx.fillStyle = `rgba(255, 214, 120, ${hazard.active ? 0.48 : 0.24 + telegraphAlpha * 0.24})`;
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y, Math.max(3, hazard.radius * 0.12 * state.camera.zoom), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.beginPath();
     ctx.arc(screen.x, screen.y, hazard.radius * state.camera.zoom, 0, Math.PI * 2);
     ctx.strokeStyle = hazard.type === "vent"
@@ -5545,10 +5617,6 @@ function renderResultsScreen() {
   ui.resultsBlocks.textContent = fmt(report.blocksMined);
   ui.resultsTotalHaul.textContent = formatMaterials(report.delivered);
   ui.resultsBankTotal.textContent = formatCredits(report.creditsAfter || 0);
-  ui.resultsOre.textContent = fmt(report.delivered.ore || 0);
-  ui.resultsPlatinum.textContent = fmt(report.delivered.platinum || 0);
-  ui.resultsCrystal.textContent = fmt(report.delivered.crystal || 0);
-  ui.resultsPeakCargo.textContent = fmt(report.peakCargo);
   ui.resultsPlanet.textContent = report.planetName;
   ui.resultsSector.textContent = report.sectorName;
   ui.resultsCompletion.textContent = formatPercent(report.minedPercent || 0);
