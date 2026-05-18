@@ -1010,6 +1010,50 @@ const FIELD_CONTRACT_TEMPLATES = [
 
 const FIELD_CONTRACTS = FIELD_CONTRACT_TEMPLATES.map(applyFieldContractFamily);
 
+const CONTRACT_MODIFIERS = {
+  lowVisibility: {
+    id: "lowVisibility",
+    label: "Low Visibility",
+    summary: "Sensor haze cuts long-range clarity.",
+    apply(contract) {
+      contract.visibilityPenalty = 0.22;
+      contract.hazardRateMult = (contract.hazardRateMult || 1) * 0.94;
+    },
+  },
+  volatileCrust: {
+    id: "volatileCrust",
+    label: "Volatile Crust",
+    summary: "Unstable blocks flare when cracked.",
+    apply(contract) {
+      contract.volatileCrust = true;
+      contract.blockHpBonus = (contract.blockHpBonus || 0) + 1;
+    },
+  },
+  densePlatinumSeams: {
+    id: "densePlatinumSeams",
+    label: "Dense Platinum Seams",
+    summary: "Industrial veins run richer than normal.",
+    apply(contract) {
+      contract.materialBias = {
+        ...(contract.materialBias || {}),
+        ore: (contract.materialBias?.ore || 1) * 0.9,
+        platinum: (contract.materialBias?.platinum || 1) * 1.45,
+        crystal: (contract.materialBias?.crystal || 1) * 0.96,
+      };
+    },
+  },
+  doublePayout: {
+    id: "doublePayout",
+    label: "Double Payout",
+    summary: "Corporate rush bonus doubles credits.",
+    apply(contract) {
+      contract.payoutCredits = Math.round((contract.payoutCredits || 0) * 2);
+    },
+  },
+};
+
+const CONTRACT_MODIFIER_BY_ID = CONTRACT_MODIFIERS;
+
 const SECTOR_BY_ID = Object.fromEntries(SECTORS.map((sector) => [sector.id, sector]));
 const PLANET_BY_ID = Object.fromEntries(PLANETS.map((planet) => [planet.id, planet]));
 const FIELD_CONTRACT_BY_ID = Object.fromEntries(FIELD_CONTRACTS.map((contract) => [contract.id, contract]));
@@ -1207,6 +1251,8 @@ const SHIP_SKINS = [
   { id: "breaker", label: "Breaker Skin", rewardAchievementId: "blocks_1000", bonus: { hpMax: 12, bulletDamage: 0.18 }, style: { hull: "#ff8d78", canopy: "#ffe3d8", wing: "#ff4d61", trim: "#541222", thruster: "#ffcf72", fin: "hammer", nose: "ram" } },
   { id: "surveyor", label: "Surveyor Skin", rewardAchievementId: "contracts_1", bonus: { magnet: 10, thrustFuelMult: 0.94 }, style: { hull: "#8bf6c4", canopy: "#e8fff6", wing: "#59d6ff", trim: "#053947", thruster: "#8dffff", fin: "swept", nose: "needle" } },
   { id: "archon", label: "Archon Skin", rewardAchievementId: "fortress_doctrine", bonus: { hpMax: 16, shieldMult: 0.92, fuelMax: 10, bulletDamage: 0.14 }, style: { hull: "#d1a0ff", canopy: "#fff1ff", wing: "#ff85d5", trim: "#2b144f", thruster: "#ffe88d", fin: "crown", nose: "spire" } },
+  { id: "nomad", label: "Nomad Skin", rewardAchievementId: "mastery_8", bonus: { cargoCap: 8, fuelMax: 14, thrustFuelMult: 0.92, missileDamage: 0.25 }, style: { hull: "#7bffcf", canopy: "#f0fff8", wing: "#ffd96d", trim: "#0d4c3f", thruster: "#fff0a0", fin: "hauler", nose: "needle" } },
+  { id: "warden", label: "Warden Skin", rewardAchievementId: "prestige_1", bonus: { hpMax: 22, shieldMult: 0.88, droneDamage: 0.2, cargoCap: 4 }, style: { hull: "#7da2ff", canopy: "#f4f7ff", wing: "#ff7368", trim: "#131f63", thruster: "#ffd27e", fin: "royal", nose: "ram" } },
   { id: "sovereign", label: "Sovereign Skin", rewardAchievementId: "core_planets_3", bonus: { hpMax: 18, cargoCap: 6, fuelMax: 12, bulletDamage: 0.18, shieldMult: 0.9 }, style: { hull: "#7fb2ff", canopy: "#f0f6ff", wing: "#ffd76d", trim: "#0f1e5d", thruster: "#fff0b8", fin: "royal", nose: "spire" } },
 ];
 
@@ -1235,6 +1281,9 @@ const HIDDEN_ACHIEVEMENTS = [
   { id: "contracts_5", label: "Freelancer", type: "fieldContractsCompleted", threshold: 5 },
   { id: "contracts_20", label: "Contract Fleet", type: "fieldContractsCompleted", threshold: 20 },
   { id: "contracts_50", label: "Contract Syndicate", type: "fieldContractsCompleted", threshold: 50 },
+  { id: "daily_3", label: "Daily Cadence", type: "dailyContractsCompleted", threshold: 3 },
+  { id: "elite_3", label: "Elite Breacher", type: "eliteContractsCompleted", threshold: 3 },
+  { id: "endless_5", label: "Ladder Climber", type: "endlessContractsCompleted", threshold: 5 },
   { id: "core_planets_1", label: "Corebreaker", type: "corePlanetsCleared", threshold: 1 },
   { id: "core_planets_2", label: "Twin World Breach", type: "corePlanetsCleared", threshold: 2 },
   { id: "core_planets_3", label: "World Line Broken", type: "corePlanetsCleared", threshold: 3, rewardSkinId: "sovereign" },
@@ -1256,6 +1305,8 @@ const HIDDEN_ACHIEVEMENTS = [
   { id: "fortress_doctrine", label: "Fortress Doctrine", type: "researchNodeUnlocked", threshold: "fortressDoctrine", rewardSkinId: "archon" },
   { id: "autonomous_siege", label: "Autonomous Siege", type: "researchNodeUnlocked", threshold: "autonomousSiege" },
   { id: "build_complete", label: "Build Completed", type: "buildComplete", threshold: 1 },
+  { id: "prestige_1", label: "Second Dawn", type: "prestigeLevel", threshold: 1, rewardSkinId: "warden" },
+  { id: "mastery_8", label: "Mastery Eight", type: "masteryRank", threshold: 8, rewardSkinId: "nomad" },
 ];
 
 const HIDDEN_ACHIEVEMENT_BY_ID = Object.fromEntries(HIDDEN_ACHIEVEMENTS.map((achievement) => [achievement.id, achievement]));
@@ -1364,6 +1415,9 @@ function defaultLifetimeStats() {
     crystalMined: 0,
     coreSamplesRecovered: 0,
     fieldContractsCompleted: 0,
+    dailyContractsCompleted: 0,
+    eliteContractsCompleted: 0,
+    endlessContractsCompleted: 0,
     corePlanetsCleared: 0,
     perfectFieldContracts: 0,
     perfectPlanets: 0,
@@ -1381,6 +1435,14 @@ function normalizeLifetimeStats(stats = {}) {
 
 function defaultFieldContractCompletions() {
   return Object.fromEntries(FIELD_CONTRACTS.map((contract) => [contract.id, 0]));
+}
+
+function defaultDynamicContracts() {
+  return {
+    daily: null,
+    elite: null,
+    endless: null,
+  };
 }
 
 function defaultPlanetProgress() {
@@ -1460,10 +1522,13 @@ function planetYieldLabel(contractRef = DEFAULT_PLANET_ID) {
 }
 
 function getFieldContractDefinition(contractId = DEFAULT_FIELD_CONTRACT_ID) {
-  return FIELD_CONTRACT_BY_ID[contractId] || FIELD_CONTRACTS[0];
+  ensureRotatingContracts(progress);
+  const dynamic = Object.values(progress.dynamicContracts || {}).find((contract) => contract?.id === contractId);
+  return dynamic || FIELD_CONTRACT_BY_ID[contractId] || FIELD_CONTRACTS[0];
 }
 
 function getActiveContractDefinition() {
+  ensureRotatingContracts(progress);
   return progress.currentContractLane === "field"
     ? getFieldContractDefinition(progress.currentFieldContractId)
     : getPlanetDefinition(progress.currentPlanetId);
@@ -1610,6 +1675,18 @@ function contractYieldLabel(contract) {
   const bias = contract?.materialBias || emptyMaterials();
   const ranked = MATERIAL_TYPES.slice().sort((a, b) => (bias[b] || 0) - (bias[a] || 0));
   return `${ranked[0][0].toUpperCase()}${ranked[0].slice(1)} focus`;
+}
+
+function contractModifierSummary(contract) {
+  return getModifierLabel(contract?.modifierIds || []);
+}
+
+function contractHasModifier(contract, modifierId) {
+  return !!contract?.modifierIds?.includes(modifierId);
+}
+
+function masteryRewardForContract(contract) {
+  return Math.max(20, Number(contract?.masteryReward || 36));
 }
 
 function contractObjectiveRequirements(contract) {
@@ -1767,6 +1844,9 @@ function achievementProgressValue(achievement) {
     case "crystalMined":
     case "coreSamplesRecovered":
     case "fieldContractsCompleted":
+    case "dailyContractsCompleted":
+    case "eliteContractsCompleted":
+    case "endlessContractsCompleted":
     case "corePlanetsCleared":
     case "perfectFieldContracts":
     case "perfectPlanets":
@@ -1781,6 +1861,10 @@ function achievementProgressValue(achievement) {
       return progress.research?.[achievement.threshold] ? 1 : 0;
     case "buildComplete":
       return progress.buildComplete ? 1 : 0;
+    case "prestigeLevel":
+      return progress.prestigeLevel || 0;
+    case "masteryRank":
+      return masteryRankForXp(progress.masteryXp || 0).rank;
     default:
       return 0;
   }
@@ -1818,6 +1902,8 @@ function formatSkinBonus(bonus = {}) {
   if (bonus.fuelMax) parts.push(`+${bonus.fuelMax} fuel`);
   if (bonus.magnet) parts.push(`+${bonus.magnet} magnet`);
   if (bonus.bulletDamage) parts.push(`+${bonus.bulletDamage.toFixed(2)} dmg`);
+  if (bonus.missileDamage) parts.push(`+${bonus.missileDamage.toFixed(2)} missile`);
+  if (bonus.droneDamage) parts.push(`+${bonus.droneDamage.toFixed(2)} drone`);
   if (bonus.shieldMult) parts.push(`${Math.round((1 - bonus.shieldMult) * 100)}% shield`);
   if (bonus.thrustFuelMult) parts.push(`${Math.round((1 - bonus.thrustFuelMult) * 100)}% thrust fuel`);
   return parts.join(" • ") || "No bonus";
@@ -2135,6 +2221,17 @@ function defaultProgress() {
     currentPlanetId: DEFAULT_PLANET_ID,
     currentContractLane: "core",
     currentFieldContractId: DEFAULT_FIELD_CONTRACT_ID,
+    prestigeLevel: 0,
+    prestigeResets: 0,
+    prestigeTokens: 0,
+    masteryXp: 0,
+    endlessTier: 1,
+    dynamicContracts: defaultDynamicContracts(),
+    rotationState: {
+      dailyStamp: "",
+      eliteStamp: "",
+      endlessStamp: "",
+    },
     planetProgress: {
       [DEFAULT_PLANET_ID]: defaultPlanetProgress(),
     },
@@ -2187,6 +2284,18 @@ function loadProgress() {
     if (!merged.unlockedSkins.includes("standard")) merged.unlockedSkins.unshift("standard");
     merged.activeSkinId = SHIP_SKIN_BY_ID[merged.activeSkinId] ? merged.activeSkinId : merged.unlockedSkins[merged.unlockedSkins.length - 1] || "standard";
     if (!merged.unlockedSkins.includes(merged.activeSkinId)) merged.unlockedSkins.push(merged.activeSkinId);
+    merged.prestigeLevel = Math.max(0, Number(merged.prestigeLevel || 0));
+    merged.prestigeResets = Math.max(0, Number(merged.prestigeResets || 0));
+    merged.prestigeTokens = Math.max(0, Number(merged.prestigeTokens || 0));
+    merged.masteryXp = Math.max(0, Number(merged.masteryXp || 0));
+    merged.endlessTier = Math.max(1, Number(merged.endlessTier || 1));
+    merged.dynamicContracts = { ...defaultDynamicContracts(), ...(merged.dynamicContracts || {}) };
+    merged.rotationState = {
+      dailyStamp: "",
+      eliteStamp: "",
+      endlessStamp: "",
+      ...(merged.rotationState || {}),
+    };
     merged.buildComplete = !!merged.buildComplete || PLANETS.every((planet) => merged.planetProgress?.[planet.id]?.coreCleared);
     merged.lifetimeStats = normalizeLifetimeStats(merged.lifetimeStats);
     merged.research = typeof merged.research === "object" && merged.research ? { ...merged.research } : {};
@@ -2213,6 +2322,11 @@ function loadProgress() {
       merged.fieldContractProgress[contract.id] = clonePlanetProgress(merged.fieldContractProgress[contract.id] || defaultPlanetProgress());
       merged.fieldContractCompletions[contract.id] = Math.max(0, Number(merged.fieldContractCompletions[contract.id] || 0));
     }
+    ensureRotatingContracts(merged);
+    for (const contractId of dynamicContractIds(merged)) {
+      merged.fieldContractProgress[contractId] = clonePlanetProgress(merged.fieldContractProgress[contractId] || defaultPlanetProgress());
+      merged.fieldContractCompletions[contractId] = Math.max(0, Number(merged.fieldContractCompletions[contractId] || 0));
+    }
     if (merged.upgrades?.laser) merged.research.laserTheory = true;
     if (merged.upgrades?.splash2) merged.research.arrayTheory = true;
     if (merged.unlockedPlanets.includes("vesper-2")) merged.research.vesper2License = true;
@@ -2233,7 +2347,238 @@ function syncLegacyDestroyedBlocksForLoad(progressState) {
   progressState.destroyedBlocks = [...active.destroyedBlocks];
 }
 
+function dayStamp(offsetDays = 0) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
+}
+
+function rotationStamp(intervalDays = 1) {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  const bucket = Math.floor(date.getTime() / 86400000 / Math.max(1, intervalDays));
+  return `rot-${intervalDays}-${bucket}`;
+}
+
+function hashSeed(input) {
+  let hash = 2166136261;
+  const text = String(input || "");
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededUnit(seed, salt = 0) {
+  const value = Math.sin((seed + salt + 1) * 12.9898) * 43758.5453123;
+  return value - Math.floor(value);
+}
+
+function seededPick(list, seed, salt = 0) {
+  if (!list.length) return null;
+  return list[Math.floor(seededUnit(seed, salt) * list.length) % list.length];
+}
+
+function masteryRankForXp(xp = 0) {
+  let rank = 0;
+  let remaining = Math.max(0, xp);
+  let threshold = 120;
+  while (remaining >= threshold) {
+    remaining -= threshold;
+    rank += 1;
+    threshold = Math.round(threshold * 1.28);
+  }
+  return {
+    rank,
+    current: remaining,
+    needed: threshold,
+    title: rank >= 20 ? "Mythic" : rank >= 15 ? "Prime" : rank >= 10 ? "Master" : rank >= 6 ? "Veteran" : rank >= 3 ? "Adept" : "Rookie",
+  };
+}
+
+function dynamicContractIds(progressState = progress) {
+  return Object.values(progressState.dynamicContracts || {}).map((contract) => contract?.id).filter(Boolean);
+}
+
+function allFieldContracts(progressState = progress) {
+  return [...FIELD_CONTRACTS, ...Object.values(progressState.dynamicContracts || {}).filter(Boolean)];
+}
+
+function getModifierLabel(modifierIds = []) {
+  return modifierIds.map((id) => CONTRACT_MODIFIER_BY_ID[id]?.label).filter(Boolean).join(" • ");
+}
+
+function applyModifierIds(contract, modifierIds = []) {
+  contract.modifierIds = [...modifierIds];
+  contract.modifierLabel = getModifierLabel(modifierIds);
+  for (const modifierId of modifierIds) {
+    CONTRACT_MODIFIER_BY_ID[modifierId]?.apply?.(contract);
+  }
+  return contract;
+}
+
+function buildDynamicFieldContract(template, dynamicMeta = {}) {
+  const contract = applyFieldContractFamily({
+    ...template,
+    dynamicType: dynamicMeta.dynamicType || template.dynamicType || "",
+    dynamicSeed: dynamicMeta.dynamicSeed || template.dynamicSeed || "",
+  });
+  contract.isDynamic = true;
+  contract.dynamicType = dynamicMeta.dynamicType || contract.dynamicType;
+  contract.dynamicSeed = dynamicMeta.dynamicSeed || contract.dynamicSeed;
+  contract.masteryReward = dynamicMeta.masteryReward ?? template.masteryReward ?? 0;
+  contract.rotationLabel = dynamicMeta.rotationLabel || template.rotationLabel || "";
+  applyModifierIds(contract, dynamicMeta.modifierIds || template.modifierIds || []);
+  return contract;
+}
+
+function templateForGeneratedFamily(familyId) {
+  const byFamily = FIELD_CONTRACT_TEMPLATES.filter((contract) => contract.familyId === familyId);
+  return byFamily[0] || FIELD_CONTRACT_TEMPLATES[0];
+}
+
+function generateDailyContract(stamp) {
+  const seed = hashSeed(`daily:${stamp}`);
+  const familyId = seededPick(["asteroid", "moon", "crystalShard", "splitBody", "terracedMoon"], seed, 1);
+  const modifierPool = ["lowVisibility", "densePlatinumSeams", "doublePayout"];
+  const modifierId = seededPick(modifierPool, seed, 2);
+  const family = CELESTIAL_FAMILY_BY_ID[familyId];
+  const objectiveType = seededPick(family?.contractTendencies?.commonObjectives || ["mixed"], seed, 3) || "mixed";
+  const requirements = objectiveType === "ore"
+    ? { ore: 900 + Math.floor(seededUnit(seed, 4) * 500), minedPercent: 18 }
+    : objectiveType === "platinum"
+      ? { platinum: 180 + Math.floor(seededUnit(seed, 4) * 90), ore: 500 }
+      : objectiveType === "crystal"
+        ? { crystal: 90 + Math.floor(seededUnit(seed, 4) * 60), platinum: 80 }
+        : { ore: 700, platinum: 120, crystal: 60 };
+  return buildDynamicFieldContract({
+    id: `daily-${stamp}`,
+    familyId,
+    name: "Daily Survey",
+    threatLabel: "Daily",
+    contractDetail: `${family?.label || "Field body"} • rotating special contract`,
+    objective: { requirements },
+    payoutCredits: 14000 + Math.round(seededUnit(seed, 5) * 5000),
+    paletteShift: seededUnit(seed, 6) * 0.08 - 0.04,
+  }, {
+    dynamicType: "daily",
+    dynamicSeed: stamp,
+    modifierIds: [modifierId],
+    masteryReward: 70,
+    rotationLabel: "Daily",
+  });
+}
+
+function generateEliteContract(stamp) {
+  const seed = hashSeed(`elite:${stamp}`);
+  const familyId = seededPick(["fortifiedMoon", "brokenCore", "volatileFragment", "microPlanet"], seed, 1);
+  const modifierIds = [
+    seededPick(["volatileCrust", "lowVisibility"], seed, 2),
+    seededPick(["densePlatinumSeams", "doublePayout"], seed, 3),
+  ].filter(Boolean);
+  const hasCore = familyId === "brokenCore" || familyId === "microPlanet";
+  const requirements = hasCore
+    ? { platinum: 240, crystal: 140, coreSamples: 6 }
+    : { ore: 1300, platinum: 220, minedPercent: 32 };
+  return buildDynamicFieldContract({
+    id: `elite-${stamp}`,
+    familyId,
+    name: "Elite Breach",
+    threatLabel: "Elite",
+    contractDetail: `${CELESTIAL_FAMILY_BY_ID[familyId]?.label || "Field body"} • hardened rotating contract`,
+    objective: { requirements },
+    payoutCredits: 24000 + Math.round(seededUnit(seed, 4) * 9000),
+    blockHpBonus: 2,
+    hazardRateMult: 0.78,
+    hasCoreEvent: hasCore,
+    coreSampleYield: hasCore ? 6 : 0,
+    coreSampleNodeCount: hasCore ? 2 : 0,
+    paletteShift: seededUnit(seed, 5) * 0.1 - 0.05,
+  }, {
+    dynamicType: "elite",
+    dynamicSeed: stamp,
+    modifierIds,
+    masteryReward: 120,
+    rotationLabel: "Elite",
+  });
+}
+
+function generateEndlessContract(tier) {
+  const seed = hashSeed(`endless:${tier}`);
+  const familyId = seededPick(["asteroid", "moon", "crystalShard", "fortifiedMoon", "brokenCore", "microPlanet"], seed, 1);
+  const modifierPool = ["lowVisibility", "volatileCrust", "densePlatinumSeams", "doublePayout"];
+  const modifierIds = modifierPool.filter((id, index) => seededUnit(seed, 2 + index) > (index < 2 ? 0.45 : 0.68)).slice(0, Math.min(3, 1 + Math.floor(tier / 4)));
+  const hasCore = tier >= 3 && (familyId === "brokenCore" || familyId === "microPlanet" || seededUnit(seed, 9) > 0.62);
+  const tierScale = 1 + (tier - 1) * 0.14;
+  return buildDynamicFieldContract({
+    id: `endless-${tier}`,
+    familyId,
+    name: `Endless Ladder ${tier}`,
+    threatLabel: `Tier ${tier}`,
+    contractDetail: `${CELESTIAL_FAMILY_BY_ID[familyId]?.label || "Field body"} • open-ended escalation contract`,
+    objective: {
+      requirements: {
+        ore: Math.round(850 * tierScale),
+        platinum: tier >= 2 ? Math.round(90 * tierScale) : 0,
+        crystal: tier >= 4 ? Math.round(45 * tierScale) : 0,
+        coreSamples: hasCore && tier >= 5 ? Math.max(2, Math.floor(tier / 3)) : 0,
+        minedPercent: Math.min(55, 16 + tier * 2),
+      },
+    },
+    payoutCredits: Math.round(10000 * tierScale),
+    radiusBlocks: Math.min(72, 48 + tier),
+    blockHpBonus: Math.min(6, Math.floor(tier / 2)),
+    hazardRateMult: Math.max(0.6, 0.98 - tier * 0.03),
+    sectorCompletionMult: Math.min(1.3, 1 + tier * 0.03),
+    hasCoreEvent: hasCore,
+    coreSampleYield: hasCore ? Math.max(4, Math.floor(tier * 0.8)) : 0,
+    coreSampleNodeCount: hasCore ? Math.min(5, 2 + Math.floor(tier / 4)) : 0,
+    paletteShift: seededUnit(seed, 8) * 0.12 - 0.06,
+  }, {
+    dynamicType: "endless",
+    dynamicSeed: String(tier),
+    modifierIds,
+    masteryReward: 85 + tier * 10,
+    rotationLabel: "Endless",
+  });
+}
+
+function ensureRotatingContracts(progressState = progress) {
+  if (!progressState.dynamicContracts || typeof progressState.dynamicContracts !== "object") {
+    progressState.dynamicContracts = defaultDynamicContracts();
+  }
+  if (!progressState.rotationState || typeof progressState.rotationState !== "object") {
+    progressState.rotationState = { dailyStamp: "", eliteStamp: "", endlessStamp: "" };
+  }
+  const currentDaily = rotationStamp(1);
+  const currentElite = rotationStamp(3);
+  if (progressState.rotationState.dailyStamp !== currentDaily) {
+    progressState.rotationState.dailyStamp = currentDaily;
+    progressState.dynamicContracts.daily = generateDailyContract(currentDaily);
+    ensureFieldContractProgressRecord(progressState, progressState.dynamicContracts.daily.id);
+  }
+  if (progressState.rotationState.eliteStamp !== currentElite) {
+    progressState.rotationState.eliteStamp = currentElite;
+    progressState.dynamicContracts.elite = generateEliteContract(currentElite);
+    ensureFieldContractProgressRecord(progressState, progressState.dynamicContracts.elite.id);
+  }
+  const endlessTier = Math.max(1, Number(progressState.endlessTier || 1));
+  const endlessStamp = `tier-${endlessTier}`;
+  if (progressState.rotationState.endlessStamp !== endlessStamp) {
+    progressState.rotationState.endlessStamp = endlessStamp;
+    progressState.dynamicContracts.endless = generateEndlessContract(endlessTier);
+    ensureFieldContractProgressRecord(progressState, progressState.dynamicContracts.endless.id);
+  }
+  const validIds = new Set([...FIELD_CONTRACTS.map((contract) => contract.id), ...dynamicContractIds(progressState)]);
+  if (!validIds.has(progressState.currentFieldContractId)) {
+    progressState.currentFieldContractId = progressState.dynamicContracts.daily?.id || DEFAULT_FIELD_CONTRACT_ID;
+  }
+}
+
 const progress = loadProgress();
+ensureRotatingContracts(progress);
 let fpsSampleTime = 0;
 let fpsSampleFrames = 0;
 let displayedFps = 0;
@@ -2950,6 +3295,7 @@ function applyUpgrades() {
   const ship = state.ship;
   const skinBonus = currentSkin().bonus || {};
   const droneResearchUnlocked = !!progress.research?.droneCommand;
+  const prestigeBonus = prestigePassiveBonus();
   ship.fuelMax = 120;
   ship.hpMax = 80;
   ship.cargoCap = 28;
@@ -2985,6 +3331,11 @@ function applyUpgrades() {
   ship.collisionFuelMult = 1;
   ship.collisionCostMult = 1;
 
+  ship.fuelMax += prestigeBonus.fuelMax;
+  ship.hpMax += prestigeBonus.hpMax;
+  ship.cargoCap += prestigeBonus.cargoCap;
+  ship.bulletDamage += prestigeBonus.bulletDamage;
+
   if (skinBonus.fuelMax) ship.fuelMax += skinBonus.fuelMax;
   if (skinBonus.hpMax) ship.hpMax += skinBonus.hpMax;
   if (skinBonus.cargoCap) ship.cargoCap += skinBonus.cargoCap;
@@ -2992,6 +3343,8 @@ function applyUpgrades() {
   if (skinBonus.thrust) ship.thrust += skinBonus.thrust;
   if (skinBonus.thrustFuelMult) ship.thrustFuelMult *= skinBonus.thrustFuelMult;
   if (skinBonus.bulletDamage) ship.bulletDamage += skinBonus.bulletDamage;
+  if (skinBonus.missileDamage) ship.missileDamage += skinBonus.missileDamage;
+  if (skinBonus.droneDamage) ship.droneDamage += skinBonus.droneDamage;
   if (skinBonus.rateMult) ship.rateMult *= skinBonus.rateMult;
   if (skinBonus.shieldMult) ship.shieldMult *= skinBonus.shieldMult;
 
@@ -3109,7 +3462,8 @@ function unlockedPlanetIds() {
 }
 
 function currentContractIds() {
-  return progress.currentContractLane === "field" ? FIELD_CONTRACTS.map((contract) => contract.id) : unlockedPlanetIds();
+  ensureRotatingContracts(progress);
+  return progress.currentContractLane === "field" ? allFieldContracts(progress).map((contract) => contract.id) : unlockedPlanetIds();
 }
 
 function setContractLane(lane) {
@@ -3152,6 +3506,28 @@ function selectPlanet(direction) {
   render();
 }
 
+function selectFieldContractByType(dynamicType) {
+  ensureRotatingContracts(progress);
+  const target = Object.values(progress.dynamicContracts || {}).find((contract) => contract?.dynamicType === dynamicType);
+  if (!target) return;
+  progress.currentContractLane = "field";
+  progress.currentFieldContractId = target.id;
+  saveProgress();
+  const previousZoom = state.treeZoom;
+  resetSortie();
+  state.treeZoom = previousZoom;
+  state.mode = "hangar";
+  hideOverlays();
+  ui.hangarScreen.classList.add("visible");
+  renderUpgradeTree();
+  renderResearchTree();
+  renderLogbook();
+  renderSkinsTree();
+  showHangarStatus(`${target.name} routed to the contract rail.`);
+  syncUi();
+  render();
+}
+
 function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefinition = null) {
   state.mode = success ? "results" : "hangar";
   hideOverlays();
@@ -3164,6 +3540,7 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
     }
     let objectiveProgress = null;
     let contractPayoutCredits = 0;
+    let masteryReward = 0;
     if (contract.contractType === "field") {
       const fieldProgress = ensureFieldContractProgressRecord(progress, contract.id);
       fieldProgress.contractDelivered = addMaterials(fieldProgress.contractDelivered, delivered);
@@ -3175,6 +3552,16 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
         progress.credits += contractPayoutCredits;
         progress.fieldContractCompletions[contract.id] = fieldContractCompletionCount(contract.id) + 1;
         progress.fieldContractProgress[contract.id] = defaultPlanetProgress();
+        masteryReward = masteryRewardForContract(contract);
+        progress.masteryXp = Math.max(0, progress.masteryXp || 0) + masteryReward;
+        if (contract.dynamicType === "daily") progress.lifetimeStats.dailyContractsCompleted = (progress.lifetimeStats.dailyContractsCompleted || 0) + 1;
+        if (contract.dynamicType === "elite") progress.lifetimeStats.eliteContractsCompleted = (progress.lifetimeStats.eliteContractsCompleted || 0) + 1;
+        if (contract.dynamicType === "endless") progress.lifetimeStats.endlessContractsCompleted = (progress.lifetimeStats.endlessContractsCompleted || 0) + 1;
+        if (contract.dynamicType === "endless") {
+          progress.endlessTier = Math.max(1, progress.endlessTier || 1) + 1;
+          ensureRotatingContracts(progress);
+          progress.currentFieldContractId = progress.dynamicContracts.endless?.id || progress.currentFieldContractId;
+        }
       }
     }
     progress.bestCargo = Math.max(progress.bestCargo, sumCargo(delivered));
@@ -3187,15 +3574,18 @@ function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefiniti
       objectiveMissingLabel: objectiveProgress?.missingLabel || "",
       objectiveComplete: objectiveProgress?.complete ?? true,
       contractPayoutCredits,
+      masteryReward,
     };
     progress.lastSortieReport = sortieReport;
     updateLifetimeProgressFromSortie(sortieReport, contract, objectiveProgress?.complete ?? true);
     achievementUnlocks = evaluateHiddenAchievements();
     if (contract.contractType === "field") {
       showHangarStatus(mergeAchievementMessages(objectiveProgress.complete
-        ? `Field contract complete. Stored ${formatMaterials(delivered)} and paid out ${formatCredits(contractPayoutCredits)}.`
+        ? `${contract.dynamicType === "endless" ? `Endless tier ${Math.max(1, progress.endlessTier - 1)} cleared.` : "Field contract complete."} Stored ${formatMaterials(delivered)} and paid out ${formatCredits(contractPayoutCredits)}. +${fmt(masteryReward)} mastery.`
         : `Contract progress updated. Stored ${formatMaterials(delivered)}. Still need ${objectiveProgress.missingLabel}.`, achievementUnlocks));
     } else if (sumCargo(state.runStats.bonusMaterials) > 0) {
+      const worldMastery = reportPlanetDefinition?.finalPlanet ? 240 : reportPlanetDefinition?.id === "vesper-2" ? 180 : 140;
+      progress.masteryXp = Math.max(0, progress.masteryXp || 0) + worldMastery;
       showHangarStatus(mergeAchievementMessages(`Core harvest secured. Delivered ${formatMaterials(delivered)} including ${formatMaterials(state.runStats.bonusMaterials)} bonus materials.`, achievementUnlocks));
     } else {
       showHangarStatus(mergeAchievementMessages(`Dock successful. Stored ${formatMaterials(delivered)} in the hangar hold.`, achievementUnlocks));
@@ -3354,6 +3744,51 @@ function showHangarStatus(message, duration = 3.6) {
   progress.lastStatus = message;
   state.hangarMessage = message;
   state.hangarStatusUntil = state.time + duration;
+}
+
+function canPrestige() {
+  return !!progress.buildComplete;
+}
+
+function prestigePassiveBonus() {
+  const level = Math.max(0, progress.prestigeLevel || 0);
+  return {
+    hpMax: level * 6,
+    fuelMax: level * 8,
+    cargoCap: level * 2,
+    bulletDamage: level * 0.05,
+  };
+}
+
+function performPrestigeReset() {
+  if (!canPrestige()) return;
+  const preserved = {
+    settings: { ...(progress.settings || {}) },
+    achievements: { ...(progress.achievements || {}) },
+    unlockedSkins: [...(progress.unlockedSkins || ["standard"])],
+    activeSkinId: progress.activeSkinId,
+    lifetimeStats: normalizeLifetimeStats(progress.lifetimeStats),
+    prestigeLevel: Math.max(0, progress.prestigeLevel || 0) + 1,
+    prestigeResets: Math.max(0, progress.prestigeResets || 0) + 1,
+    prestigeTokens: Math.max(0, progress.prestigeTokens || 0) + 1,
+    masteryXp: Math.max(0, progress.masteryXp || 0),
+  };
+  Object.assign(progress, defaultProgress());
+  progress.settings = preserved.settings;
+  progress.achievements = preserved.achievements;
+  progress.unlockedSkins = preserved.unlockedSkins.includes("standard") ? preserved.unlockedSkins : ["standard", ...preserved.unlockedSkins];
+  progress.activeSkinId = SHIP_SKIN_BY_ID[preserved.activeSkinId] ? preserved.activeSkinId : progress.unlockedSkins[0];
+  progress.lifetimeStats = preserved.lifetimeStats;
+  progress.prestigeLevel = preserved.prestigeLevel;
+  progress.prestigeResets = preserved.prestigeResets;
+  progress.prestigeTokens = preserved.prestigeTokens;
+  progress.masteryXp = preserved.masteryXp;
+  ensureRotatingContracts(progress);
+  const unlocked = evaluateHiddenAchievements();
+  saveProgress();
+  resetSortie();
+  showHangarScreen();
+  showHangarStatus(mergeAchievementMessages(`Prestige reset complete. Prestige ${progress.prestigeLevel} online.`, unlocked), 4.8);
 }
 
 function setHangarView(view) {
@@ -3531,9 +3966,11 @@ function renderResearchTree() {
 }
 
 function renderLogbook() {
+  ensureRotatingContracts(progress);
   const clearedCorePlanets = PLANETS.filter((planet) => progress.planetProgress?.[planet.id]?.coreCleared).length;
   const unlockedAchievements = HIDDEN_ACHIEVEMENTS.filter((achievement) => hiddenAchievementUnlocked(achievement.id));
   const lockedCount = HIDDEN_ACHIEVEMENTS.length - unlockedAchievements.length;
+  const mastery = masteryRankForXp(progress.masteryXp || 0);
   const familyCards = CELESTIAL_FAMILIES.map((family) => {
     const contractCount = FIELD_CONTRACTS.filter((contract) => contract.familyId === family.id).length;
     const tendency = family.contractTendencies?.commonObjectives?.slice(0, 2).join(" / ") || "mixed";
@@ -3544,6 +3981,9 @@ function renderLogbook() {
     : `<div class="logbook-chip">No milestones logged yet.</div>`;
   const activeCore = getPlanetDefinition(progress.currentPlanetId);
   const activeField = getFieldContractDefinition(progress.currentFieldContractId);
+  const daily = progress.dynamicContracts?.daily;
+  const elite = progress.dynamicContracts?.elite;
+  const endless = progress.dynamicContracts?.endless;
   ui.logbookTree.innerHTML = `
     <section class="logbook-section">
       <h4>Campaign</h4>
@@ -3553,15 +3993,35 @@ function renderLogbook() {
         <div class="logbook-row"><span>Active World</span><strong>${activeCore.name}</strong></div>
         <div class="logbook-row"><span>Field Clears</span><strong>${fmt(progress.lifetimeStats.fieldContractsCompleted || 0)}</strong></div>
       </div>
-      <p>${progress.buildComplete ? "Vesper-3 is down. The current build is fully cleared." : "Break core worlds, cash field jobs, and finish the charter ladder."}</p>
+      <p>${progress.buildComplete ? "Vesper-3 is down. The build is cleared and prestige is now available." : "Break core worlds, cash field jobs, and finish the charter ladder."}</p>
+    </section>
+    <section class="logbook-section">
+      <h4>Progression</h4>
+      <div class="logbook-grid">
+        <div class="logbook-row"><span>Mastery</span><strong>${mastery.title} ${mastery.rank}</strong></div>
+        <div class="logbook-row"><span>XP</span><strong>${fmt(mastery.current)} / ${fmt(mastery.needed)}</strong></div>
+        <div class="logbook-row"><span>Prestige</span><strong>${fmt(progress.prestigeLevel || 0)}</strong></div>
+        <div class="logbook-row"><span>Tokens</span><strong>${fmt(progress.prestigeTokens || 0)}</strong></div>
+      </div>
+      <p>${progress.buildComplete ? "Prestige resets credits, upgrades, research, planets, and contracts while keeping achievements, skins, mastery, and permanent prestige bonuses." : "Mastery rises through successful contracts and core clears. Prestige unlocks after the final world is cracked."}</p>
+      <div class="hangar-trade-buttons">
+        <button class="mini-ui-btn" data-logbook-action="goto-daily">Daily</button>
+        <button class="mini-ui-btn" data-logbook-action="goto-elite">Elite</button>
+        <button class="mini-ui-btn" data-logbook-action="goto-endless">Endless</button>
+        <button class="mini-ui-btn" data-logbook-action="prestige"${canPrestige() ? "" : " disabled"}>Prestige Reset</button>
+      </div>
     </section>
     <section class="logbook-section">
       <h4>Routes</h4>
       <div class="logbook-grid">
         <div class="logbook-row"><span>Core Route</span><strong>${activeCore.name}</strong></div>
         <div class="logbook-row"><span>Field Route</span><strong>${activeField.name}</strong></div>
+        <div class="logbook-row"><span>Daily</span><strong>${daily?.name || "Offline"}</strong></div>
+        <div class="logbook-row"><span>Elite</span><strong>${elite?.name || "Offline"}</strong></div>
+        <div class="logbook-row"><span>Endless</span><strong>${endless?.name || "Offline"}</strong></div>
+        <div class="logbook-row"><span>Ladder</span><strong>Tier ${fmt(progress.endlessTier || 1)}</strong></div>
       </div>
-      <p>${activeField.contractDetail}. Goal: ${contractObjectiveLabel(activeField)}.</p>
+      <p>${activeField.contractDetail}. Goal: ${contractObjectiveLabel(activeField)}.${contractModifierSummary(activeField) ? ` Mod: ${contractModifierSummary(activeField)}.` : ""}</p>
     </section>
     <section class="logbook-section">
       <h4>Families</h4>
@@ -3947,6 +4407,22 @@ function pickupBlockDamage(block, damage) {
       state.planetProgressDirty = true;
       state.planetProgressPersistNeeded = true;
       state.planetProgressAnnounceNeeded = true;
+    }
+    if (contractHasModifier(state.contract, "volatileCrust")) {
+      const blastRadius = BLOCK_SIZE * 1.35;
+      if (distanceSq(state.ship.x, state.ship.y, block.x, block.y) < blastRadius * blastRadius) {
+        damageShip(18, 10, 1);
+      }
+      for (let i = 0; i < 6; i += 1) {
+        pushParticle({
+          x: block.x,
+          y: block.y,
+          vx: rand(-180, 180),
+          vy: rand(-180, 180),
+          life: rand(0.18, 0.42),
+          color: i % 2 === 0 ? "#ff9d4d" : "#ffd27a",
+        });
+      }
     }
     spawnPickup(block);
   }
@@ -5510,6 +5986,14 @@ function drawSectorBoundaries() {
 
 function render() {
   drawBackground();
+  if (state.mode === "sortie" && contractHasModifier(state.contract, "lowVisibility")) {
+    const fogAlpha = 0.18 + (state.contract.visibilityPenalty || 0.22);
+    const fog = ctx.createRadialGradient(state.width * 0.5, state.height * 0.5, state.width * 0.12, state.width * 0.5, state.height * 0.5, state.width * 0.68);
+    fog.addColorStop(0, "rgba(7, 3, 14, 0)");
+    fog.addColorStop(1, `rgba(7, 3, 14, ${fogAlpha})`);
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, 0, state.width, state.height);
+  }
   drawCoreGlow();
   drawSectorBoundaries();
   drawPlanetBlocks();
@@ -5658,8 +6142,9 @@ function syncUi(force = true) {
   ui.hangarPlanetValue.textContent = activePlanet.name;
   const contractCompletions = activePlanet.contractType === "field" ? fieldContractCompletionCount(activePlanet.id) : 0;
   const lowFuelTag = activePlanet.startingFuelMult ? ` • ${Math.round(activePlanet.startingFuelMult * 100)}% fuel start` : "";
+  const modifierTag = contractModifierSummary(activePlanet);
   ui.hangarPlanetDetail.textContent = activePlanet.contractType === "field"
-    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}${lowFuelTag}`
+    ? `${planetThreatLabel(activePlanet)} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}${lowFuelTag}${modifierTag ? ` • ${modifierTag}` : ""}`
     : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarSectorValue.textContent = `${planetSnapshot.currentSector.name} ${formatPercent(planetSnapshot.currentSector.percentCleared)}`;
   const fieldObjectiveProgress = activePlanet.contractType === "field"
@@ -5674,13 +6159,13 @@ function syncUi(force = true) {
     : planetSnapshot.coreCleared ? activePlanet.finalPlanet ? "Build Clear" : "Cleared" : planetSnapshot.coreUnlocked ? "Unlocked" : "Sealed";
   ui.hangarContractName.textContent = activePlanet.name;
   ui.hangarContractDetail.textContent = activePlanet.contractType === "field"
-    ? `${activePlanet.visual?.bodyLabel || "Field body"} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}`
+    ? `${activePlanet.rotationLabel ? `${activePlanet.rotationLabel} • ` : ""}${activePlanet.visual?.bodyLabel || "Field body"} • ${contractCompletions ? `Cleared ${fmt(contractCompletions)}x` : "Open"}`
     : `${planetThreatLabel(activePlanet)} • ${planetContractDetail(activePlanet)}`;
   ui.hangarContractObjective.textContent = activePlanet.contractType === "field"
     ? `Goal: ${contractObjectiveLabel(activePlanet)}`
     : "Objective: Clear the sectors and destroy the core";
   ui.hangarContractYield.textContent = activePlanet.contractType === "field"
-    ? `Status: ${fieldObjectiveProgress?.progressLabel || "No progress"}`
+    ? `Status: ${fieldObjectiveProgress?.progressLabel || "No progress"}${modifierTag ? ` • ${modifierTag}` : ""}`
     : `Focus: ${planetYieldLabel(activePlanet)}`;
   ui.hangarContractPressure.textContent = planetThreatLabel(activePlanet);
   ui.hangarUpgradeGrid.textContent = `${purchasedCount} / ${visibleNodeCount} online`;
@@ -5881,6 +6366,27 @@ ui.showResearchBtn.addEventListener("click", () => {
 ui.showLogbookBtn.addEventListener("click", () => {
   playUiClick();
   setHangarView("logbook");
+});
+ui.logbookTree.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-logbook-action]");
+  if (!button) return;
+  playUiClick();
+  const action = button.dataset.logbookAction;
+  if (action === "prestige") {
+    performPrestigeReset();
+    return;
+  }
+  if (action === "goto-daily") {
+    selectFieldContractByType("daily");
+    return;
+  }
+  if (action === "goto-elite") {
+    selectFieldContractByType("elite");
+    return;
+  }
+  if (action === "goto-endless") {
+    selectFieldContractByType("endless");
+  }
 });
 ui.showSkinsBtn.addEventListener("click", () => {
   playUiClick();
