@@ -83,8 +83,12 @@
 
         <section id="hangar-screen" class="overlay hangar-screen">
           <div class="hangar-ops-column">
-            <div class="hangar-launch">
-              <button id="launch-sortie-btn" class="ui-btn primary">Start New Sortie</button>
+            <div class="hangar-hero">
+              <button id="launch-sortie-btn" class="ui-btn primary hangar-launch-btn">Start New Sortie</button>
+              <div class="hangar-next-hint">
+                <span>Next step</span>
+                <strong id="hangar-next-upgrade">No upgrade queued</strong>
+              </div>
             </div>
             <div class="hangar-pane-tabs">
               <button id="show-core-contracts-btn" class="mini-ui-btn active">Core</button>
@@ -139,10 +143,6 @@
               <div class="hangar-progress-card">
                 <span>Upgrade Grid</span>
                 <strong id="hangar-upgrade-grid">0 / 0 online</strong>
-              </div>
-              <div class="hangar-progress-card">
-                <span>Next System</span>
-                <strong id="hangar-next-upgrade">No upgrade queued</strong>
               </div>
             </div>
             <div class="hangar-trade">

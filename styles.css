@@ -10,7 +10,29 @@
   --red: #ff5d49;
   --gold: #ffd24f;
   --shadow: 0 22px 60px rgba(0, 0, 0, 0.46);
+  --font-display: "Avenir Next Condensed", "Futura", "Roboto Condensed", "Arial Narrow", "Trebuchet MS", sans-serif;
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+.menu-card h2,
+.modal-card h3,
+.tip-card h3,
+.results-header h3,
+.hangar-contract-copy strong,
+.logbook-section h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.menu-card h2 {
+  letter-spacing: 0.1em;
+  background: linear-gradient(180deg, #fff6da 20%, #ffd24f 62%, #ff8a5c);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 42px rgba(255, 187, 92, 0.28);
 }
 
 * {
@@ -314,13 +336,45 @@ canvas,
   padding-right: 6px;
 }
 
-.hangar-launch {
-  display: flex;
-  justify-content: stretch;
+.hangar-hero {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 204, 79, 0.08), rgba(255, 93, 73, 0.04)),
+    rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 210, 79, 0.28);
+  box-shadow: 0 0 26px rgba(255, 187, 92, 0.08);
 }
 
-.hangar-launch .ui-btn {
+.hangar-launch-btn {
   width: 100%;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-color: rgba(255, 210, 79, 0.45);
+  box-shadow: 0 0 22px rgba(255, 187, 92, 0.18);
+}
+
+.hangar-next-hint {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.hangar-next-hint span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.hangar-next-hint strong {
+  color: var(--gold);
+  font-size: 0.92rem;
 }
 
 .hangar-contract-bar {
@@ -383,6 +437,11 @@ canvas,
   cursor: default;
 }
 
+.mini-ui-btn.hidden,
+.hangar-pane-tabs.hidden {
+  display: none;
+}
+
 .hangar-summary {
   display: grid;
   grid-template-columns: 1fr;
@@ -391,7 +450,7 @@ canvas,
 
 .hangar-progress-strip {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1135,6 +1194,31 @@ canvas,
   transform: translateX(-50%);
   padding: 10px 16px;
   border-radius: 999px;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.status-banner[data-kind="warn"] {
+  border-color: rgba(255, 187, 92, 0.55);
+  box-shadow: 0 0 18px rgba(255, 187, 92, 0.2);
+}
+
+.status-banner[data-kind="danger"] {
+  border-color: rgba(255, 93, 73, 0.6);
+  box-shadow: 0 0 18px rgba(255, 93, 73, 0.26);
+}
+
+.status-banner[data-kind="success"] {
+  border-color: rgba(98, 255, 141, 0.5);
+  box-shadow: 0 0 18px rgba(98, 255, 141, 0.18);
+}
+
+.status-banner[data-kind="tip"] {
+  border-color: rgba(88, 223, 255, 0.6);
+  box-shadow: 0 0 20px rgba(88, 223, 255, 0.24);
+}
+
+.status-banner[data-kind="tip"] #status-text {
+  color: #d9f6ff;
 }
 
 @media (max-width: 760px) {
@@ -1405,8 +1489,19 @@ canvas,
     padding-right: 2px;
   }
 
-  .hangar-launch .ui-btn {
+  .hangar-hero {
+    padding: 10px;
+    gap: 6px;
+    border-radius: 16px;
+  }
+
+  .hangar-launch-btn {
     padding: 9px 14px;
+    font-size: 0.9rem;
+  }
+
+  .hangar-next-hint strong {
+    font-size: 0.78rem;
   }
 
   .hangar-contract-bar {

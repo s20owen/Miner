@@ -99,7 +99,7 @@ const CORE_RADIUS_BLOCKS = 10;
 const PLANET_RADIUS = PLANET_RADIUS_BLOCKS * BLOCK_SIZE;
 const SHIP_RADIUS = 11;
 const SAVE_KEY = "orbit-mine-save-v1";
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 const IS_MOBILE = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent || "");
 
 const QUALITY_PROFILES = {
@@ -1433,6 +1433,15 @@ function normalizeLifetimeStats(stats = {}) {
   };
 }
 
+function defaultOnboarding() {
+  return {
+    thrust: false,
+    mine: false,
+    cargoFull: false,
+    dock: false,
+  };
+}
+
 function defaultFieldContractCompletions() {
   return Object.fromEntries(FIELD_CONTRACTS.map((contract) => [contract.id, 0]));
 }
@@ -2252,6 +2261,7 @@ function defaultProgress() {
     upgrades: {},
     lastStatus: "Start your first sortie.",
     hasSeenTip: false,
+    onboarding: defaultOnboarding(),
   };
 }
 
@@ -2334,6 +2344,15 @@ function loadProgress() {
     if (merged.upgrades?.hull5 || merged.upgrades?.laser3 || merged.upgrades?.fuelEco3) merged.research.deepCoreOptics = true;
     merged.lifetimeStats.upgradesUnlocked = Object.keys(merged.upgrades || {}).length;
     merged.lifetimeStats.researchUnlocked = Object.keys(merged.research || {}).length;
+    // v2 -> v3: contextual onboarding flags. Veterans who already finished the
+    // old tip flow have clearly moved and mined, so skip the redundant prompts.
+    merged.onboarding = {
+      ...defaultOnboarding(),
+      ...(typeof merged.onboarding === "object" && merged.onboarding ? merged.onboarding : {}),
+    };
+    if (merged.saveVersion < 3 && (merged.lifetimeStats.blocksMined > 0 || merged.sortie > 1)) {
+      for (const key of Object.keys(merged.onboarding)) merged.onboarding[key] = true;
+    }
     syncLegacyDestroyedBlocksForLoad(merged);
     merged.saveVersion = SAVE_VERSION;
     return merged;
@@ -2617,6 +2636,12 @@ function particleBudget() {
   return currentQualityProfile().particleCap;
 }
 
+// Scales burst sizes with the profile particle cap so juice degrades
+// gracefully on Battery instead of hitting the hard budget and vanishing.
+function particleBurstCount(count) {
+  return Math.max(1, Math.round(count * (particleBudget() / QUALITY_PROFILES.performance.particleCap)));
+}
+
 function setQualityProfile(profileId, { persist = true } = {}) {
   const nextProfile = sanitizeQualityProfile(profileId);
   if (!progress.settings) progress.settings = defaultProgress().settings;
@@ -2746,9 +2771,20 @@ function savePlanetProgressSnapshot(snapshot, persist = true) {
   if (persist) saveProgress();
 }
 
-function showGameplayBanner(message, duration = 3.2) {
+function showGameplayBanner(message, duration = 3.2, kind = "info") {
   state.bannerMessage = message;
   state.bannerUntil = state.time + duration;
+  state.bannerKind = kind;
+}
+
+function maybeShowOnboardingTip(key, message, duration = 4.6) {
+  if (!progress.onboarding) progress.onboarding = defaultOnboarding();
+  if (progress.onboarding[key]) return false;
+  progress.onboarding[key] = true;
+  saveProgress();
+  showGameplayBanner(message, duration, "tip");
+  playSectorEntered();
+  return true;
 }
 
 function setCorePhase(phase, timer = 0) {
@@ -2762,7 +2798,7 @@ function triggerCorePulse(strength = 310) {
   state.gravityPulse.radius = contractPlanetRadius(state.contract) * 0.24;
   state.gravityPulse.strength = strength;
   state.gravityPulse.timer = 4.2;
-  showGameplayBanner("Core pulse. Stay clear of the center.", 1.8);
+  showGameplayBanner("Core pulse. Stay clear of the center.", 1.8, "danger");
 }
 
 function refreshPlanetProgress({ persist = false, announce = false } = {}) {
@@ -2778,9 +2814,11 @@ function refreshPlanetProgress({ persist = false, announce = false } = {}) {
   if (!announce || !previous) return snapshot;
   if (previous.currentSectorId !== snapshot.currentSectorId) {
     const sector = snapshot.currentSector;
-    showGameplayBanner(`${sector.name} entered. ${formatPercent(sector.percentCleared)} cleared.`);
+    showGameplayBanner(`${sector.name} entered. ${formatPercent(sector.percentCleared)} cleared.`, 3.2, "success");
+    playSectorEntered();
   } else if (!previous.coreUnlocked && snapshot.coreUnlocked) {
-    showGameplayBanner("Core shell broken. Core event unlocked.");
+    showGameplayBanner("Core shell broken. Core event unlocked.", 3.6, "success");
+    playCoreUnlocked();
     setCorePhase("shielded", 1.15);
   }
   return snapshot;
@@ -2815,6 +2853,22 @@ function playTone({ freq = 440, duration = 0.08, type = "sine", gain = 0.4, slid
   osc.stop(now + duration + 0.02);
 }
 
+const toneThrottle = {};
+
+function playToneThrottled(key, minIntervalMs, toneOptions) {
+  const now = performance.now();
+  if (toneThrottle[key] && now - toneThrottle[key] < minIntervalMs) return;
+  toneThrottle[key] = now;
+  playTone(toneOptions);
+}
+
+const MATERIAL_TONE_FREQS = {
+  ore: 150,
+  platinum: 240,
+  crystal: 330,
+  coreSample: 420,
+};
+
 function playUiClick() {
   playTone({ freq: 540, slideTo: 760, duration: 0.06, type: "triangle", gain: 0.28 });
 }
@@ -2827,14 +2881,69 @@ function playHit() {
   playTone({ freq: 120, slideTo: 70, duration: 0.09, type: "sawtooth", gain: 0.24 });
 }
 
-function playPickup(material = "ore") {
+function playBlockHit(material = "ore") {
+  const base = MATERIAL_TONE_FREQS[material] || MATERIAL_TONE_FREQS.ore;
+  playToneThrottled("blockHit", 45, { freq: base, slideTo: base * 0.6, duration: 0.05, type: "sawtooth", gain: 0.14 });
+}
+
+function playBlockBreak(material = "ore") {
+  const base = (MATERIAL_TONE_FREQS[material] || MATERIAL_TONE_FREQS.ore) * 1.8;
+  playToneThrottled("blockBreak", 60, { freq: base, slideTo: base * 1.7, duration: 0.09, type: "triangle", gain: 0.26 });
+  playToneThrottled("blockBreakThud", 60, { freq: 90, slideTo: 52, duration: 0.08, type: "square", gain: 0.18 });
+}
+
+function playCoreHit() {
+  playToneThrottled("coreHit", 70, { freq: 70, slideTo: 38, duration: 0.14, type: "sawtooth", gain: 0.32 });
+  playToneThrottled("coreHitRing", 70, { freq: 640, slideTo: 340, duration: 0.09, type: "triangle", gain: 0.14 });
+}
+
+function playPickup(material = "ore", fillRatio = 0) {
+  const pitchLift = 1 + clamp(fillRatio, 0, 1) * 0.45;
   playTone({
-    freq: material === "crystal" ? 980 : material === "platinum" ? 880 : 700,
-    slideTo: material === "crystal" ? 1380 : material === "platinum" ? 1120 : 860,
+    freq: (material === "crystal" ? 980 : material === "platinum" ? 880 : 700) * pitchLift,
+    slideTo: (material === "crystal" ? 1380 : material === "platinum" ? 1120 : 860) * pitchLift,
     duration: 0.07,
     type: "triangle",
     gain: 0.22,
   });
+}
+
+function playAlert() {
+  playTone({ freq: 520, slideTo: 330, duration: 0.16, type: "square", gain: 0.22 });
+  window.setTimeout(() => playTone({ freq: 520, slideTo: 330, duration: 0.16, type: "square", gain: 0.18 }), 190);
+}
+
+function playCargoFull() {
+  playTone({ freq: 660, slideTo: 660, duration: 0.09, type: "triangle", gain: 0.24 });
+  window.setTimeout(() => playTone({ freq: 880, slideTo: 880, duration: 0.12, type: "triangle", gain: 0.24 }), 100);
+}
+
+function playSectorEntered() {
+  playTone({ freq: 320, slideTo: 540, duration: 0.16, type: "sine", gain: 0.2 });
+}
+
+function playCoreUnlocked() {
+  playTone({ freq: 440, slideTo: 440, duration: 0.1, type: "triangle", gain: 0.24 });
+  window.setTimeout(() => playTone({ freq: 554, slideTo: 554, duration: 0.1, type: "triangle", gain: 0.24 }), 110);
+  window.setTimeout(() => playTone({ freq: 660, slideTo: 880, duration: 0.18, type: "triangle", gain: 0.26 }), 220);
+}
+
+function playExtractionSuccess() {
+  playTone({ freq: 523, slideTo: 523, duration: 0.09, type: "triangle", gain: 0.24 });
+  window.setTimeout(() => playTone({ freq: 659, slideTo: 659, duration: 0.09, type: "triangle", gain: 0.24 }), 95);
+  window.setTimeout(() => playTone({ freq: 784, slideTo: 1046, duration: 0.2, type: "triangle", gain: 0.26 }), 190);
+}
+
+function playFailure(mode = "damage") {
+  if (mode === "fuel") {
+    playTone({ freq: 300, slideTo: 70, duration: 0.5, type: "sine", gain: 0.26 });
+  } else if (mode === "core") {
+    playTone({ freq: 90, slideTo: 30, duration: 0.55, type: "sawtooth", gain: 0.3 });
+    window.setTimeout(() => playTone({ freq: 700, slideTo: 120, duration: 0.4, type: "square", gain: 0.14 }), 80);
+  } else {
+    playTone({ freq: 130, slideTo: 40, duration: 0.4, type: "sawtooth", gain: 0.32 });
+    window.setTimeout(() => playTone({ freq: 90, slideTo: 32, duration: 0.32, type: "square", gain: 0.2 }), 120);
+  }
 }
 
 function playUnlock() {
@@ -2981,6 +3090,10 @@ function makeState() {
       collisionFuelMult: 1,
       collisionCostMult: 1,
       facingAngle: Math.PI / 2,
+      thrustLevel: 0,
+      thrustAngle: 0,
+      bank: 0,
+      muzzleFlash: 0,
     },
     dock: {
       x: 0,
@@ -3032,6 +3145,10 @@ function makeState() {
     planetProgressAnnounceNeeded: false,
     bannerMessage: "",
     bannerUntil: 0,
+    bannerKind: "info",
+    fuelAlerted: false,
+    cargoFullAnnounced: false,
+    thrustInputTime: 0,
     tipIndex: 0,
     runStats: {
       blocksMined: 0,
@@ -3240,7 +3357,19 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
   const top = block.y - BLOCK_SIZE * 0.5 + PLANET_CACHE_ORIGIN;
   targetCtx.clearRect(left - 1, top - 1, BLOCK_SIZE + 2, BLOCK_SIZE + 2);
   if (!block.alive) return;
-  const color = blockColor(block);
+  let color = blockColor(block);
+  const isSampleBlock = block.isCoreSample || block.material === "coreSample";
+  if (!isSampleBlock) {
+    // Bake spherical shading into the cached art: deeper shells fall into
+    // shadow and the limb facing the dock catches light, so the block field
+    // reads as a rounded body instead of a flat wall.
+    const radiusBlocks = state?.planet?.radiusBlocks || PLANET_RADIUS_BLOCKS;
+    const dist = length2D(block.gx, block.gy);
+    const depth = clamp(1 - dist / Math.max(1, radiusBlocks), 0, 1);
+    color = mixHex(color, "#0a0312", depth * 0.46);
+    const lightBlend = dist > 0.001 ? (1 - block.gy / dist) * 0.5 : 0.5;
+    color = mixHex(color, "#fff3d6", lightBlend * 0.2 * (1 - depth * 0.55));
+  }
   targetCtx.save();
   targetCtx.fillStyle = color;
   targetCtx.fillRect(left, top, BLOCK_SIZE, BLOCK_SIZE);
@@ -3258,27 +3387,38 @@ function drawBlockOnPlanetLayer(targetCtx, block) {
     targetCtx.restore();
     return;
   }
-  targetCtx.strokeStyle = "rgba(255, 245, 215, 0.28)";
+  targetCtx.strokeStyle = "rgba(8, 2, 14, 0.5)";
   targetCtx.lineWidth = 1;
   targetCtx.strokeRect(left + 0.5, top + 0.5, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
-  targetCtx.fillStyle = "rgba(255, 255, 255, 0.12)";
-  targetCtx.fillRect(left + 2, top + 2, BLOCK_SIZE - 6, 3);
   if (block.material === "platinum") {
-    targetCtx.strokeStyle = colorWithAlpha(paletteColorForContract(state?.contract, "industrialCool", "platinum", "#89efff"), "dd");
+    targetCtx.strokeStyle = "rgba(235, 251, 255, 0.85)";
+    targetCtx.lineWidth = 1.5;
     targetCtx.beginPath();
-    targetCtx.moveTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.22);
-    targetCtx.lineTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.78);
-    targetCtx.moveTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.22);
-    targetCtx.lineTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.78);
+    targetCtx.moveTo(left + BLOCK_SIZE * 0.26, top + BLOCK_SIZE * 0.7);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.72, top + BLOCK_SIZE * 0.26);
     targetCtx.stroke();
   } else if (block.material === "crystal") {
-    targetCtx.strokeStyle = colorWithAlpha(paletteColorForContract(state?.contract, "crystalHot", "crystal", "#f889ff"), "ee");
+    targetCtx.fillStyle = "rgba(255, 240, 255, 0.5)";
     targetCtx.beginPath();
-    targetCtx.moveTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.12);
-    targetCtx.lineTo(left + BLOCK_SIZE * 0.86, top + BLOCK_SIZE * 0.5);
-    targetCtx.lineTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.88);
-    targetCtx.lineTo(left + BLOCK_SIZE * 0.14, top + BLOCK_SIZE * 0.5);
+    targetCtx.moveTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.18);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.5);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.5, top + BLOCK_SIZE * 0.82);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.2, top + BLOCK_SIZE * 0.5);
     targetCtx.closePath();
+    targetCtx.fill();
+    targetCtx.strokeStyle = "rgba(255, 252, 255, 0.88)";
+    targetCtx.lineWidth = 1;
+    targetCtx.stroke();
+  }
+  if (block.hp < block.maxHp * 0.55) {
+    targetCtx.strokeStyle = "rgba(10, 3, 16, 0.72)";
+    targetCtx.lineWidth = 1.2;
+    targetCtx.beginPath();
+    targetCtx.moveTo(left + BLOCK_SIZE * 0.22, top + BLOCK_SIZE * 0.3);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.52, top + BLOCK_SIZE * 0.56);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.4, top + BLOCK_SIZE * 0.82);
+    targetCtx.moveTo(left + BLOCK_SIZE * 0.52, top + BLOCK_SIZE * 0.56);
+    targetCtx.lineTo(left + BLOCK_SIZE * 0.8, top + BLOCK_SIZE * 0.66);
     targetCtx.stroke();
   }
   targetCtx.restore();
@@ -3450,6 +3590,9 @@ function startSortie() {
       : " Primary objective: clear the sectors and break the core.";
     showGameplayBanner(`${state.planet.definition.name} sortie. ${sector.name} at ${formatPercent(sector.percentCleared)}.${objectiveText}`);
   }
+  maybeShowOnboardingTip("thrust", IS_MOBILE
+    ? "Left stick to thrust. Fly down toward the planet."
+    : "Thrust with WASD or arrows. Fly down toward the planet.");
   hideOverlays();
   syncUi();
   resize();
@@ -3531,6 +3674,7 @@ function selectFieldContractByType(dynamicType) {
 function sendToHangar(success, reportPlanetSnapshot = null, reportPlanetDefinition = null) {
   state.mode = success ? "results" : "hangar";
   hideOverlays();
+  if (success) playExtractionSuccess();
   const delivered = success ? addMaterials(state.ship.cargo, state.runStats.bonusMaterials) : emptyMaterials();
   const contract = state.contract;
   let achievementUnlocks = [];
@@ -3748,6 +3892,16 @@ function showHangarStatus(message, duration = 3.6) {
 
 function canPrestige() {
   return !!progress.buildComplete;
+}
+
+// Advanced meta (field/daily/elite/endless contracts, logbook, skins) stays
+// out of sight until the first core world is cracked, so new players see a
+// focused tree. Saves already routed to a field contract keep their access.
+function advancedMetaUnlocked() {
+  return planetCoreCleared(PLANETS[0].id)
+    || !!progress.buildComplete
+    || (progress.prestigeLevel || 0) > 0
+    || progress.currentContractLane === "field";
 }
 
 function prestigePassiveBonus() {
@@ -4143,31 +4297,33 @@ function setupUpgradeTreePan() {
   ui.upgradeTree.addEventListener("pointercancel", releasePan);
 }
 
+function blockBaseColor(block) {
+  if (block.isCoreSample || block.material === "coreSample") return "#fff5b8";
+  const contract = state?.contract;
+  if (block.material === "platinum") {
+    if (block.sectorId === "coreShell") return paletteColorForContract(contract, "coreCool", "platinum", "#93b0ff");
+    if (block.sectorId === "crystalFault") return paletteColorForContract(contract, "crystalCool", "platinum", "#7ddcff");
+    return paletteColorForContract(contract, "industrialCool", "platinum", "#89efff");
+  }
+  if (block.material === "crystal") {
+    if (block.sectorId === "coreShell") return paletteColorForContract(contract, "coreHot", "crystal", "#ff74ba");
+    return paletteColorForContract(contract, "crystalHot", "crystal", "#f889ff");
+  }
+  if (block.sectorId === "industrial") return paletteColorForContract(contract, "industrialHot", "ore", "#ff7c52");
+  return paletteColorForContract(contract, "surfaceHot", "ore", "#ff8c63");
+}
+
 function blockColor(block) {
   const visualHp = blockVisualHp(block);
   if (block.isCoreSample || block.material === "coreSample") {
     return visualHp >= 12 ? "#fff5b8" : visualHp >= 9 ? "#ffd86b" : visualHp >= 6 ? "#ffae5d" : visualHp >= 3 ? "#ff7b47" : "#8cffba";
   }
-  if (block.sectorId === "surface") {
-    return visualHp >= 3
-      ? paletteColorForContract(state?.contract, "surfaceHot", "ore", "#ff8c63")
-      : visualHp === 2
-        ? paletteColorForContract(state?.contract, "surfaceWarm", "ore", "#ffd24f")
-        : "#79ff9e";
-  }
-  if (block.sectorId === "industrial") {
-    return block.material === "platinum"
-      ? visualHp >= 4 ? paletteColorForContract(state?.contract, "industrialCool", "platinum", "#89efff") : visualHp === 3 ? "#b9f5ff" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? paletteColorForContract(state?.contract, "industrialHot", "ore", "#ff7c52") : visualHp === 3 ? "#ffaf70" : visualHp === 2 ? "#ffe07d" : "#8cffba";
-  }
-  if (block.sectorId === "crystalFault") {
-    return block.material === "crystal"
-      ? visualHp >= 5 ? paletteColorForContract(state?.contract, "crystalHot", "crystal", "#f889ff") : visualHp === 4 ? "#d582ff" : visualHp === 3 ? "#ffacf7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-      : visualHp >= 4 ? paletteColorForContract(state?.contract, "crystalCool", "platinum", "#7ddcff") : visualHp === 3 ? "#c3f4ff" : visualHp === 2 ? "#ffe07d" : "#8cffba";
-  }
-  return block.material === "crystal"
-    ? visualHp >= 5 ? paletteColorForContract(state?.contract, "coreHot", "crystal", "#ff74ba") : visualHp === 4 ? "#ff9ae0" : visualHp === 3 ? "#ffd1f7" : visualHp === 2 ? "#ffe07d" : "#8cffba"
-    : visualHp >= 5 ? paletteColorForContract(state?.contract, "coreCool", "platinum", "#93b0ff") : visualHp === 4 ? "#badaff" : visualHp === 3 ? "#ffe3a3" : visualHp === 2 ? "#ffb96d" : "#8cffba";
+  // One clean color per material; damage darkens it, a nearly-broken block
+  // flares bright so the pop is telegraphed without per-block speckle.
+  const base = blockBaseColor(block);
+  if (block.maxHp > 2 && block.hp <= 1.6) return mixHex(base, "#eafff0", 0.58);
+  const hpRatio = clamp(visualHp / Math.max(1, block.maxHp), 0, 1);
+  return mixHex(base, "#160718", (1 - hpRatio) * 0.48);
 }
 
 function blockVisualHp(block) {
@@ -4377,20 +4533,55 @@ function syncDroneState() {
   if (state.drones.length > desired) state.drones.length = desired;
 }
 
-function pickupBlockDamage(block, damage) {
+function pickupBlockDamage(block, damage, hitX = null, hitY = null, { quiet = false } = {}) {
   if (!block || !block.alive) return false;
   const previousVisualHp = blockVisualHp(block);
   block.hp -= damage;
   const nextVisualHp = block.hp > 0 ? blockVisualHp(block) : 0;
+  const impactX = hitX ?? block.x;
+  const impactY = hitY ?? block.y;
+  const materialTint = MATERIAL_TINT_COLORS[block.pickupMaterial || block.material] || "#ffd24f";
   if (block.hp > 0 && nextVisualHp !== previousVisualHp) {
     ensurePlanetLayerCache();
     drawBlockOnPlanetLayer(planetLayerCache.ctx, block);
+  }
+  if (block.hp > 0 && !quiet) {
+    playBlockHit(block.material);
+    pushParticle({ x: impactX, y: impactY, vx: 0, vy: 0, life: 0.22, color: "#fff7dd", size: 5, shrink: true });
+    const debrisCount = particleBurstCount(3);
+    for (let i = 0; i < debrisCount; i += 1) {
+      pushParticle({
+        x: impactX + rand(-3, 3),
+        y: impactY + rand(-3, 3),
+        vx: rand(-130, 130),
+        vy: rand(-130, 130),
+        life: rand(0.18, 0.4),
+        color: materialTint,
+        size: rand(1.6, 2.8),
+      });
+    }
   }
   if (block.hp <= 0) {
     block.alive = false;
     ensurePlanetLayerCache();
     drawBlockOnPlanetLayer(planetLayerCache.ctx, block);
     invalidateResultsMapCache();
+    playBlockBreak(block.material);
+    state.damageShake = Math.max(state.damageShake, 0.14);
+    pushParticle({ x: block.x, y: block.y, vx: 0, vy: 0, life: 0.3, color: "#ffffff", size: BLOCK_SIZE * 0.9, shrink: true });
+    pushParticle({ x: block.x, y: block.y, vx: 0, vy: 0, life: 0.2, maxLife: 0.2, color: colorWithAlpha(materialTint, "aa"), ring: true, ringRadius: BLOCK_SIZE * 1.2 });
+    const burstCount = particleBurstCount(7);
+    for (let i = 0; i < burstCount; i += 1) {
+      pushParticle({
+        x: block.x + rand(-5, 5),
+        y: block.y + rand(-5, 5),
+        vx: rand(-190, 190),
+        vy: rand(-190, 190),
+        life: rand(0.24, 0.55),
+        color: i % 3 === 0 ? "#fff0b8" : materialTint,
+        size: rand(1.8, 3.4),
+      });
+    }
     state.runStats.blocksMined += 1;
     if (block.isCoreSample || block.material === "coreSample") {
       state.runStats.coreSamples += block.pickupValue || 1;
@@ -4450,7 +4641,7 @@ function applySplashDamage(x, y, directKey, baseDamage = state.ship.bulletDamage
       if (dist > radius) continue;
       const falloff = 1 - dist / Math.max(radius, 0.001);
       const splashDamage = baseDamage * falloffScale * falloff;
-      if (splashDamage > 0.025) pickupBlockDamage(block, splashDamage);
+      if (splashDamage > 0.025) pickupBlockDamage(block, splashDamage, null, null, { quiet: true });
     }
   }
   for (let i = 0; i < 8; i += 1) {
@@ -4510,13 +4701,33 @@ function beginFailureSequence(mode, message) {
   state.wrecked = true;
   state.failMode = mode;
   state.failMessage = message;
-  state.wreckTimer = mode === "fuel" ? 1.1 : 0.95;
+  state.wreckTimer = mode === "fuel" ? 1.1 : mode === "core" ? 1.25 : 0.95;
   state.failAngle = Math.atan2(state.input.aimY, state.input.aimX);
-  state.damageShake = mode === "damage" ? 1.3 : 0.65;
+  state.damageShake = mode === "damage" ? 1.3 : mode === "core" ? 1.5 : 0.65;
+  showGameplayBanner(mode === "fuel"
+    ? "Fuel exhausted. Systems going dark."
+    : mode === "core"
+      ? "Reactor surge. Hull integrity gone."
+      : "Hull breach. Ship coming apart.", 2.4, "danger");
   if (mode === "damage") {
     spawnShipExplosion();
     state.ship.vx *= 0.45;
     state.ship.vy *= 0.45;
+  } else if (mode === "core") {
+    // Reactor implosion read: gold/red flare distinct from the debris blast.
+    const flareCount = particleBurstCount(22);
+    for (let i = 0; i < flareCount; i += 1) {
+      pushParticle({
+        x: state.ship.x,
+        y: state.ship.y,
+        vx: rand(-160, 160),
+        vy: rand(-160, 160),
+        life: rand(0.3, 0.8),
+        color: i % 3 === 0 ? "#fff3bf" : i % 2 === 0 ? "#ffd24f" : "#ff5d49",
+        size: rand(2, 3.6),
+      });
+    }
+    pushParticle({ x: state.ship.x, y: state.ship.y, vx: 0, vy: 0, life: 0.4, maxLife: 0.4, color: "rgba(255, 210, 79, 0.8)", ring: true, ringRadius: 40 });
   } else {
     for (let i = 0; i < 14; i += 1) {
       pushParticle({
@@ -4529,7 +4740,7 @@ function beginFailureSequence(mode, message) {
       });
     }
   }
-  playHit();
+  playFailure(mode);
 }
 
 function getMoveAxis() {
@@ -4627,6 +4838,7 @@ function spawnBullet() {
   });
   state.runStats.bulletShots += 1;
   state.ship.fuel = Math.max(0, state.ship.fuel - stats.shotFuel * state.ship.blasterFuelMult);
+  state.ship.muzzleFlash = 0.07;
   playShoot();
 }
 
@@ -4750,6 +4962,9 @@ function finishCoreMeltdown() {
     state.hangarMessage = activePlanet.nextPlanetId && !progress.unlockedPlanets.includes(activePlanet.nextPlanetId)
       ? "Planet cracked open. Core haul recovered. Research the next contract in the hangar."
       : "Planet cracked open. Core haul recovered.";
+    if (activePlanet.id === PLANETS[0].id) {
+      state.hangarMessage += " Field contracts, logbook, and skins are now open.";
+    }
   }
   progress.lastStatus = state.hangarMessage;
   sendToHangar(true, reportSnapshot, reportPlanetDefinition);
@@ -4765,7 +4980,10 @@ function damageCore(amount, hitX = 0, hitY = 0, source = "bullet") {
   if (state.core.phase !== "vulnerable") return false;
   state.core.hp = Math.max(0, state.core.hp - amount);
   recordDamage(source, amount);
-  state.damageShake = Math.max(state.damageShake, 0.8);
+  state.damageShake = Math.max(state.damageShake, 1);
+  playCoreHit();
+  pushParticle({ x: hitX, y: hitY, vx: 0, vy: 0, life: 0.3, maxLife: 0.3, color: "rgba(255, 214, 79, 0.85)", ring: true, ringRadius: 30 });
+  pushParticle({ x: hitX, y: hitY, vx: 0, vy: 0, life: 0.28, color: "#fff7dd", size: 9, shrink: true });
   for (let i = 0; i < 8; i += 1) {
     pushParticle({
       x: hitX,
@@ -4841,6 +5059,23 @@ function updateShip(dt) {
           color: Math.random() < 0.6 ? "#58dfff" : "#8ea2b8",
         });
       }
+    } else if (state.failMode === "core") {
+      // Dragged into the reactor: fast spin plus a pull toward the center.
+      state.failAngle += dt * 16;
+      const coreDist = Math.max(1, length2D(ship.x, ship.y));
+      ship.vx += (-ship.x / coreDist) * 320 * dt;
+      ship.vy += (-ship.y / coreDist) * 320 * dt;
+      if (Math.random() < 0.5) {
+        pushParticle({
+          x: ship.x + rand(-10, 10),
+          y: ship.y + rand(-10, 10),
+          vx: rand(-140, 140),
+          vy: rand(-140, 140),
+          life: rand(0.14, 0.3),
+          color: Math.random() < 0.5 ? "#ffd24f" : "#ff5d49",
+          size: rand(1.8, 3),
+        });
+      }
     }
     ship.vx *= 0.92;
     ship.vy *= 0.92;
@@ -4852,6 +5087,25 @@ function updateShip(dt) {
     ship.vx += move.x * ship.thrust * dt;
     ship.vy += move.y * ship.thrust * dt;
     ship.fuel = Math.max(0, ship.fuel - dt * 2.8 * ship.thrustFuelMult);
+    ship.thrustAngle = Math.atan2(move.y, move.x);
+  }
+  ship.thrustLevel = lerp(ship.thrustLevel, move.active ? 1 : 0, clamp(dt * 9, 0, 1));
+  // Bank toward lateral thrust relative to the nose for a subtle lean.
+  const facingX = Math.cos(ship.facingAngle);
+  const facingY = Math.sin(ship.facingAngle);
+  const bankTarget = move.active ? clamp(facingX * move.y - facingY * move.x, -1, 1) * 0.22 : 0;
+  ship.bank = lerp(ship.bank, bankTarget, clamp(dt * 6, 0, 1));
+  if (move.active && ship.thrustLevel > 0.25 && Math.random() < 0.55) {
+    pushParticle({
+      x: ship.x - move.x * 15 + rand(-3, 3),
+      y: ship.y - move.y * 15 + rand(-3, 3),
+      vx: -move.x * rand(70, 150) + ship.vx * 0.4 + rand(-24, 24),
+      vy: -move.y * rand(70, 150) + ship.vy * 0.4 + rand(-24, 24),
+      life: rand(0.14, 0.3),
+      color: Math.random() < 0.6 ? currentSkin().style?.thruster || "#ffb85b" : "#58dfff",
+      size: rand(1.6, 2.6),
+      shrink: true,
+    });
   }
 
   ship.x += ship.vx * dt;
@@ -4896,7 +5150,21 @@ function updateShip(dt) {
     playHit();
   }
 
+  if (move.active) state.thrustInputTime += dt;
   const distFromCenterSq = ship.x * ship.x + ship.y * ship.y;
+  const mineTipRadius = contractPlanetRadius(state.contract) + 300;
+  // Wait until the player has actually thrust so this doesn't stomp the
+  // "thrust to move" prompt the moment the sortie spawns.
+  if (state.thrustInputTime > 0.6 && distFromCenterSq < mineTipRadius * mineTipRadius) {
+    maybeShowOnboardingTip("mine", IS_MOBILE
+      ? "Right stick aims and fires. Hold it on the crust to mine, then fly through the drops."
+      : "Aim with the mouse and hold click to mine the crust, then fly through the drops.");
+  }
+  if (!state.fuelAlerted && ship.fuel <= ship.fuelMax * 0.18) {
+    state.fuelAlerted = true;
+    showGameplayBanner("Fuel low. Break off and return to the dock.", 3.6, "warn");
+    playAlert();
+  }
   const boundaryRadius = contractPlanetRadius(state.contract) + 420;
   if (distFromCenterSq > boundaryRadius * boundaryRadius) {
     const distFromCenter = Math.sqrt(distFromCenterSq);
@@ -4908,7 +5176,12 @@ function updateShip(dt) {
 
   if (ship.hp <= 0 && !state.wrecked) {
     ship.hp = 0;
-    beginFailureSequence("damage", "Ship was damaged too much and blew up.");
+    const nearCore = coreHazardActive() && distFromCenterSq < Math.pow(state.core.radius * 3.2, 2);
+    if (nearCore) {
+      beginFailureSequence("core", "Ship was consumed by the core reactor surge.");
+    } else {
+      beginFailureSequence("damage", "Ship was damaged too much and blew up.");
+    }
     return;
   }
 
@@ -4921,6 +5194,7 @@ function updateShip(dt) {
 function updateWeapons(dt) {
   const ship = state.ship;
   ship.fireCooldown = Math.max(0, ship.fireCooldown - dt);
+  ship.muzzleFlash = Math.max(0, ship.muzzleFlash - dt);
   ship.laserCooldown = Math.max(0, ship.laserCooldown - dt);
   ship.missileCooldown = Math.max(0, ship.missileCooldown - dt);
   ship.droneCooldown = Math.max(0, ship.droneCooldown - dt);
@@ -4947,7 +5221,7 @@ function updateWeapons(dt) {
           if (target.type === "core") {
             damageCore(damage, target.x, target.y, "laser");
           } else {
-            pickupBlockDamage(target.block, damage);
+            pickupBlockDamage(target.block, damage, target.x, target.y);
             recordDamage("laser", damage);
           }
           state.laserBursts.push({
@@ -5083,7 +5357,7 @@ function updateBullets(dt) {
       }
       const key = `${Math.floor(sampleX / BLOCK_SIZE)},${Math.floor(sampleY / BLOCK_SIZE)}`;
       const block = state.planet.map.get(key);
-      if (block && block.alive && pickupBlockDamage(block, bullet.damage)) {
+      if (block && block.alive && pickupBlockDamage(block, bullet.damage, sampleX, sampleY)) {
         recordDamage(bullet.source === "drone" ? "drone" : bullet.source === "missile" ? "missile" : "bullet", bullet.damage);
         bullet.x = sampleX;
         bullet.y = sampleY;
@@ -5116,25 +5390,35 @@ function updatePickups(dt) {
     if (distSq < magnetSq) {
       const dist = Math.sqrt(distSq);
       const pull = clamp(1 - dist / state.ship.magnet, 0, 1);
-      pickup.vx += (dx / Math.max(dist, 1)) * pull * 240 * dt;
-      pickup.vy += (dy / Math.max(dist, 1)) * pull * 240 * dt;
+      pickup.vx += (dx / Math.max(dist, 1)) * pull * (240 + pull * 260) * dt;
+      pickup.vy += (dy / Math.max(dist, 1)) * pull * (240 + pull * 260) * dt;
     }
     const pickupRange = SHIP_RADIUS + 8;
     if (distSq < pickupRange * pickupRange) {
       if (pickup.material === "coreSample") {
         state.ship.coreSamples += pickup.value;
-        playPickup("crystal");
+        playPickup("crystal", 1);
       } else {
         const cargoCount = sumCargo(state.ship.cargo);
         if (cargoCount < state.ship.cargoCap) {
           const room = state.ship.cargoCap - cargoCount;
           const gained = Math.min(room, pickup.value);
           state.ship.cargo[pickup.material] += gained;
-          state.runStats.peakCargo = Math.max(state.runStats.peakCargo, sumCargo(state.ship.cargo));
-          playPickup(pickup.material);
+          const newCount = sumCargo(state.ship.cargo);
+          state.runStats.peakCargo = Math.max(state.runStats.peakCargo, newCount);
+          playPickup(pickup.material, newCount / Math.max(1, state.ship.cargoCap));
+          if (newCount >= state.ship.cargoCap && !state.cargoFullAnnounced) {
+            state.cargoFullAnnounced = true;
+            if (!maybeShowOnboardingTip("cargoFull", "Cargo hold full. Fly back up to the dock ring to bank your haul.")) {
+              showGameplayBanner("Cargo full. Return to the dock to bank the haul.", 3.4, "warn");
+            }
+            playCargoFull();
+          }
         }
       }
       pickup.life = 0;
+    } else if (state.cargoFullAnnounced && sumCargo(state.ship.cargo) < state.ship.cargoCap) {
+      state.cargoFullAnnounced = false;
     }
   }
   state.pickups = state.pickups.filter((pickup) => pickup.life > 0);
@@ -5358,6 +5642,9 @@ function updateCinematic(dt) {
 
 function updateDocking(dt) {
   if (distanceSq(state.ship.x, state.ship.y, state.dock.x, state.dock.y) < state.dock.radius * state.dock.radius) {
+    if (state.dock.timer <= 0) {
+      maybeShowOnboardingTip("dock", "Hold position inside the ring. Cargo banks when the dock timer fills.");
+    }
     state.dock.timer = clamp(state.dock.timer + dt * state.ship.dockRate, 0, state.dock.needed);
     state.ship.vx *= 0.92;
     state.ship.vy *= 0.92;
@@ -5409,6 +5696,18 @@ function currentShipSectorProgress() {
   };
 }
 
+function setStatusBannerKind(kind) {
+  if (ui.statusBanner.dataset.kind !== kind) ui.statusBanner.dataset.kind = kind;
+}
+
+function sortieObjectiveText() {
+  if (state.contract?.contractType === "field") return `Goal: ${contractObjectiveLabel(state.contract)}`;
+  const snapshot = state.planetProgressSnapshot;
+  if (snapshot?.coreCleared) return "Core destroyed";
+  if (snapshot?.coreUnlocked) return "Goal: destroy the core";
+  return "Goal: clear sectors, break the core";
+}
+
 function updateStatusText() {
   if (state.mode === "sortie") {
     const cargoFull = sumCargo(state.ship.cargo) >= state.ship.cargoCap;
@@ -5416,23 +5715,32 @@ function updateStatusText() {
     const sectorText = sector ? `${sector.name} ${formatPercent(sector.percentCleared)}` : "";
     if (state.cinematic.active) {
       ui.status.textContent = "Planet core detonating. Hold the line.";
+      setStatusBannerKind("danger");
     } else if (state.core.phase === "vulnerable") {
       ui.status.textContent = `Core exposed ${Math.ceil(state.core.hp)} / ${state.core.hpMax}`;
+      setStatusBannerKind("danger");
     } else if (state.core.phase === "shielded") {
       ui.status.textContent = `Core shielded. Pulse cycle ${Math.max(0, state.core.phaseTimer).toFixed(1)}s`;
+      setStatusBannerKind("info");
     } else if (state.dock.timer > 0) {
       ui.status.textContent = `Docking in ${Math.max(0, state.dock.needed - state.dock.timer).toFixed(1)}s`;
+      setStatusBannerKind("success");
     } else if (state.bannerUntil > state.time && state.bannerMessage) {
       ui.status.textContent = state.bannerMessage;
+      setStatusBannerKind(state.bannerKind || "info");
     } else if (state.wreckTimer > 0) {
-      ui.status.textContent = state.failMode === "fuel" ? "Fuel depleted." : "Ship critical.";
+      ui.status.textContent = state.failMode === "fuel" ? "Fuel depleted." : state.failMode === "core" ? "Reactor surge critical." : "Ship critical.";
+      setStatusBannerKind("danger");
+    } else if (cargoFull) {
+      ui.status.textContent = "Cargo full. Return to the docking station to bank the haul.";
+      setStatusBannerKind("warn");
     } else {
-      ui.status.textContent = cargoFull
-        ? "Cargo full. Return to the docking station to bank the haul."
-        : sectorText;
+      ui.status.textContent = `${sortieObjectiveText()} • ${sectorText}`;
+      setStatusBannerKind("info");
     }
   } else {
     ui.status.textContent = state.hangarMessage;
+    setStatusBannerKind("info");
   }
 }
 
@@ -5450,7 +5758,7 @@ function update(dt) {
     updateShip(dt);
     updateCamera(dt);
     if (state.wreckTimer <= 0) {
-      if (state.failMode === "damage") {
+      if (state.failMode === "damage" || state.failMode === "core") {
         spawnShipExplosion();
       }
       failSortie(state.failMessage || "Ship was lost before docking. Cargo discarded.");
@@ -5564,16 +5872,27 @@ function drawDockIndicator() {
   const anchorX = centerX;
   const anchorY = margin * 0.62;
   const angle = Math.atan2(dock.y - anchorY, dock.x - anchorX);
-  const arrowLength = 20;
-  const arrowWidth = 8;
+  // During onboarding, or whenever the hold is full, the return path is the
+  // one thing the player must see — make the indicator unmissable.
+  const emphasize = state.mode === "sortie"
+    && (!progress.onboarding?.dock || sumCargo(state.ship.cargo) >= state.ship.cargoCap);
+  const pulse = emphasize ? 1 + Math.sin(state.time * 6) * 0.18 : 1;
+  const arrowLength = 20 * (emphasize ? 1.5 * pulse : 1);
+  const arrowWidth = 8 * (emphasize ? 1.4 * pulse : 1);
 
   ctx.save();
   ctx.translate(anchorX, anchorY);
+  if (emphasize) {
+    ctx.font = "700 11px 'Trebuchet MS', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillStyle = `rgba(196, 244, 255, ${0.6 + Math.sin(state.time * 6) * 0.3})`;
+    ctx.fillText("DOCK", 0, arrowLength + 22);
+  }
   ctx.rotate(angle);
-  ctx.globalAlpha = 0.42;
-  if (dynamicLightsEnabled()) {
-    ctx.shadowColor = "rgba(88, 223, 255, 0.4)";
-    ctx.shadowBlur = 8;
+  ctx.globalAlpha = emphasize ? 0.95 : 0.42;
+  if (dynamicLightsEnabled() || emphasize) {
+    ctx.shadowColor = "rgba(88, 223, 255, 0.55)";
+    ctx.shadowBlur = emphasize ? 14 : 8;
   }
   ctx.fillStyle = "#8ff0ff";
   ctx.beginPath();
@@ -5748,9 +6067,25 @@ function drawLaser() {
 function drawPickups() {
   for (const pickup of state.pickups) {
     const screen = worldToScreen(pickup.x, pickup.y);
+    const color = pickup.material === "coreSample" ? "#fff1ac" : pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
+    const speedSq = pickup.vx * pickup.vx + pickup.vy * pickup.vy;
+    if (speedSq > 3600) {
+      // Magnet arc: streak behind fast-moving pickups being pulled to the ship.
+      const tail = worldToScreen(pickup.x - pickup.vx * 0.05, pickup.y - pickup.vy * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(tail.x, tail.y);
+      ctx.lineTo(screen.x, screen.y);
+      ctx.strokeStyle = colorWithAlpha(color, "77");
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
     ctx.beginPath();
     ctx.arc(screen.x, screen.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = pickup.material === "coreSample" ? "#fff1ac" : pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(screen.x - 1, screen.y - 1, 1.6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
     ctx.fill();
   }
 }
@@ -5759,8 +6094,19 @@ function drawParticles() {
   for (const particle of state.particles) {
     const screen = worldToScreen(particle.x, particle.y);
     ctx.globalAlpha = clamp(particle.life * 2, 0, 1);
+    if (particle.ring) {
+      const maxLife = particle.maxLife || 0.2;
+      const grow = 1 - clamp(particle.life / maxLife, 0, 1);
+      ctx.beginPath();
+      ctx.arc(screen.x, screen.y, (particle.ringRadius || 14) * (0.35 + grow) * state.camera.zoom, 0, Math.PI * 2);
+      ctx.strokeStyle = particle.color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      continue;
+    }
     ctx.fillStyle = particle.color;
-    ctx.fillRect(screen.x, screen.y, 2, 2);
+    const size = (particle.size || 2) * (particle.shrink ? clamp(particle.life * 3, 0.3, 1) : 1);
+    ctx.fillRect(screen.x - size * 0.5, screen.y - size * 0.5, size, size);
   }
   ctx.globalAlpha = 1;
 }
@@ -5802,7 +6148,8 @@ function drawShip() {
   const style = currentSkin().style || SHIP_SKIN_BY_ID.standard.style || {};
   ctx.save();
   ctx.translate(ship.x, ship.y);
-  ctx.rotate(angle + Math.PI / 2);
+  ctx.rotate(angle + Math.PI / 2 + state.ship.bank);
+  ctx.scale(1 - Math.abs(state.ship.bank) * 0.5, 1);
   ctx.globalAlpha = alpha;
   ctx.fillStyle = style.hull || "#89f3ff";
   if (dynamicLightsEnabled()) {
@@ -5897,19 +6244,45 @@ function drawShip() {
   ctx.beginPath();
   ctx.ellipse(0, -4, 4.2, 5.8, 0, 0, Math.PI * 2);
   ctx.fill();
+  const thrustLevel = state.wreckTimer > 0 ? 0 : state.ship.thrustLevel;
+  const flicker = 1 + Math.sin(state.time * 34) * 0.22 * thrustLevel;
+  const plume = (1 + thrustLevel * 1.7) * flicker;
   ctx.fillStyle = style.thruster || "#ffb85b";
   ctx.beginPath();
   ctx.moveTo(-4.5, 12);
-  ctx.lineTo(-1.4, 18);
+  ctx.lineTo(-1.4, 12 + 6 * plume);
   ctx.lineTo(0, 12);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
   ctx.moveTo(4.5, 12);
-  ctx.lineTo(1.4, 18);
+  ctx.lineTo(1.4, 12 + 6 * plume);
   ctx.lineTo(0, 12);
   ctx.closePath();
   ctx.fill();
+  if (thrustLevel > 0.2) {
+    ctx.fillStyle = "rgba(255, 245, 214, 0.85)";
+    ctx.beginPath();
+    ctx.moveTo(-2.4, 12);
+    ctx.lineTo(0, 12 + 4.4 * plume);
+    ctx.lineTo(2.4, 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+  if (state.ship.muzzleFlash > 0 && state.wreckTimer <= 0) {
+    const flash = state.ship.muzzleFlash / 0.07;
+    if (dynamicLightsEnabled()) {
+      ctx.shadowColor = "#fff2b3";
+      ctx.shadowBlur = 14;
+    }
+    ctx.fillStyle = `rgba(255, 244, 189, ${0.55 + flash * 0.4})`;
+    ctx.beginPath();
+    ctx.moveTo(0, -24 - flash * 5);
+    ctx.lineTo(4.2, -15);
+    ctx.lineTo(-4.2, -15);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.shadowBlur = 0;
   ctx.restore();
 }
@@ -5972,6 +6345,40 @@ function drawCoreGlow() {
   }
 }
 
+function drawPlanetAtmosphere() {
+  const center = worldToScreen(0, 0);
+  const radius = contractPlanetRadius(state.contract) * state.camera.zoom;
+  if (radius <= 0) return;
+  // Dark interior disk behind the blocks: carved-out pockets read as the
+  // inside of a body rather than empty space.
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(16, 6, 22, 0.6)";
+  ctx.fill();
+  if (qualityProfileId() !== "battery") {
+    const rimOuter = radius * 1.15;
+    const halo = ctx.createRadialGradient(center.x, center.y, radius * 0.96, center.x, center.y, rimOuter);
+    halo.addColorStop(0, "rgba(96, 206, 255, 0.15)");
+    halo.addColorStop(0.45, "rgba(96, 186, 255, 0.06)");
+    halo.addColorStop(1, "rgba(96, 186, 255, 0)");
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, rimOuter, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, radius + 3, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(140, 226, 255, 0.14)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  // Brighter limb on the dock-facing side, matching the baked block lighting.
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, radius + 3, -Math.PI * 0.84, -Math.PI * 0.16);
+  ctx.strokeStyle = "rgba(198, 242, 255, 0.45)";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+}
+
 function drawSectorBoundaries() {
   const center = worldToScreen(0, 0);
   for (const sector of orderedMiningSectors(state.planet.id)) {
@@ -5994,6 +6401,7 @@ function render() {
     ctx.fillStyle = fog;
     ctx.fillRect(0, 0, state.width, state.height);
   }
+  drawPlanetAtmosphere();
   drawCoreGlow();
   drawSectorBoundaries();
   drawPlanetBlocks();
@@ -6188,6 +6596,11 @@ function syncUi(force = true) {
   ui.sellPlatinumBtn.disabled = !progress.bank.platinum;
   ui.sellCrystalBtn.disabled = !progress.bank.crystal;
   ui.sellAllBtn.disabled = !sumCargo(progress.bank);
+  const metaUnlocked = advancedMetaUnlocked();
+  if (!metaUnlocked && (state.hangarView === "logbook" || state.hangarView === "skins")) state.hangarView = "upgrades";
+  ui.showCoreContractsBtn.parentElement?.classList.toggle("hidden", !metaUnlocked);
+  ui.showLogbookBtn.classList.toggle("hidden", !metaUnlocked);
+  ui.showSkinsBtn.classList.toggle("hidden", !metaUnlocked);
   ui.showCoreContractsBtn.classList.toggle("active", progress.currentContractLane === "core");
   ui.showFieldContractsBtn.classList.toggle("active", progress.currentContractLane === "field");
   ui.showUpgradesBtn.classList.toggle("active", state.hangarView === "upgrades");
@@ -6608,6 +7021,20 @@ window.advanceTime = async (ms) => {
   const dt = ms / steps / 1000;
   for (let i = 0; i < steps; i += 1) update(dt);
   render();
+};
+
+// Automation surface for the headless browser smoke test (test/smoke.mjs).
+window.__orbitMineTest = {
+  state,
+  progress,
+  startSortie,
+  showHangarScreen,
+  buyNode,
+  sellAllMaterials,
+  cheapestReadyUpgrade,
+  availableUpgradeNodes,
+  saveProgress,
+  syncUi,
 };
 
 let last = performance.now();
