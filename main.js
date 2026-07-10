@@ -2908,6 +2908,19 @@ function playPickup(material = "ore", fillRatio = 0) {
   });
 }
 
+function playEnemyShot() {
+  playToneThrottled("enemyShot", 70, { freq: 330, slideTo: 170, duration: 0.09, type: "square", gain: 0.15 });
+}
+
+function playEnemyHit() {
+  playToneThrottled("enemyHit", 50, { freq: 500, slideTo: 260, duration: 0.05, type: "sawtooth", gain: 0.15 });
+}
+
+function playEnemyDown() {
+  playToneThrottled("enemyDown", 90, { freq: 300, slideTo: 55, duration: 0.24, type: "sawtooth", gain: 0.26 });
+  playToneThrottled("enemyDownRing", 90, { freq: 880, slideTo: 420, duration: 0.12, type: "triangle", gain: 0.12 });
+}
+
 function playAlert() {
   playTone({ freq: 520, slideTo: 330, duration: 0.16, type: "square", gain: 0.22 });
   window.setTimeout(() => playTone({ freq: 520, slideTo: 330, duration: 0.16, type: "square", gain: 0.18 }), 190);
@@ -2997,6 +3010,7 @@ function makeSortieReport(success, delivered, reportPlanetSnapshot = null, repor
     bulletShots: state.runStats.bulletShots,
     laserPulses: state.runStats.laserPulses,
     peakCargo: state.runStats.peakCargo,
+    enemiesDestroyed: state.runStats.enemiesDestroyed,
     bonusMaterials: { ...state.runStats.bonusMaterials },
     planetId: planetSnapshot.planetId,
     planetName: planetDefinition.name || planetSnapshot.planetName,
@@ -3057,7 +3071,7 @@ function makeState() {
       cargoCap: 28,
       cargo: emptyMaterials(),
       coreSamples: 0,
-      magnet: 56,
+      magnet: 72,
       thrust: 170,
       thrustFuelMult: 1,
       dockRate: 1,
@@ -3093,6 +3107,8 @@ function makeState() {
       thrustLevel: 0,
       thrustAngle: 0,
       bank: 0,
+      retro: 0,
+      hitFlash: 0,
       muzzleFlash: 0,
     },
     dock: {
@@ -3107,6 +3123,11 @@ function makeState() {
     particles: [],
     drones: [],
     hazards: [],
+    enemies: [],
+    enemyBullets: [],
+    enemySpawnTimer: 0,
+    enemiesAnnounced: false,
+    sortieTime: 0,
     damageShake: 0,
     wreckTimer: 0,
     wrecked: false,
@@ -3161,6 +3182,7 @@ function makeState() {
       materials: emptyMaterials(),
       coreSamples: 0,
       peakCargo: 0,
+      enemiesDestroyed: 0,
       bonusMaterials: emptyMaterials(),
     },
   };
@@ -3439,7 +3461,7 @@ function applyUpgrades() {
   ship.fuelMax = 120;
   ship.hpMax = 80;
   ship.cargoCap = 28;
-  ship.magnet = 56;
+  ship.magnet = 72;
   ship.thrust = 170;
   ship.thrustFuelMult = 1;
   ship.dockRate = 1;
@@ -4644,6 +4666,14 @@ function applySplashDamage(x, y, directKey, baseDamage = state.ship.bulletDamage
       if (splashDamage > 0.025) pickupBlockDamage(block, splashDamage, null, null, { quiet: true });
     }
   }
+  for (const enemy of state.enemies) {
+    if (enemy.dead) continue;
+    const reach = radius + 12;
+    const distSq = distanceSq(x, y, enemy.x, enemy.y);
+    if (distSq > reach * reach) continue;
+    const splash = baseDamage * falloffScale * (1 - Math.sqrt(distSq) / reach);
+    if (splash > 0.025) damageEnemy(enemy, splash);
+  }
   for (let i = 0; i < 8; i += 1) {
     pushParticle({
       x,
@@ -4669,7 +4699,7 @@ function spawnPickup(block) {
     vy: rand(-45, 45),
     value,
     material: pickupMaterial,
-    life: 14,
+    life: 28,
   });
   for (let i = 0; i < 5; i += 1) {
     pushParticle({
@@ -4867,6 +4897,7 @@ function damageShip(hullDamage, fuelDamage, dtMultiplier = 1) {
   state.ship.hp = Math.max(0, state.ship.hp - hullDamage * dtMultiplier * state.ship.shieldMult);
   state.ship.fuel = Math.max(0, state.ship.fuel - fuelDamage * dtMultiplier * state.ship.collisionFuelMult);
   state.damageShake = Math.max(state.damageShake, 0.55);
+  state.ship.hitFlash = Math.max(state.ship.hitFlash, 0.18);
   state.hazardFlash = 0.18;
 }
 
@@ -5028,6 +5059,7 @@ function updateShip(dt) {
     ship.facingAngle = Math.atan2(state.input.aimY, state.input.aimX);
   }
   state.damageShake = Math.max(0, state.damageShake - dt * 5);
+  ship.hitFlash = Math.max(0, ship.hitFlash - dt * 4);
   if (state.wreckTimer > 0) {
     if (state.failMode === "damage") {
       state.failAngle += dt * 10;
@@ -5095,6 +5127,15 @@ function updateShip(dt) {
   const facingY = Math.sin(ship.facingAngle);
   const bankTarget = move.active ? clamp(facingX * move.y - facingY * move.x, -1, 1) * 0.22 : 0;
   ship.bank = lerp(ship.bank, bankTarget, clamp(dt * 6, 0, 1));
+  // Thrusting against the nose fires the forward retro nozzles instead of the
+  // main engine, and doubles as a brake against the current drift.
+  const noseDot = move.active ? facingX * move.x + facingY * move.y : 0;
+  ship.retro = lerp(ship.retro, move.active ? clamp(-noseDot, 0, 1) : 0, clamp(dt * 9, 0, 1));
+  if (move.active && move.x * ship.vx + move.y * ship.vy < 0) {
+    const brake = 1 - clamp(dt * 1.4, 0, 0.24);
+    ship.vx *= brake;
+    ship.vy *= brake;
+  }
   if (move.active && ship.thrustLevel > 0.25 && Math.random() < 0.55) {
     pushParticle({
       x: ship.x - move.x * 15 + rand(-3, 3),
@@ -5147,6 +5188,7 @@ function updateShip(dt) {
     ship.vx = ship.vx * 0.24 + pushX * 42;
     ship.vy = ship.vy * 0.24 + pushY * 42;
     state.damageShake = 1;
+    ship.hitFlash = Math.max(ship.hitFlash, 0.18);
     playHit();
   }
 
@@ -5339,6 +5381,24 @@ function updateBullets(dt) {
     for (let step = 1; step <= steps; step += 1) {
       const sampleX = bullet.x + (dx * step) / steps;
       const sampleY = bullet.y + (dy * step) / steps;
+      if (state.enemies.length) {
+        let struck = null;
+        for (const enemy of state.enemies) {
+          if (!enemy.dead && distanceSq(sampleX, sampleY, enemy.x, enemy.y) < 13 * 13) {
+            struck = enemy;
+            break;
+          }
+        }
+        if (struck) {
+          damageEnemy(struck, bullet.damage, sampleX, sampleY);
+          recordDamage(bullet.source === "drone" ? "drone" : bullet.source === "missile" ? "missile" : "bullet", bullet.damage);
+          bullet.x = sampleX;
+          bullet.y = sampleY;
+          bullet.life = 0;
+          hit = true;
+          break;
+        }
+      }
       if (pointInsideDefenseRing(sampleX, sampleY)) {
         bullet.x = sampleX;
         bullet.y = sampleY;
@@ -5376,48 +5436,85 @@ function updateBullets(dt) {
   state.bullets = state.bullets.filter((bullet) => bullet.life > 0);
 }
 
+function pickupTint(material) {
+  return material === "coreSample"
+    ? "#fff1ac"
+    : material === "crystal" ? "#b494ff" : material === "platinum" ? "#79d7ff" : "#ffd24f";
+}
+
+function spawnCollectSparkle(material) {
+  const color = pickupTint(material);
+  const count = particleBurstCount(3);
+  for (let i = 0; i < count; i += 1) {
+    pushParticle({
+      x: state.ship.x + rand(-8, 8),
+      y: state.ship.y + rand(-8, 8),
+      vx: state.ship.vx * 0.5 + rand(-60, 60),
+      vy: state.ship.vy * 0.5 + rand(-60, 60),
+      life: rand(0.14, 0.3),
+      color: i === 0 ? "#ffffff" : color,
+      size: rand(1.4, 2.4),
+      shrink: true,
+    });
+  }
+}
+
 function updatePickups(dt) {
+  const ship = state.ship;
+  let cargoRoom = ship.cargoCap - sumCargo(ship.cargo);
   for (const pickup of state.pickups) {
     pickup.life -= dt;
     pickup.x += pickup.vx * dt;
     pickup.y += pickup.vy * dt;
     pickup.vx *= 0.98;
     pickup.vy *= 0.98;
-    const dx = state.ship.x - pickup.x;
-    const dy = state.ship.y - pickup.y;
+    const dx = ship.x - pickup.x;
+    const dy = ship.y - pickup.y;
     const distSq = dx * dx + dy * dy;
-    const magnetSq = state.ship.magnet * state.ship.magnet;
-    if (distSq < magnetSq) {
+    const magnetSq = ship.magnet * ship.magnet;
+    const isCoreSample = pickup.material === "coreSample";
+    // A full hold stops the magnet so uncollectable drops wait in place
+    // instead of grinding against the hull.
+    if ((isCoreSample || cargoRoom > 0) && distSq < magnetSq) {
       const dist = Math.sqrt(distSq);
-      const pull = clamp(1 - dist / state.ship.magnet, 0, 1);
-      pickup.vx += (dx / Math.max(dist, 1)) * pull * (240 + pull * 260) * dt;
-      pickup.vy += (dy / Math.max(dist, 1)) * pull * (240 + pull * 260) * dt;
+      const pull = clamp(1 - dist / ship.magnet, 0, 1);
+      pickup.vx += (dx / Math.max(dist, 1)) * pull * (300 + pull * 340) * dt;
+      pickup.vy += (dy / Math.max(dist, 1)) * pull * (300 + pull * 340) * dt;
     }
     const pickupRange = SHIP_RADIUS + 8;
     if (distSq < pickupRange * pickupRange) {
-      if (pickup.material === "coreSample") {
-        state.ship.coreSamples += pickup.value;
+      if (isCoreSample) {
+        ship.coreSamples += pickup.value;
         playPickup("crystal", 1);
-      } else {
-        const cargoCount = sumCargo(state.ship.cargo);
-        if (cargoCount < state.ship.cargoCap) {
-          const room = state.ship.cargoCap - cargoCount;
-          const gained = Math.min(room, pickup.value);
-          state.ship.cargo[pickup.material] += gained;
-          const newCount = sumCargo(state.ship.cargo);
-          state.runStats.peakCargo = Math.max(state.runStats.peakCargo, newCount);
-          playPickup(pickup.material, newCount / Math.max(1, state.ship.cargoCap));
-          if (newCount >= state.ship.cargoCap && !state.cargoFullAnnounced) {
-            state.cargoFullAnnounced = true;
-            if (!maybeShowOnboardingTip("cargoFull", "Cargo hold full. Fly back up to the dock ring to bank your haul.")) {
-              showGameplayBanner("Cargo full. Return to the dock to bank the haul.", 3.4, "warn");
-            }
-            playCargoFull();
+        spawnCollectSparkle(pickup.material);
+        pickup.life = 0;
+      } else if (cargoRoom > 0) {
+        const gained = Math.min(cargoRoom, pickup.value);
+        ship.cargo[pickup.material] += gained;
+        cargoRoom -= gained;
+        pickup.value -= gained;
+        const newCount = sumCargo(ship.cargo);
+        state.runStats.peakCargo = Math.max(state.runStats.peakCargo, newCount);
+        playPickup(pickup.material, newCount / Math.max(1, ship.cargoCap));
+        spawnCollectSparkle(pickup.material);
+        if (pickup.value <= 0) {
+          pickup.life = 0;
+        } else {
+          // Hold filled mid-drop: keep the remainder alive and ease it away.
+          pickup.vx = -(dx / Math.max(Math.sqrt(distSq), 1)) * 55;
+          pickup.vy = -(dy / Math.max(Math.sqrt(distSq), 1)) * 55;
+        }
+        if (newCount >= ship.cargoCap && !state.cargoFullAnnounced) {
+          state.cargoFullAnnounced = true;
+          if (!maybeShowOnboardingTip("cargoFull", "Cargo hold full. Fly back up to the dock ring to bank your haul.")) {
+            showGameplayBanner("Cargo full. Return to the dock to bank the haul.", 3.4, "warn");
           }
+          playCargoFull();
         }
       }
-      pickup.life = 0;
-    } else if (state.cargoFullAnnounced && sumCargo(state.ship.cargo) < state.ship.cargoCap) {
+      // Full hold + material drop: leave the pickup in the world (it used to
+      // be destroyed with zero gain here).
+    } else if (state.cargoFullAnnounced && cargoRoom > 0) {
       state.cargoFullAnnounced = false;
     }
   }
@@ -5587,6 +5684,257 @@ function updateHazards(dt) {
       damageShip(20, 12, dt);
     }
   }
+}
+
+// --- Claim jumpers: hostile salvage drones that contest the dig site. ---
+// Sentries hold a standoff ring and fire telegraphed shots; stingers dive and
+// detonate on contact. Both are shot down with the mining weapons and drop
+// salvage, so fighting back feeds the cargo loop instead of stalling it.
+
+function enemyThreatScale() {
+  const rate = state.planet.definition.hazardRateMult || 1;
+  return clamp(1 + (1 - rate) * 1.8, 1, 2.4);
+}
+
+function enemyCap() {
+  const rate = state.planet.definition.hazardRateMult || 1;
+  return rate <= 0.75 ? 4 : rate <= 0.92 ? 3 : 2;
+}
+
+function enemyFirstSpawnDelay() {
+  // Higher-threat contracts send patrols sooner; starter worlds give the
+  // player a calm first stretch to mine and learn.
+  const rate = state.planet.definition.hazardRateMult || 1;
+  return 24 + rate * 16;
+}
+
+function pickEnemySpawnPoint() {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const angle = rand(-Math.PI, Math.PI);
+    const dist = rand(380, 560);
+    const x = state.ship.x + Math.cos(angle) * dist;
+    const y = state.ship.y + Math.sin(angle) * dist;
+    const block = state.planet.map.get(`${Math.floor(x / BLOCK_SIZE)},${Math.floor(y / BLOCK_SIZE)}`);
+    if (!block || !block.alive) return { x, y };
+  }
+  const shipDist = Math.max(1, length2D(state.ship.x, state.ship.y));
+  const orbit = contractPlanetRadius(state.contract) + 150;
+  return { x: (state.ship.x / shipDist) * orbit, y: (state.ship.y / shipDist) * orbit };
+}
+
+function spawnEnemy() {
+  const threat = enemyThreatScale();
+  const spawn = pickEnemySpawnPoint();
+  const stinger = Math.random() < 0.4;
+  state.enemies.push({
+    type: stinger ? "stinger" : "sentry",
+    x: spawn.x,
+    y: spawn.y,
+    vx: 0,
+    vy: 0,
+    hp: stinger ? 1 + threat : 2 + threat * 2,
+    angle: 0,
+    wobble: rand(0, Math.PI * 2),
+    fireTimer: rand(1.4, 2.4),
+    charge: 0,
+    flash: 0,
+    dead: false,
+  });
+  pushParticle({
+    x: spawn.x,
+    y: spawn.y,
+    vx: 0,
+    vy: 0,
+    life: 0.3,
+    maxLife: 0.3,
+    color: colorWithAlpha("#ff5d6e", "aa"),
+    ring: true,
+    ringRadius: 30,
+  });
+}
+
+function damageEnemy(enemy, amount, hitX = enemy.x, hitY = enemy.y) {
+  if (enemy.dead) return;
+  enemy.hp -= amount;
+  enemy.flash = 0.12;
+  playEnemyHit();
+  const count = particleBurstCount(2);
+  for (let i = 0; i < count; i += 1) {
+    pushParticle({
+      x: hitX,
+      y: hitY,
+      vx: rand(-120, 120),
+      vy: rand(-120, 120),
+      life: rand(0.14, 0.28),
+      color: "#ff8a7a",
+      size: rand(1.4, 2.2),
+    });
+  }
+  if (enemy.hp <= 0) destroyEnemy(enemy);
+}
+
+function destroyEnemy(enemy, { detonated = false } = {}) {
+  if (enemy.dead) return;
+  enemy.dead = true;
+  state.runStats.enemiesDestroyed += 1;
+  playEnemyDown();
+  state.damageShake = Math.max(state.damageShake, 0.3);
+  pushParticle({ x: enemy.x, y: enemy.y, vx: 0, vy: 0, life: 0.25, color: "#ffffff", size: 15, shrink: true });
+  pushParticle({
+    x: enemy.x,
+    y: enemy.y,
+    vx: 0,
+    vy: 0,
+    life: 0.24,
+    maxLife: 0.24,
+    color: colorWithAlpha("#ff5d6e", "aa"),
+    ring: true,
+    ringRadius: 26,
+  });
+  const burst = particleBurstCount(8);
+  for (let i = 0; i < burst; i += 1) {
+    pushParticle({
+      x: enemy.x + rand(-4, 4),
+      y: enemy.y + rand(-4, 4),
+      vx: rand(-200, 200),
+      vy: rand(-200, 200),
+      life: rand(0.2, 0.5),
+      color: i % 3 === 0 ? "#fff0b8" : "#ff5d6e",
+      size: rand(1.6, 3),
+    });
+  }
+  if (!detonated) {
+    const threat = enemyThreatScale();
+    const drops = enemy.type === "sentry" ? 2 : 1;
+    for (let i = 0; i < drops; i += 1) {
+      const material = Math.random() < 0.14 + (threat - 1) * 0.12 ? "platinum" : "ore";
+      state.pickups.push({
+        x: enemy.x + rand(-10, 10),
+        y: enemy.y + rand(-10, 10),
+        vx: rand(-50, 50),
+        vy: rand(-50, 50),
+        value: 1,
+        material,
+        life: 28,
+      });
+    }
+  }
+}
+
+function updateEnemies(dt) {
+  if (!state.wrecked && !state.cinematic.active && !coreHazardActive()) {
+    state.enemySpawnTimer -= dt;
+    if (state.sortieTime >= enemyFirstSpawnDelay() && state.enemySpawnTimer <= 0 && state.enemies.length < enemyCap()) {
+      spawnEnemy();
+      const rate = state.planet.definition.hazardRateMult || 1;
+      const depthPressure = shipSectorDefinition().id === "surface" ? 1 : 0.8;
+      state.enemySpawnTimer = rand(10, 15) * rate * depthPressure;
+      if (!state.enemiesAnnounced) {
+        state.enemiesAnnounced = true;
+        showGameplayBanner("Claim jumpers inbound. Shoot them down for salvage or keep moving.", 3.4, "danger");
+        playAlert();
+      }
+    }
+  }
+  const threat = enemyThreatScale();
+  const ship = state.ship;
+  for (const enemy of state.enemies) {
+    if (enemy.dead) continue;
+    enemy.flash = Math.max(0, enemy.flash - dt * 4);
+    enemy.wobble += dt * 2.6;
+    const dx = ship.x - enemy.x;
+    const dy = ship.y - enemy.y;
+    const dist = Math.max(1, length2D(dx, dy));
+    const dirX = dx / dist;
+    const dirY = dy / dist;
+    enemy.angle = Math.atan2(dy, dx);
+    if (enemy.type === "stinger") {
+      const accel = 260 + threat * 100;
+      enemy.vx += dirX * accel * dt;
+      enemy.vy += dirY * accel * dt;
+      enemy.vx *= 0.982;
+      enemy.vy *= 0.982;
+      if (!state.wrecked && dist < SHIP_RADIUS + 15) {
+        damageShip(14 + threat * 5, 8, 1);
+        playHit();
+        destroyEnemy(enemy, { detonated: true });
+        continue;
+      }
+    } else {
+      const standoff = 175;
+      const approach = clamp((dist - standoff) * 1.6, -110, 150);
+      const strafe = Math.sin(enemy.wobble) * 55;
+      const desiredVX = dirX * approach - dirY * strafe;
+      const desiredVY = dirY * approach + dirX * strafe;
+      enemy.vx = lerp(enemy.vx, desiredVX, clamp(dt * 2.2, 0, 1));
+      enemy.vy = lerp(enemy.vy, desiredVY, clamp(dt * 2.2, 0, 1));
+      if (dist < 460 && !state.wrecked) {
+        enemy.fireTimer -= dt;
+        if (enemy.fireTimer <= 0) {
+          enemy.charge += dt;
+          if (enemy.charge >= 0.6) {
+            const shotAngle = enemy.angle + rand(-0.09, 0.09);
+            const speed = 230 + threat * 40;
+            state.enemyBullets.push({
+              x: enemy.x + Math.cos(shotAngle) * 14,
+              y: enemy.y + Math.sin(shotAngle) * 14,
+              vx: Math.cos(shotAngle) * speed,
+              vy: Math.sin(shotAngle) * speed,
+              life: 2.4,
+            });
+            playEnemyShot();
+            enemy.charge = 0;
+            enemy.fireTimer = rand(2.2, 3.2) / (0.6 + threat * 0.4);
+          }
+        }
+      } else {
+        enemy.charge = Math.max(0, enemy.charge - dt);
+      }
+    }
+    const nextX = enemy.x + enemy.vx * dt;
+    const nextY = enemy.y + enemy.vy * dt;
+    const block = state.planet.map.get(`${Math.floor(nextX / BLOCK_SIZE)},${Math.floor(nextY / BLOCK_SIZE)}`);
+    if (block && block.alive) {
+      if (enemy.type === "stinger") {
+        destroyEnemy(enemy, { detonated: true });
+        continue;
+      }
+      // Sentries skim off the terrain instead of clipping into it.
+      const pushX = enemy.x - block.x;
+      const pushY = enemy.y - block.y;
+      const pushLen = length2D(pushX, pushY) || 1;
+      enemy.vx = (pushX / pushLen) * 60;
+      enemy.vy = (pushY / pushLen) * 60;
+    } else {
+      enemy.x = nextX;
+      enemy.y = nextY;
+    }
+  }
+  state.enemies = state.enemies.filter((enemy) => !enemy.dead);
+}
+
+function updateEnemyBullets(dt) {
+  const ship = state.ship;
+  const threat = enemyThreatScale();
+  const hitRange = SHIP_RADIUS + 5;
+  for (const bullet of state.enemyBullets) {
+    bullet.life -= dt;
+    bullet.x += bullet.vx * dt;
+    bullet.y += bullet.vy * dt;
+    if (bullet.life <= 0) continue;
+    const block = state.planet.map.get(`${Math.floor(bullet.x / BLOCK_SIZE)},${Math.floor(bullet.y / BLOCK_SIZE)}`);
+    if (block && block.alive) {
+      bullet.life = 0;
+      pushParticle({ x: bullet.x, y: bullet.y, vx: 0, vy: 0, life: 0.16, color: "#ff8a7a", size: 3, shrink: true });
+      continue;
+    }
+    if (!state.wrecked && distanceSq(bullet.x, bullet.y, ship.x, ship.y) < hitRange * hitRange) {
+      bullet.life = 0;
+      damageShip(8 + threat * 3, 4, 1);
+      playHit();
+    }
+  }
+  state.enemyBullets = state.enemyBullets.filter((bullet) => bullet.life > 0);
 }
 
 function updateCinematic(dt) {
@@ -5775,9 +6123,12 @@ function update(dt) {
     syncUi(false);
     return;
   }
+  state.sortieTime += dt;
   updateShip(dt);
   updateCoreEvent(dt);
   updateHazards(dt);
+  updateEnemies(dt);
+  updateEnemyBullets(dt);
   updateWeapons(dt);
   updateBullets(dt);
   updatePickups(dt);
@@ -6067,7 +6418,11 @@ function drawLaser() {
 function drawPickups() {
   for (const pickup of state.pickups) {
     const screen = worldToScreen(pickup.x, pickup.y);
-    const color = pickup.material === "coreSample" ? "#fff1ac" : pickup.material === "crystal" ? "#b494ff" : pickup.material === "platinum" ? "#79d7ff" : "#ffd24f";
+    const color = pickupTint(pickup.material);
+    if (pickup.life < 4) {
+      // Blink as the drop nears despawn so expiring cargo reads as urgent.
+      ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(pickup.life * 7));
+    }
     const speedSq = pickup.vx * pickup.vx + pickup.vy * pickup.vy;
     if (speedSq > 3600) {
       // Magnet arc: streak behind fast-moving pickups being pulled to the ship.
@@ -6087,6 +6442,7 @@ function drawPickups() {
     ctx.arc(screen.x - 1, screen.y - 1, 1.6, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -6138,6 +6494,73 @@ function drawDrones() {
     ctx.arc(0, -1.5, 2.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+}
+
+function drawEnemies() {
+  for (const enemy of state.enemies) {
+    const screen = worldToScreen(enemy.x, enemy.y);
+    ctx.save();
+    ctx.translate(screen.x, screen.y);
+    ctx.rotate(enemy.angle + Math.PI / 2);
+    if (dynamicLightsEnabled()) {
+      ctx.shadowColor = "#ff5d6e";
+      ctx.shadowBlur = 12;
+    }
+    if (enemy.type === "stinger") {
+      const pulse = 1 + Math.sin(enemy.wobble * 3) * 0.12;
+      ctx.fillStyle = enemy.flash > 0 ? "#ffffff" : "#ff6b5d";
+      ctx.beginPath();
+      ctx.moveTo(0, -9 * pulse);
+      ctx.lineTo(6, 4);
+      ctx.lineTo(0, 8 * pulse);
+      ctx.lineTo(-6, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#3a1020";
+      ctx.beginPath();
+      ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = enemy.flash > 0 ? "#ffffff" : "#ff5d6e";
+      ctx.beginPath();
+      ctx.moveTo(0, -11);
+      ctx.lineTo(9, 2);
+      ctx.lineTo(5, 9);
+      ctx.lineTo(-5, 9);
+      ctx.lineTo(-9, 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#2b0d1c";
+      ctx.fillRect(-3, -2, 6, 6);
+      if (enemy.charge > 0) {
+        // Charging telegraph: white-hot muzzle bloom before the shot.
+        const chargeT = clamp(enemy.charge / 0.6, 0, 1);
+        ctx.fillStyle = `rgba(255, 240, 220, ${0.35 + chargeT * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(0, -12, 1.5 + chargeT * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+function drawEnemyBullets() {
+  for (const bullet of state.enemyBullets) {
+    const screen = worldToScreen(bullet.x, bullet.y);
+    const tail = worldToScreen(bullet.x - bullet.vx * 0.03, bullet.y - bullet.vy * 0.03);
+    ctx.strokeStyle = "rgba(255, 122, 110, 0.75)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tail.x, tail.y);
+    ctx.lineTo(screen.x, screen.y);
+    ctx.stroke();
+    ctx.fillStyle = "#ffb3a6";
+    ctx.beginPath();
+    ctx.arc(screen.x, screen.y, 2.6, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
@@ -6245,8 +6668,10 @@ function drawShip() {
   ctx.ellipse(0, -4, 4.2, 5.8, 0, 0, Math.PI * 2);
   ctx.fill();
   const thrustLevel = state.wreckTimer > 0 ? 0 : state.ship.thrustLevel;
+  const retro = state.wreckTimer > 0 ? 0 : state.ship.retro * thrustLevel;
+  const rearLevel = thrustLevel * (1 - state.ship.retro * 0.85);
   const flicker = 1 + Math.sin(state.time * 34) * 0.22 * thrustLevel;
-  const plume = (1 + thrustLevel * 1.7) * flicker;
+  const plume = (1 + rearLevel * 1.7) * flicker;
   ctx.fillStyle = style.thruster || "#ffb85b";
   ctx.beginPath();
   ctx.moveTo(-4.5, 12);
@@ -6260,13 +6685,51 @@ function drawShip() {
   ctx.lineTo(0, 12);
   ctx.closePath();
   ctx.fill();
-  if (thrustLevel > 0.2) {
+  if (rearLevel > 0.2) {
     ctx.fillStyle = "rgba(255, 245, 214, 0.85)";
     ctx.beginPath();
     ctx.moveTo(-2.4, 12);
     ctx.lineTo(0, 12 + 4.4 * plume);
     ctx.lineTo(2.4, 12);
     ctx.closePath();
+    ctx.fill();
+  }
+  if (retro > 0.06) {
+    // Front retro nozzles: twin plumes beside the nose firing forward.
+    const retroPlume = (1 + retro * 1.4) * flicker;
+    ctx.fillStyle = style.thruster || "#ffb85b";
+    ctx.beginPath();
+    ctx.moveTo(-8, -3);
+    ctx.lineTo(-5.4, -3 - 5.2 * retroPlume);
+    ctx.lineTo(-3, -3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(8, -3);
+    ctx.lineTo(5.4, -3 - 5.2 * retroPlume);
+    ctx.lineTo(3, -3);
+    ctx.closePath();
+    ctx.fill();
+    if (retro > 0.35) {
+      ctx.fillStyle = "rgba(255, 245, 214, 0.8)";
+      ctx.beginPath();
+      ctx.moveTo(-6.6, -3);
+      ctx.lineTo(-5.4, -3 - 3.6 * retroPlume);
+      ctx.lineTo(-4.2, -3);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(6.6, -3);
+      ctx.lineTo(5.4, -3 - 3.6 * retroPlume);
+      ctx.lineTo(4.2, -3);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  if (state.ship.hitFlash > 0 && state.wreckTimer <= 0) {
+    ctx.fillStyle = `rgba(255, 255, 255, ${clamp(state.ship.hitFlash / 0.18, 0, 1) * 0.45})`;
+    ctx.beginPath();
+    ctx.arc(0, -2, 15, 0, Math.PI * 2);
     ctx.fill();
   }
   if (state.ship.muzzleFlash > 0 && state.wreckTimer <= 0) {
@@ -6410,9 +6873,11 @@ function render() {
   drawDockIndicator();
   drawPickups();
   drawBullets();
+  drawEnemyBullets();
   drawLaser();
   drawParticles();
   drawDrones();
+  drawEnemies();
   drawShip();
   if (state.cinematic.active) {
     ctx.fillStyle = `rgba(255, 240, 200, ${Math.min(0.42, state.cinematic.timer * 0.16)})`;
@@ -6502,7 +6967,9 @@ function renderResultsScreen() {
   const report = progress.lastSortieReport;
   if (!report) return;
   ui.resultsTitle.textContent = report.buildComplete ? "Build Complete" : report.success ? "Return Complete" : "Sortie Lost";
-  ui.resultsSortieLabel.textContent = `Sortie #${report.sortieNumber}`;
+  ui.resultsSortieLabel.textContent = report.enemiesDestroyed
+    ? `Sortie #${report.sortieNumber} • ${fmt(report.enemiesDestroyed)} drone${report.enemiesDestroyed === 1 ? "" : "s"} downed`
+    : `Sortie #${report.sortieNumber}`;
   ui.resultsMinedLabel.textContent = report.contractType === "field"
     ? `${report.objectiveLabel}${report.objectiveProgressLabel ? ` • ${report.objectiveProgressLabel}` : ""}`
     : `Mining ${report.minedPercent.toFixed(1)}%`;
